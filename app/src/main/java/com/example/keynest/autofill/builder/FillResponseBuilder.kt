@@ -7,8 +7,10 @@ import android.os.Build
 import android.os.Parcelable
 import android.service.autofill.Dataset
 import android.service.autofill.FillResponse
+import android.service.autofill.InlinePresentation
 import android.view.autofill.AutofillId
 import android.view.autofill.AutofillValue
+import android.widget.inline.InlinePresentationSpec
 import com.example.keynest.autofill.unlock.AutofillUnlockActivity
 import com.example.keynest.domain.usecase.AutofillCandidate
 
@@ -49,13 +51,17 @@ class FillResponseBuilder(
         candidates: List<AutofillCandidate>,
         usernameAutofillId: AutofillId?,
         passwordAutofillId: AutofillId?,
+        inlineSpecs: List<InlinePresentationSpec> = emptyList(),
     ): FillResponse? {
         if (candidates.isEmpty()) return null
         if (usernameAutofillId == null && passwordAutofillId == null) return null
 
         val builder = FillResponse.Builder()
-        for (candidate in candidates) {
-            val dataset = buildLockedDataset(candidate, usernameAutofillId, passwordAutofillId)
+        candidates.forEachIndexed { index, candidate ->
+            // Per the InlineSuggestionsRequest contract the last spec is reused
+            // for any datasets beyond the provided list size.
+            val spec = inlineSpecs.getOrNull(index) ?: inlineSpecs.lastOrNull()
+            val dataset = buildLockedDataset(candidate, usernameAutofillId, passwordAutofillId, spec)
             builder.addDataset(dataset)
         }
         return builder.build()
@@ -66,10 +72,16 @@ class FillResponseBuilder(
         candidate: AutofillCandidate,
         usernameAutofillId: AutofillId?,
         passwordAutofillId: AutofillId?,
+        inlineSpec: InlinePresentationSpec?,
     ): Dataset {
         val presentation = presentationFactory.build(
             label = candidate.label,
             subtitle = candidate.username,
+        )
+        val inlinePresentation: InlinePresentation? = presentationFactory.buildInline(
+            label = candidate.label,
+            subtitle = candidate.username,
+            spec = inlineSpec,
         )
 
         val datasetBuilder = Dataset.Builder()
@@ -79,18 +91,10 @@ class FillResponseBuilder(
         // authentication IntentSender (the framework discards these and
         // waits for the auth result to supply real values).
         if (usernameAutofillId != null) {
-            datasetBuilder.setValue(
-                usernameAutofillId,
-                AutofillValue.forText(PLACEHOLDER),
-                presentation,
-            )
+            attachLockedValue(datasetBuilder, usernameAutofillId, presentation, inlinePresentation)
         }
         if (passwordAutofillId != null) {
-            datasetBuilder.setValue(
-                passwordAutofillId,
-                AutofillValue.forText(PLACEHOLDER),
-                presentation,
-            )
+            attachLockedValue(datasetBuilder, passwordAutofillId, presentation, inlinePresentation)
         }
 
         val authIntent = AutofillUnlockActivity.newIntent(
@@ -139,6 +143,21 @@ class FillResponseBuilder(
             builder.setValue(passwordAutofillId, AutofillValue.forText(passwordValue))
         }
         return builder.build()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun attachLockedValue(
+        builder: Dataset.Builder,
+        id: AutofillId,
+        presentation: android.widget.RemoteViews,
+        inlinePresentation: InlinePresentation?,
+    ) {
+        val value = AutofillValue.forText(PLACEHOLDER)
+        if (inlinePresentation != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            builder.setValue(id, value, presentation, inlinePresentation)
+        } else {
+            builder.setValue(id, value, presentation)
+        }
     }
 
     private fun pendingIntentFlags(): Int {

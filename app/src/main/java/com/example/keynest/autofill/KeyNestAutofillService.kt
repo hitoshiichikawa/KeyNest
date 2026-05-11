@@ -1,11 +1,13 @@
 package com.example.keynest.autofill
 
+import android.os.Build
 import android.os.CancellationSignal
 import android.service.autofill.AutofillService
 import android.service.autofill.FillCallback
 import android.service.autofill.FillRequest
 import android.service.autofill.SaveCallback
 import android.service.autofill.SaveRequest
+import android.widget.inline.InlinePresentationSpec
 import com.example.keynest.autofill.builder.DatasetPresentationFactory
 import com.example.keynest.autofill.builder.FillResponseBuilder
 import com.example.keynest.autofill.parser.AssistStructureParser
@@ -116,10 +118,12 @@ class KeyNestAutofillService : AutofillService() {
                 }
 
                 val candidates = ServiceLocator.resolveAutofillCandidatesUseCase(callerPackage)
+                val inlineSpecs = extractInlineSpecs(request)
                 val response = responseBuilder.buildLockedResponse(
                     candidates = candidates,
                     usernameAutofillId = parsed.usernameId,
                     passwordAutofillId = parsed.passwordId,
+                    inlineSpecs = inlineSpecs,
                 )
                 val elapsed = System.currentTimeMillis() - t0
                 SafeLogger.info(
@@ -147,6 +151,20 @@ class KeyNestAutofillService : AutofillService() {
      */
     override fun onSaveRequest(request: SaveRequest, callback: SaveCallback) {
         callback.onSuccess()
+    }
+
+    /**
+     * Returns the IME-supplied inline presentation specs when available.
+     *
+     * Inline suggestions render the autofill chip inside the IME's
+     * suggestion strip (Gboard etc.), avoiding the popup-vs-keyboard
+     * overlap that occurs when the user focuses a password field. The
+     * IME is the gating party: it returns specs through
+     * `FillRequest.inlineSuggestionsRequest` only when it can host them.
+     */
+    private fun extractInlineSpecs(request: FillRequest): List<InlinePresentationSpec> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
+        return request.inlineSuggestionsRequest?.inlinePresentationSpecs.orEmpty()
     }
 
     /**

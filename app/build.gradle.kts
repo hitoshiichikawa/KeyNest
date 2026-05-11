@@ -75,6 +75,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.autofill)
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
