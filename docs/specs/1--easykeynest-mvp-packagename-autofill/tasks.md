@@ -50,8 +50,8 @@
 
 ## Phase 1: Security & Util 基盤
 
-- [ ] **T2. 暗号化基盤の実装**
-- [ ] T2.1 `KeystoreKeyProvider` 実装 (P)
+- [x] **T2. 暗号化基盤の実装**
+- [x] T2.1 `KeystoreKeyProvider` 実装 (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/security/KeystoreKeyProvider.kt`
   - Alias `keynest_aead_v1`、AES-256-GCM、`KeyGenParameterSpec` で `setRandomizedEncryptionRequired(true)`、`setUserAuthenticationRequired(false)`
   - 完了条件: `getOrCreateKey()` で SecretKey が取得できる
@@ -59,7 +59,7 @@
   - _Requirements: 1.2, NFR 1.1, NFR 1.2_
   - _Boundary: KeystoreKeyProvider_
   - _Depends: T1.4_
-- [ ] T2.2 `AesGcmCipher` と `EncryptedBlob` 実装 (P)
+- [x] T2.2 `AesGcmCipher` と `EncryptedBlob` 実装 (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/security/AesGcmCipher.kt`, `app/src/main/java/com/example/keynest/security/EncryptedBlob.kt`
   - `encrypt(ByteArray) → EncryptedBlob(iv, ciphertext)`、`decrypt(EncryptedBlob) → ByteArray`
   - IV は Cipher が自動生成（12byte）
@@ -68,7 +68,7 @@
   - _Requirements: 1.2, NFR 1.1, NFR 1.2_
   - _Boundary: AesGcmCipher, KeystoreKeyProvider_
   - _Depends: T2.1_
-- [ ] T2.3 `SafeLogger` 実装 (P)
+- [x] T2.3 `SafeLogger` 実装 (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/util/SafeLogger.kt`
   - `debug/info/warn/error` API、password / 復号 credential / 完全な署名 hex のログ出力を機械的に遮断する utility
   - 完了条件: 与えられた sensitive キーワードがログに出ないことの unit test が通る
@@ -76,14 +76,14 @@
   - _Requirements: NFR 1.3, NFR 5.1_
   - _Boundary: SafeLogger_
   - _Depends: T1.4_
-- [ ] T2.4 `HexEncoding` ユーティリティ (P)
+- [x] T2.4 `HexEncoding` ユーティリティ (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/util/HexEncoding.kt`
   - ByteArray ↔ Hex の相互変換
   - 完了条件: 32byte ハッシュ→64文字 hex のラウンドトリップ test 通過
   - テスト方針: JVM unit test
   - _Requirements: 2.1_
   - _Boundary: HexEncoding_
-- [ ] T2.5 `PackageSignatureResolver` 実装
+- [x] T2.5 `PackageSignatureResolver` 実装
   - 触るファイル: `app/src/main/java/com/example/keynest/util/PackageSignatureResolver.kt`
   - API 28+: `GET_SIGNING_CERTIFICATES` → `SigningInfo.apkContentsSigners`
   - API 26–27: `GET_SIGNATURES` → `signatures[]`
