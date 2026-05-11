@@ -5,7 +5,12 @@
         <item name="colorPrimaryVariant">@color/keynest_primary_variant</item>
         <item name="colorOnPrimary">@android:color/white</item>
         <item name="colorSecondary">@color/keynest_secondary</item>
-        <item name="android:windowBackground">@android:color/white</item>
+        <!--
+            Use the Material surface color (respects DayNight) so text colored
+            with textColorPrimary remains readable in both modes. Hard-pinning
+            windowBackground to white caused white-on-white text in dark mode.
+        -->
+        <item name="android:windowBackground">?attr/colorSurface</item>
     </style>
 
     <style name="Theme.KeyNest.Translucent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
