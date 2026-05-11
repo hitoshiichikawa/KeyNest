@@ -112,7 +112,7 @@ class CredentialListActivity : AppCompatActivity() {
 
     private fun hasEnabledAutofillService(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
-        val manager = getSystemService(Context.AUTOFILL_SERVICE) as? AutofillManager ?: return true
+        val manager = getSystemService(AutofillManager::class.java) ?: return true
         return manager.hasEnabledAutofillServices()
     }
 

@@ -67,7 +67,7 @@ class AutofillEnableActivity : AppCompatActivity() {
 
     private fun isAutofillServiceEnabled(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
-        val manager = getSystemService(Context.AUTOFILL_SERVICE) as? AutofillManager ?: return false
+        val manager = getSystemService(AutofillManager::class.java) ?: return false
         return manager.hasEnabledAutofillServices()
     }
 
