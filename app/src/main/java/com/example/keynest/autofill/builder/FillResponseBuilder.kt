@@ -113,8 +113,17 @@ class FillResponseBuilder(
     /**
      * Build the Dataset that the framework consumes after successful
      * biometric auth. The actual username / password values land here.
+     *
+     * The 2-arg `setValue(id, value)` is used intentionally: the auth-result
+     * Dataset is NOT shown in any picker (the user already selected the
+     * locked Dataset), so a RemoteViews presentation is unnecessary and on
+     * some Android versions the 3-arg overload causes the framework to
+     * treat the result as a new pickable Dataset rather than the resolved
+     * value, leaving the target form unfilled. The `label` argument is
+     * kept on the signature for symmetry with the locked-side builder but
+     * is not surfaced in this path.
      */
-    @Suppress("DEPRECATION")
+    @Suppress("UNUSED_PARAMETER")
     fun buildUnlockedDataset(
         usernameAutofillId: AutofillId?,
         usernameValue: String?,
@@ -122,13 +131,12 @@ class FillResponseBuilder(
         passwordValue: CharSequence?,
         label: String,
     ): Dataset {
-        val presentation = presentationFactory.build(label = label, subtitle = usernameValue.orEmpty())
         val builder = Dataset.Builder()
         if (usernameAutofillId != null && usernameValue != null) {
-            builder.setValue(usernameAutofillId, AutofillValue.forText(usernameValue), presentation)
+            builder.setValue(usernameAutofillId, AutofillValue.forText(usernameValue))
         }
         if (passwordAutofillId != null && passwordValue != null) {
-            builder.setValue(passwordAutofillId, AutofillValue.forText(passwordValue), presentation)
+            builder.setValue(passwordAutofillId, AutofillValue.forText(passwordValue))
         }
         return builder.build()
     }
