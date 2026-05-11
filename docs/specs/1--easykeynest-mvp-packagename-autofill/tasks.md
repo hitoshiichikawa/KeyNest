@@ -189,8 +189,8 @@
 
 ## Phase 3: Auth & DI
 
-- [ ] **T6. 認証ラッパー**
-- [ ] T6.1 `BiometricAuthenticator` 実装
+- [x] **T6. 認証ラッパー**
+- [x] T6.1 `BiometricAuthenticator` 実装
   - 触るファイル: `app/src/main/java/com/example/keynest/auth/BiometricAuthenticator.kt`
   - `BIOMETRIC_STRONG or DEVICE_CREDENTIAL` を要求
   - `AuthResult` sealed class を返却
