@@ -2,11 +2,9 @@ package com.example.keynest.ui.list
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.autofill.AutofillManager
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -20,6 +18,7 @@ import com.example.keynest.di.ServiceLocator
 import com.example.keynest.domain.model.Credential
 import com.example.keynest.ui.edit.CredentialEditActivity
 import com.example.keynest.ui.enable.AutofillEnableActivity
+import com.example.keynest.util.AutofillServiceStatus
 import com.example.keynest.util.SafeLogger
 import kotlinx.coroutines.launch
 
@@ -112,11 +111,7 @@ class CredentialListActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun hasEnabledAutofillService(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
-        val manager = getSystemService(AutofillManager::class.java) ?: return true
-        return manager.hasEnabledAutofillServices()
-    }
+    private fun hasEnabledAutofillService(): Boolean = AutofillServiceStatus.isCurrentService(this)
 
     companion object {
         // In-process flag; survives configuration changes but resets on

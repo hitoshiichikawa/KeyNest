@@ -8,10 +8,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
-import android.view.autofill.AutofillManager
 import androidx.appcompat.app.AppCompatActivity
 import com.example.keynest.R
 import com.example.keynest.databinding.AutofillEnableActivityBinding
+import com.example.keynest.util.AutofillServiceStatus
 import com.google.android.material.snackbar.Snackbar
 
 /**
@@ -65,11 +65,7 @@ class AutofillEnableActivity : AppCompatActivity() {
         }
     }
 
-    private fun isAutofillServiceEnabled(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
-        val manager = getSystemService(AutofillManager::class.java) ?: return false
-        return manager.hasEnabledAutofillServices()
-    }
+    private fun isAutofillServiceEnabled(): Boolean = AutofillServiceStatus.isCurrentService(this)
 
     companion object {
         fun newIntent(context: Context): Intent = Intent(context, AutofillEnableActivity::class.java)
