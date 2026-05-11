@@ -117,8 +117,8 @@
   - _Boundary: CredentialRepository_
   - _Depends: T3.1_
 
-- [ ] **T4. Room データ層実装**
-- [ ] T4.1 `CredentialEntity` と DAO
+- [x] **T4. Room データ層実装**
+- [x] T4.1 `CredentialEntity` と DAO
   - 触るファイル: `app/src/main/java/com/example/keynest/data/entity/CredentialEntity.kt`, `app/src/main/java/com/example/keynest/data/dao/CredentialDao.kt`
   - 設計書 schema どおりにカラム定義（password_ciphertext / password_iv / signature_sha256 nullable / package_name index）
   - 完了条件: Room がコンパイル時にスキーマ検証を通す
@@ -126,7 +126,7 @@
   - _Requirements: 1.1, 1.2, 1.4, 2.1, 2.2_
   - _Boundary: CredentialEntity, CredentialDao_
   - _Depends: T3.2, T1.3_
-- [ ] T4.2 `KeyNestDatabase` と Migration スケルトン
+- [x] T4.2 `KeyNestDatabase` と Migration スケルトン
   - 触るファイル: `app/src/main/java/com/example/keynest/data/KeyNestDatabase.kt`
   - DB ファイル名 `keynest.db`、version 1
   - 完了条件: `Room.databaseBuilder` でビルドできる
@@ -134,7 +134,7 @@
   - _Requirements: 1.1_
   - _Boundary: KeyNestDatabase_
   - _Depends: T4.1_
-- [ ] T4.3 `CredentialRepositoryImpl` 実装
+- [x] T4.3 `CredentialRepositoryImpl` 実装
   - 触るファイル: `app/src/main/java/com/example/keynest/data/repository/CredentialRepositoryImpl.kt`
   - DAO ↔ ドメイン型のマッピング、`observeAll()` で Flow を返却
   - 完了条件: domain interface を満たす
