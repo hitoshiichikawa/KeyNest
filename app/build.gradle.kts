@@ -45,6 +45,10 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            // Allow unit tests to invoke android.util.Log etc. without
+            // mocking each call: framework methods return their default
+            // value (0 / null / false) instead of throwing.
+            isReturnDefaultValues = true
         }
     }
     packaging {

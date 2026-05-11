@@ -25,6 +25,8 @@
     <string name="error_password_blank">Password is required.</string>
     <string name="error_label_blank">Display name is required.</string>
     <string name="error_save_failed">Failed to save credential.</string>
+    <string name="message_credential_saved">Saved.</string>
+    <string name="error_save_failed_with_reason">Failed to save credential: %1$s</string>
     <string name="message_signature_not_captured">Signature unavailable (app not installed). Candidates will not appear until you reinstall and re-save.</string>
 
     <!-- Autofill enable -->

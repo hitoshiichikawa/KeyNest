@@ -11,6 +11,7 @@ import com.example.keynest.domain.usecase.SaveFailure
 import com.example.keynest.domain.usecase.UpdateCredentialInput
 import com.example.keynest.domain.usecase.UpdateCredentialUseCase
 import com.example.keynest.domain.usecase.UpdateFailure
+import com.example.keynest.util.SafeLogger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -90,10 +91,15 @@ class CredentialEditViewModel(
 
             result
                 .onSuccess {
+                    SafeLogger.info(
+                        tag = TAG,
+                        message = "credential save ok (mode=${if (existingId != null) "update" else "new"})",
+                    )
                     _state.value = State.Saved
                     _navigation.tryEmit(Unit)
                 }
                 .onFailure { ex ->
+                    SafeLogger.error(tag = TAG, message = "credential save failed", throwable = ex)
                     _state.value = ex.toState()
                 }
         }
@@ -129,5 +135,9 @@ class CredentialEditViewModel(
             require(modelClass == CredentialEditViewModel::class.java)
             return CredentialEditViewModel(repository, saveUseCase, updateUseCase) as T
         }
+    }
+
+    private companion object {
+        const val TAG = "KeyNest.Edit"
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
@@ -110,9 +111,16 @@ class CredentialEditActivity : AppCompatActivity() {
     private fun renderState(state: CredentialEditViewModel.State) {
         when (state) {
             is CredentialEditViewModel.State.FieldError -> showFieldError(state.field, state.kind)
-            is CredentialEditViewModel.State.Error -> Snackbar.make(binding.root, R.string.error_save_failed, Snackbar.LENGTH_LONG).show()
+            is CredentialEditViewModel.State.Error -> Snackbar.make(
+                binding.root,
+                getString(R.string.error_save_failed_with_reason, state.cause),
+                Snackbar.LENGTH_LONG,
+            ).show()
+            // Toast is used (not Snackbar) so that the confirmation survives the
+            // activity finish() triggered by the navigation collector.
+            CredentialEditViewModel.State.Saved ->
+                Toast.makeText(this, R.string.message_credential_saved, Toast.LENGTH_SHORT).show()
             CredentialEditViewModel.State.Saving,
-            CredentialEditViewModel.State.Saved,
             CredentialEditViewModel.State.Idle,
             -> Unit
         }

@@ -20,6 +20,7 @@ import com.example.keynest.di.ServiceLocator
 import com.example.keynest.domain.model.Credential
 import com.example.keynest.ui.edit.CredentialEditActivity
 import com.example.keynest.ui.enable.AutofillEnableActivity
+import com.example.keynest.util.SafeLogger
 import kotlinx.coroutines.launch
 
 /**
@@ -65,6 +66,7 @@ class CredentialListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.credentials.collect { list ->
+                    SafeLogger.info(tag = TAG, message = "credential list emit size=${list.size}")
                     adapter.submitList(list)
                     binding.emptyView.visibility = if (list.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
                 }
@@ -121,6 +123,8 @@ class CredentialListActivity : AppCompatActivity() {
         // cold process start (which is the appropriate scope for the
         // first-launch nudge).
         private var redirectShown: Boolean = false
+
+        private const val TAG = "KeyNest.List"
 
         fun newIntent(context: Context): Intent = Intent(context, CredentialListActivity::class.java)
     }
