@@ -8,21 +8,21 @@
 
 ## Phase 0: プロジェクトセットアップ
 
-- [ ] **T1. Android プロジェクト雛形と Gradle 構成**
-- [ ] T1.1 Gradle wrapper / ルート設定の作成
+- [x] **T1. Android プロジェクト雛形と Gradle 構成**
+- [x] T1.1 Gradle wrapper / ルート設定の作成
   - 触るファイル: `gradle/wrapper/gradle-wrapper.properties`, `gradle/wrapper/gradle-wrapper.jar`, `gradlew`, `gradlew.bat`, `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`
   - Gradle 8.7+ / AGP 8.5+ / Kotlin DSL を採用
   - `settings.gradle.kts` で `app` モジュールを include
   - 完了条件: `./gradlew tasks` が成功
   - テスト方針: CI で `./gradlew tasks` 実行（unit/instrumented なし）
   - _Requirements: 7.1, 7.2, 7.3_
-- [ ] T1.2 Version catalog の整備
+- [x] T1.2 Version catalog の整備
   - 触るファイル: `gradle/libs.versions.toml`
   - エントリ: kotlin, agp, androidx-core, androidx-appcompat, material, androidx-activity, androidx-fragment, androidx-lifecycle, androidx-room, androidx-biometric, kotlinx-coroutines, junit, mockk, robolectric, androidx-test, espresso
   - 完了条件: 後続タスクから `libs.xxx` で参照可能
   - _Requirements: 7.1_
   - _Depends: T1.1_
-- [ ] T1.3 `app` モジュール build.gradle.kts
+- [x] T1.3 `app` モジュール build.gradle.kts
   - 触るファイル: `app/build.gradle.kts`, `app/proguard-rules.pro`
   - `minSdk = 26`, `compileSdk = 34`, `targetSdk = 34`
   - Kotlin / Room / Biometric / Coroutines プラグインを適用
@@ -30,7 +30,7 @@
   - 完了条件: `./gradlew :app:assembleDebug` が成功（空 Activity でも可）
   - _Requirements: 7.1, 7.2, 7.3_
   - _Depends: T1.2_
-- [ ] T1.4 AndroidManifest スケルトンと Application クラス (P)
+- [x] T1.4 AndroidManifest スケルトンと Application クラス (P)
   - 触るファイル: `app/src/main/AndroidManifest.xml`, `app/src/main/java/com/example/keynest/KeyNestApp.kt`, `app/src/main/res/values/strings.xml`, `app/src/main/res/values/themes.xml`
   - `<application android:name=".KeyNestApp" android:allowBackup="false">` を宣言
   - `android.permission.INTERNET` は宣言しない（NFR 1.5 機械的保証）
@@ -39,7 +39,7 @@
   - _Requirements: 7.1, 7.2, 7.3_
   - _Boundary: KeyNestApp_
   - _Depends: T1.3_
-- [ ] T1.5 `.gitignore` の Android 用エントリ追記 (P)
+- [x] T1.5 `.gitignore` の Android 用エントリ追記 (P)
   - 触るファイル: `.gitignore`
   - `build/`, `.gradle/`, `local.properties`, `*.iml`, `.idea/`, `captures/` を追加
   - 完了条件: `git status` で生成物が ignore される
