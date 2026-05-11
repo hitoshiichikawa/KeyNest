@@ -200,8 +200,8 @@
   - _Boundary: BiometricAuthenticator_
   - _Depends: T1.3_
 
-- [ ] **T7. ServiceLocator（軽量 DI）**
-- [ ] T7.1 `ServiceLocator` 実装
+- [x] **T7. ServiceLocator（軽量 DI）**
+- [x] T7.1 `ServiceLocator` 実装
   - 触るファイル: `app/src/main/java/com/example/keynest/di/ServiceLocator.kt`
   - Database / Repository / Cipher / Resolver / UseCase 群の singleton 生成
   - 完了条件: `KeyNestApp.onCreate` から初期化可能
