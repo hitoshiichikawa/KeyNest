@@ -107,7 +107,9 @@ class AutofillUnlockActivity : AppCompatActivity() {
                         SafeLogger.info(
                             tag = TAG,
                             message = "unlock returning dataset (userLen=${plain.username.length} " +
-                                "passLen=${plain.password.size})",
+                                "passLen=${plain.password.size}, userIdPresent=${usernameAutofillId != null}, " +
+                                "passIdPresent=${passwordAutofillId != null}, " +
+                                "fwResultPresent=${intent?.hasExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT) == true})",
                         )
                     } finally {
                         // Req 5.5: zero-fill the CharArray before finishing.
@@ -150,8 +152,13 @@ class AutofillUnlockActivity : AppCompatActivity() {
             usernameAutofillId: AutofillId?,
             passwordAutofillId: AutofillId?,
         ): Intent {
+            // Intentionally NOT adding FLAG_ACTIVITY_NEW_TASK: the framework
+            // launches this PendingIntent and manages task affinity itself.
+            // Forcing a NEW_TASK detaches the unlock activity from the
+            // originating app's task and breaks the framework's ability to
+            // apply the EXTRA_AUTHENTICATION_RESULT Dataset back to the
+            // original form on some Android versions.
             return Intent(context, AutofillUnlockActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 putExtra(EXTRA_CREDENTIAL_ID, credentialId)
                 usernameAutofillId?.let { putExtra(EXTRA_USERNAME_AUTOFILL_ID, it as android.os.Parcelable) }
                 passwordAutofillId?.let { putExtra(EXTRA_PASSWORD_AUTOFILL_ID, it as android.os.Parcelable) }
