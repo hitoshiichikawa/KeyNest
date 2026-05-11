@@ -276,8 +276,8 @@
 
 ## Phase 5: UI 層
 
-- [ ] **T9. UI 実装**
-- [ ] T9.1 `CredentialListActivity` / Adapter / ViewModel (P)
+- [x] **T9. UI 実装**
+- [x] T9.1 `CredentialListActivity` / Adapter / ViewModel (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/ui/list/CredentialListActivity.kt`, `CredentialListAdapter.kt`, `CredentialListViewModel.kt`, `app/src/main/res/layout/credential_list_activity.xml`, `credential_list_item.xml`
   - `ListCredentialsUseCase` の Flow を購読
   - リストアイテムから編集／削除メニュー導線
@@ -286,7 +286,7 @@
   - _Requirements: 1.5_
   - _Boundary: CredentialListActivity, CredentialListViewModel, ListCredentialsUseCase_
   - _Depends: T5.3, T7.1_
-- [ ] T9.2 `CredentialEditActivity` / ViewModel (P)
+- [x] T9.2 `CredentialEditActivity` / ViewModel (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/ui/edit/CredentialEditActivity.kt`, `CredentialEditViewModel.kt`, `app/src/main/res/layout/credential_edit_activity.xml`
   - 入力: packageName / username / password / label
   - バリデーションエラー表示（Req 1.3）
@@ -296,7 +296,7 @@
   - _Requirements: 1.1, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3_
   - _Boundary: CredentialEditActivity, CredentialEditViewModel, SaveCredentialUseCase, UpdateCredentialUseCase_
   - _Depends: T5.1, T5.2, T7.1_
-- [ ] T9.3 `PackagePickerBottomSheet`（インストール済みアプリ選択） (P)
+- [x] T9.3 `PackagePickerBottomSheet`（インストール済みアプリ選択） (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/ui/edit/PackagePickerBottomSheet.kt`, `app/src/main/res/layout/package_picker_bottom_sheet.xml`
   - `PackageManager.getInstalledApplications` を一覧表示し、選択結果を CredentialEditActivity に返す
   - 完了条件: 選択された packageName が編集画面に反映される
@@ -304,7 +304,7 @@
   - _Requirements: 1.1, 2.1_
   - _Boundary: PackagePickerBottomSheet, CredentialEditActivity_
   - _Depends: T9.2_
-- [ ] T9.4 `AutofillEnableActivity`
+- [x] T9.4 `AutofillEnableActivity`
   - 触るファイル: `app/src/main/java/com/example/keynest/ui/enable/AutofillEnableActivity.kt`, `app/src/main/res/layout/autofill_enable_activity.xml`
   - `AutofillManager.hasEnabledAutofillServices()` で状態確認
   - 「有効化」ボタンで `Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE` + `package:` URI Intent を起動
@@ -313,7 +313,7 @@
   - _Requirements: 6.1, 6.2, 6.3_
   - _Boundary: AutofillEnableActivity_
   - _Depends: T1.4_
-- [ ] T9.5 アプリ起動時の Autofill 有効化案内導線
+- [x] T9.5 アプリ起動時の Autofill 有効化案内導線
   - 触るファイル: `app/src/main/java/com/example/keynest/ui/list/CredentialListActivity.kt`, `app/src/main/AndroidManifest.xml`
   - launcher Activity を `CredentialListActivity` とし、起動時に未有効化なら `AutofillEnableActivity` を表示
   - メニューから随時 `AutofillEnableActivity` に到達可能
