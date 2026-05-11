@@ -77,7 +77,7 @@ class SaveCredentialUseCase(
             Result.success(id)
         } catch (t: Throwable) {
             // Wrap to make sure no sensitive payload appears in the message.
-            Result.failure(SaveFailure.Storage(cause = t.javaClass.simpleName))
+            Result.failure(SaveFailure.Storage(reason = t.javaClass.simpleName))
         } finally {
             wipe(input.password)
         }
@@ -146,5 +146,5 @@ sealed class SaveFailure(message: String) : Exception(message) {
     object UsernameBlank : SaveFailure("username is required")
     object PasswordBlank : SaveFailure("password is required")
     object LabelBlank : SaveFailure("label is required")
-    data class Storage(val cause: String) : SaveFailure("storage error: $cause")
+    data class Storage(val reason: String) : SaveFailure("storage error: $reason")
 }

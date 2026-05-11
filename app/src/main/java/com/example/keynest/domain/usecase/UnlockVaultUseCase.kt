@@ -45,7 +45,7 @@ class UnlockVaultUseCase(
                 ),
             )
         } catch (t: Throwable) {
-            Result.failure(UnlockFailure.Decrypt(cause = t.javaClass.simpleName))
+            Result.failure(UnlockFailure.Decrypt(reason = t.javaClass.simpleName))
         } finally {
             // Zero-fill the intermediate decrypted bytes.
             plaintextBytes?.let { Arrays.fill(it, 0.toByte()) }
@@ -70,5 +70,5 @@ class UnlockVaultUseCase(
 
 sealed class UnlockFailure(message: String) : Exception(message) {
     object NotFound : UnlockFailure("credential not found")
-    data class Decrypt(val cause: String) : UnlockFailure("decrypt failed: $cause")
+    data class Decrypt(val reason: String) : UnlockFailure("decrypt failed: $reason")
 }

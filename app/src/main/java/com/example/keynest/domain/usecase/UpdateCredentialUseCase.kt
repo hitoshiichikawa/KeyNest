@@ -91,7 +91,7 @@ class UpdateCredentialUseCase(
             )
             Result.success(Unit)
         } catch (t: Throwable) {
-            Result.failure(UpdateFailure.Storage(cause = t.javaClass.simpleName))
+            Result.failure(UpdateFailure.Storage(reason = t.javaClass.simpleName))
         } finally {
             wipeIfPresent(newPasswordCopy)
         }
@@ -160,5 +160,5 @@ sealed class UpdateFailure(message: String) : Exception(message) {
     object UsernameBlank : UpdateFailure("username is required")
     object LabelBlank : UpdateFailure("label is required")
     object NotFound : UpdateFailure("credential not found")
-    data class Storage(val cause: String) : UpdateFailure("storage error: $cause")
+    data class Storage(val reason: String) : UpdateFailure("storage error: $reason")
 }

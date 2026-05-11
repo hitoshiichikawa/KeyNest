@@ -17,8 +17,8 @@ class DeleteCredentialUseCase(
             repo.delete(id)
             Result.success(Unit)
         } catch (t: Throwable) {
-            Result.failure(DeleteFailure(cause = t.javaClass.simpleName))
+            Result.failure(DeleteFailure(reason = t.javaClass.simpleName))
         }
 }
 
-data class DeleteFailure(val cause: String) : Exception("storage error: $cause")
+data class DeleteFailure(val reason: String) : Exception("storage error: $reason")
