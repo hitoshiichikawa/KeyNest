@@ -99,8 +99,8 @@
 
 ## Phase 2: Domain & Data 層
 
-- [ ] **T3. ドメインモデルと UseCase 雛形**
-- [ ] T3.1 `Credential` / `PlaintextCredential` / `SigningHash` (P)
+- [x] **T3. ドメインモデルと UseCase 雛形**
+- [x] T3.1 `Credential` / `PlaintextCredential` / `SigningHash` (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/model/Credential.kt`, `PlaintextCredential.kt`, `SigningHash.kt`
   - `PlaintextCredential` は `AutoCloseable`、`close()` で password CharArray を zero-fill
   - `SigningHash.equals` は `MessageDigest.isEqual` を利用（タイミング攻撃耐性）
@@ -109,7 +109,7 @@
   - _Requirements: 1.1, 1.2, 2.1, 2.2, 5.5_
   - _Boundary: Credential, PlaintextCredential, SigningHash_
   - _Depends: T1.4_
-- [ ] T3.2 `CredentialRepository` interface 定義 (P)
+- [x] T3.2 `CredentialRepository` interface 定義 (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/repository/CredentialRepository.kt`
   - `save / update / delete / findByPackage / findById / observeAll` を定義
   - 完了条件: interface コンパイル成功、依存先で参照可能
