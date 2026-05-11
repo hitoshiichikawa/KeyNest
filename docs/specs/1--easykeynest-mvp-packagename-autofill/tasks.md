@@ -327,8 +327,8 @@
 
 ## Phase 6: 結合テスト・性能・セキュリティ検証
 
-- [ ] **T10. 統合・性能・セキュリティ検証**
-- [ ] T10.1 End-to-End Autofill フロー instrumented test (P)
+- [x] **T10. 統合・性能・セキュリティ検証**
+- [x] T10.1 End-to-End Autofill フロー instrumented test (P)
   - 触るファイル: `app/src/androidTest/java/com/example/keynest/e2e/AutofillFlowTest.kt`
   - フロー: credential 登録 → 別アプリの login Activity に AutofillManager をトリガ → 候補表示 → BiometricPrompt 模擬通過 → username/password 入力
   - 完了条件: 一連の操作が成功し、対象 EditText に値がセットされる
@@ -336,14 +336,14 @@
   - _Requirements: 3.3, 3.4, 5.2, 5.3_
   - _Boundary: KeyNestAutofillService, AutofillUnlockActivity, BiometricAuthenticator_
   - _Depends: T8.6, T9.2_
-- [ ] T10.2 署名不一致／NULL の候補除外 instrumented test (P)
+- [x] T10.2 署名不一致／NULL の候補除外 instrumented test (P)
   - 触るファイル: `app/src/androidTest/java/com/example/keynest/security/SignatureMismatchTest.kt`
   - PackageSignatureResolver を test double で差し替え、不一致時に候補が出ないことを検証
   - 完了条件: 不一致／NULL の credential が一切返らない
   - _Requirements: 4.2, 4.3, 4.4_
   - _Boundary: ResolveAutofillCandidatesUseCase, PackageSignatureResolver_
   - _Depends: T8.5_
-- [ ] T10.3 ロック中の FillResponse バイト列検査 unit test (P)
+- [x] T10.3 ロック中の FillResponse バイト列検査 unit test (P)
   - 触るファイル: `app/src/test/java/com/example/keynest/autofill/LockedFillResponseSecurityTest.kt`
   - ロック中 FillResponse を Parcel 経由で `marshall()` し、バイト列に元 password 文字列・復号値が含まれないことを検証
   - 完了条件: assertion 通過
@@ -351,7 +351,7 @@
   - _Requirements: 5.1, NFR 1.4_
   - _Boundary: FillResponseBuilder_
   - _Depends: T8.4_
-- [ ] T10.4 NFR 2.1 性能テスト (P)
+- [x] T10.4 NFR 2.1 性能テスト (P)
   - 触るファイル: `app/src/androidTest/java/com/example/keynest/perf/FillRequestLatencyTest.kt`
   - credential 100 件登録状態で `onFillRequest` 〜 FillResponse 構築を 50 回計測
   - 完了条件: 中央値 ≤ 300ms、p95 ≤ 600ms
@@ -359,7 +359,7 @@
   - _Requirements: NFR 2.1_
   - _Boundary: KeyNestAutofillService, ResolveAutofillCandidatesUseCase_
   - _Depends: T8.5_
-- [ ] T10.5 ログマスク／例外マスクの監査テスト (P)
+- [x] T10.5 ログマスク／例外マスクの監査テスト (P)
   - 触るファイル: `app/src/test/java/com/example/keynest/util/SafeLoggerAuditTest.kt`
   - 全 UseCase の異常系で例外メッセージ／スタックトレースに password 平文が含まれないことを検証
   - 完了条件: assertion 通過
@@ -367,7 +367,7 @@
   - _Requirements: NFR 1.3, NFR 5.1_
   - _Boundary: SafeLogger, SaveCredentialUseCase, UnlockVaultUseCase_
   - _Depends: T5.1, T5.5, T2.3_
-- [ ] T10.6 `INTERNET` permission 非宣言の Manifest 検証 (P)
+- [x] T10.6 `INTERNET` permission 非宣言の Manifest 検証 (P)
   - 触るファイル: `app/src/test/java/com/example/keynest/manifest/InternetPermissionAbsenceTest.kt`
   - Robolectric で `PackageManager.getPackageInfo(..., GET_PERMISSIONS)` を取得し、`android.permission.INTERNET` が含まれないことを assert
   - _Requirements: NFR 1.5_
