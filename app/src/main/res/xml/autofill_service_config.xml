@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AutofillService metadata. The settings activity is the in-app guidance
+    screen so that "long-press > Settings" on the dataset chip launches us
+    directly into the credential list.
+-->
+<autofill-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.example.keynest.ui.list.CredentialListActivity" />

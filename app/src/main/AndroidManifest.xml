@@ -41,6 +41,31 @@
             </intent-filter>
         </activity>
 
+        <!--
+            T8.5: AutofillService entry point. android:permission ensures only
+            the framework can bind. excludeFromRecents prevents the unlock
+            activity from appearing in the recent-apps list.
+        -->
+        <service
+            android:name=".autofill.KeyNestAutofillService"
+            android:exported="true"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/autofill_service_config" />
+        </service>
+
+        <!-- T8.6: Authentication intent target for locked datasets. -->
+        <activity
+            android:name=".autofill.unlock.AutofillUnlockActivity"
+            android:theme="@style/Theme.KeyNest.Translucent"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+
     </application>
 
 </manifest>
