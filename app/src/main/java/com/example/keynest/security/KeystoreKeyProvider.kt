@@ -26,7 +26,7 @@ import javax.crypto.SecretKey
  *   AutofillUnlockActivity]. See design.md "Security Considerations" and
  *   "確定事項" - this matches the human-approved design.
  */
-class KeystoreKeyProvider(
+open class KeystoreKeyProvider(
     private val keyAlias: String = DEFAULT_KEY_ALIAS,
     private val keystoreProvider: String = ANDROID_KEYSTORE,
 ) {
@@ -35,8 +35,12 @@ class KeystoreKeyProvider(
      * Returns the AES key associated with [keyAlias]. Creates a new one on the
      * first call. Thread-safe (Keystore.getKey() is itself synchronized inside
      * the platform implementation, and we never expose a stale reference).
+     *
+     * `open` so that JVM unit tests can plug in a non-Keystore SecretKey
+     * (AndroidKeyStore is only available under instrumented / Robolectric
+     * test runs).
      */
-    fun getOrCreateKey(): SecretKey {
+    open fun getOrCreateKey(): SecretKey {
         val keyStore = KeyStore.getInstance(keystoreProvider).apply { load(null) }
         val existing = keyStore.getKey(keyAlias, null) as? SecretKey
         if (existing != null) return existing

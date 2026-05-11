@@ -17,7 +17,7 @@ import javax.crypto.spec.GCMParameterSpec
  * IV per call), which combined with `setRandomizedEncryptionRequired(true)` on
  * the key spec guarantees IV uniqueness.
  */
-class AesGcmCipher(
+open class AesGcmCipher(
     private val keyProvider: KeystoreKeyProvider,
 ) {
 
@@ -27,8 +27,12 @@ class AesGcmCipher(
      * The returned [EncryptedBlob.iv] is the platform generated IV. Each call
      * to this function produces a distinct IV and therefore a distinct
      * ciphertext (verified by tests / NFR 1.1).
+     *
+     * The method is `open` so that JVM unit tests in pure-Kotlin modules can
+     * substitute a non-Keystore implementation (the real AndroidKeyStore is
+     * only available under Robolectric / instrumented tests).
      */
-    fun encrypt(plaintext: ByteArray): EncryptedBlob {
+    open fun encrypt(plaintext: ByteArray): EncryptedBlob {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, keyProvider.getOrCreateKey())
         val ciphertext = cipher.doFinal(plaintext)
@@ -44,7 +48,7 @@ class AesGcmCipher(
      * caller (which the use-case layer surfaces as an opaque error so that no
      * sensitive byte is leaked to logs - NFR 1.3).
      */
-    fun decrypt(blob: EncryptedBlob): ByteArray {
+    open fun decrypt(blob: EncryptedBlob): ByteArray {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         val spec = GCMParameterSpec(GCM_TAG_BITS, blob.iv)
         cipher.init(Cipher.DECRYPT_MODE, keyProvider.getOrCreateKey(), spec)
