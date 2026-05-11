@@ -143,8 +143,8 @@
   - _Boundary: CredentialRepositoryImpl, CredentialDao_
   - _Depends: T4.2, T3.2_
 
-- [ ] **T5. UseCase 実装**
-- [ ] T5.1 `SaveCredentialUseCase` (P)
+- [x] **T5. UseCase 実装**
+- [x] T5.1 `SaveCredentialUseCase` (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/usecase/SaveCredentialUseCase.kt`
   - バリデーション（packageName 正規表現、必須項目）→ 署名取得 → 暗号化 → save
   - 失敗時は `Result.failure`、例外メッセージに password を含めない
@@ -153,7 +153,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2_
   - _Boundary: SaveCredentialUseCase, CredentialRepository, AesGcmCipher, PackageSignatureResolver_
   - _Depends: T2.2, T2.5, T4.3_
-- [ ] T5.2 `UpdateCredentialUseCase` / `DeleteCredentialUseCase` (P)
+- [x] T5.2 `UpdateCredentialUseCase` / `DeleteCredentialUseCase` (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/usecase/UpdateCredentialUseCase.kt`, `DeleteCredentialUseCase.kt`
   - update 時に署名ハッシュを再取得（Req 2.3）
   - 完了条件: 更新後 `signatureSha256` と `signatureCapturedAt` が更新される unit test
@@ -161,13 +161,13 @@
   - _Requirements: 1.5, 2.3_
   - _Boundary: UpdateCredentialUseCase, DeleteCredentialUseCase, CredentialRepository_
   - _Depends: T5.1_
-- [ ] T5.3 `ListCredentialsUseCase` (P)
+- [x] T5.3 `ListCredentialsUseCase` (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/usecase/ListCredentialsUseCase.kt`
   - `Flow<List<Credential>>` を返す
   - _Requirements: 1.5_
   - _Boundary: ListCredentialsUseCase, CredentialRepository_
   - _Depends: T4.3_
-- [ ] T5.4 `ResolveAutofillCandidatesUseCase` (P)
+- [x] T5.4 `ResolveAutofillCandidatesUseCase` (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/usecase/ResolveAutofillCandidatesUseCase.kt`
   - packageName で取得 → 呼び出し元現行 SHA-256 取得 → 署名一致のみ filter（NULL／不一致を除外）
   - **復号は行わない**（NFR 2.2）。返却型は `AutofillCandidate`（id/label/username/packageName のみ）
@@ -176,7 +176,7 @@
   - _Requirements: 3.1, 3.5, 4.1, 4.2, 4.3, 4.4, NFR 2.2, NFR 3.2_
   - _Boundary: ResolveAutofillCandidatesUseCase, CredentialRepository, PackageSignatureResolver_
   - _Depends: T4.3, T2.5_
-- [ ] T5.5 `UnlockVaultUseCase` (P)
+- [x] T5.5 `UnlockVaultUseCase` (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/domain/usecase/UnlockVaultUseCase.kt`
   - id → 暗号文取得 → `AesGcmCipher.decrypt` → `PlaintextCredential` を返す
   - 完了条件: round-trip で password が復号できる instrumented test
