@@ -18,6 +18,7 @@ import com.example.keynest.autofill.builder.DatasetPresentationFactory
 import com.example.keynest.autofill.builder.FillResponseBuilder
 import com.example.keynest.di.ServiceLocator
 import com.example.keynest.domain.model.CredentialId
+import com.example.keynest.util.SafeLogger
 import kotlinx.coroutines.launch
 
 /**
@@ -49,7 +50,14 @@ class AutofillUnlockActivity : AppCompatActivity() {
         val usernameAutofillId: AutofillId? = intent?.getAutofillIdExtra(EXTRA_USERNAME_AUTOFILL_ID)
         val passwordAutofillId: AutofillId? = intent?.getAutofillIdExtra(EXTRA_PASSWORD_AUTOFILL_ID)
 
+        SafeLogger.info(
+            tag = TAG,
+            message = "unlock launched id=$credentialId userIdPresent=${usernameAutofillId != null} " +
+                "passIdPresent=${passwordAutofillId != null}",
+        )
+
         if (credentialId == INVALID_ID) {
+            SafeLogger.warn(tag = TAG, message = "unlock aborted: missing credentialId")
             finishWithCancel(); return
         }
 
@@ -69,9 +77,15 @@ class AutofillUnlockActivity : AppCompatActivity() {
             )
             when (authResult) {
                 AuthResult.Succeeded -> {
+                    SafeLogger.info(tag = TAG, message = "auth succeeded; decrypting credentialId=$credentialId")
                     val decryptResult = ServiceLocator.unlockVaultUseCase(CredentialId(credentialId))
                     val plain = decryptResult.getOrNull()
                     if (plain == null) {
+                        SafeLogger.warn(
+                            tag = TAG,
+                            message = "decrypt failed",
+                            throwable = decryptResult.exceptionOrNull(),
+                        )
                         finishWithCancel(); return@launch
                     }
                     try {
@@ -90,6 +104,11 @@ class AutofillUnlockActivity : AppCompatActivity() {
                             putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset as android.os.Parcelable)
                         }
                         setResult(RESULT_OK, replyIntent)
+                        SafeLogger.info(
+                            tag = TAG,
+                            message = "unlock returning dataset (userLen=${plain.username.length} " +
+                                "passLen=${plain.password.size})",
+                        )
                     } finally {
                         // Req 5.5: zero-fill the CharArray before finishing.
                         plain.close()
@@ -97,6 +116,7 @@ class AutofillUnlockActivity : AppCompatActivity() {
                     finish()
                 }
                 AuthResult.Cancelled, is AuthResult.Failed, is AuthResult.Unavailable -> {
+                    SafeLogger.info(tag = TAG, message = "auth not succeeded: $authResult")
                     finishWithCancel()
                 }
             }
@@ -122,6 +142,7 @@ class AutofillUnlockActivity : AppCompatActivity() {
         private const val EXTRA_USERNAME_AUTOFILL_ID = "com.example.keynest.extra.USERNAME_AUTOFILL_ID"
         private const val EXTRA_PASSWORD_AUTOFILL_ID = "com.example.keynest.extra.PASSWORD_AUTOFILL_ID"
         private const val INVALID_ID = -1L
+        private const val TAG = "KeyNest.Unlock"
 
         fun newIntent(
             context: Context,

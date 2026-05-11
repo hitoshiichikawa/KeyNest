@@ -56,6 +56,17 @@ class KeyNestAutofillService : AutofillService() {
             context = this,
             presentationFactory = DatasetPresentationFactory(this),
         )
+        // Pre-warm Room so the first onFillRequest does not bear the
+        // database-open latency. The query intentionally hits a key that
+        // never matches, returning quickly while still forcing Room to
+        // open the file.
+        scope.launch {
+            try {
+                ServiceLocator.credentialRepository.findByPackage("__prewarm__")
+            } catch (t: Throwable) {
+                SafeLogger.warn(message = "DB prewarm failed", throwable = t)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -75,6 +86,7 @@ class KeyNestAutofillService : AutofillService() {
         }
 
         scope.launch(handlerJob) {
+            val t0 = System.currentTimeMillis()
             try {
                 // The last context is the latest snapshot for the current
                 // focused window; older contexts are ignored to keep the
@@ -91,12 +103,14 @@ class KeyNestAutofillService : AutofillService() {
                     // (We are conservative here; a fill response with only
                     // username would still trigger the framework UI but the
                     // user experience is poor.)
+                    SafeLogger.info(message = "onFillRequest: no username+password fields detected")
                     if (handlerJob.isActive) callback.onSuccess(null)
                     return@launch
                 }
 
                 val callerPackage = extractCallerPackage(structure)
                 if (callerPackage == null) {
+                    SafeLogger.info(message = "onFillRequest: caller package unknown")
                     if (handlerJob.isActive) callback.onSuccess(null)
                     return@launch
                 }
@@ -106,6 +120,12 @@ class KeyNestAutofillService : AutofillService() {
                     candidates = candidates,
                     usernameAutofillId = parsed.usernameId,
                     passwordAutofillId = parsed.passwordId,
+                )
+                val elapsed = System.currentTimeMillis() - t0
+                SafeLogger.info(
+                    message = "onFillRequest pkg=$callerPackage candidates=${candidates.size} " +
+                        "userId=${parsed.usernameId != null} passId=${parsed.passwordId != null} " +
+                        "elapsedMs=$elapsed",
                 )
 
                 if (handlerJob.isActive) callback.onSuccess(response)
