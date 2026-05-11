@@ -214,8 +214,8 @@
 
 ## Phase 4: AutofillService 実装
 
-- [ ] **T8. Autofill 層**
-- [ ] T8.1 `AutofillFieldHeuristics` 実装 (P)
+- [x] **T8. Autofill 層**
+- [x] T8.1 `AutofillFieldHeuristics` 実装 (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/autofill/parser/AutofillFieldHeuristics.kt`
   - 4 段優先順位（autofillHints → inputType password → inputType email → idEntry/hint テキスト一致）
   - 完了条件: 各経路のフィクスチャで username/password ノードが特定／不能を返す
@@ -223,7 +223,7 @@
   - _Requirements: 3.1, 3.2, NFR 3.1_
   - _Boundary: AutofillFieldHeuristics_
   - _Depends: T1.4_
-- [ ] T8.2 `AssistStructureParser` 実装
+- [x] T8.2 `AssistStructureParser` 実装
   - 触るファイル: `app/src/main/java/com/example/keynest/autofill/parser/AssistStructureParser.kt`
   - AssistStructure を最大 500 ノード／深さ 50 で走査
   - 例外を内部で捕捉して空結果を返す
@@ -232,7 +232,7 @@
   - _Requirements: 3.1, 3.2, NFR 3.1_
   - _Boundary: AssistStructureParser, AutofillFieldHeuristics_
   - _Depends: T8.1_
-- [ ] T8.3 `DatasetPresentationFactory` 実装 (P)
+- [x] T8.3 `DatasetPresentationFactory` 実装 (P)
   - 触るファイル: `app/src/main/java/com/example/keynest/autofill/builder/DatasetPresentationFactory.kt`, `app/src/main/res/layout/dataset_presentation.xml`
   - RemoteViews ベースの presentation（API 30+ では `Presentations` を併用）
   - 完了条件: label 文字列が表示される presentation を生成できる
@@ -240,7 +240,7 @@
   - _Requirements: 3.3_
   - _Boundary: DatasetPresentationFactory_
   - _Depends: T1.4_
-- [ ] T8.4 `FillResponseBuilder` 実装
+- [x] T8.4 `FillResponseBuilder` 実装
   - 触るファイル: `app/src/main/java/com/example/keynest/autofill/builder/FillResponseBuilder.kt`
   - ロック中：各候補に `setAuthentication(IntentSender, presentation)` 付き Dataset を生成
   - 認証後：username/password の `AutofillValue` をセットした Dataset を生成
@@ -249,7 +249,7 @@
   - _Requirements: 3.3, 3.4, 5.1, NFR 1.4_
   - _Boundary: FillResponseBuilder, DatasetPresentationFactory_
   - _Depends: T8.3, T5.4_
-- [ ] T8.5 `KeyNestAutofillService` 実装と Manifest 宣言
+- [x] T8.5 `KeyNestAutofillService` 実装と Manifest 宣言
   - 触るファイル: `app/src/main/java/com/example/keynest/autofill/KeyNestAutofillService.kt`, `app/src/main/AndroidManifest.xml`, `app/src/main/res/xml/autofill_service_config.xml`
   - Manifest に `<service ... permission="BIND_AUTOFILL_SERVICE">` と `<intent-filter>`、`meta-data` を追加
   - `onFillRequest`: AssistStructureParser → ResolveAutofillCandidatesUseCase → FillResponseBuilder
@@ -260,7 +260,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.5, 4.1, 4.2, 4.3, 4.4, 5.1, 7.2, NFR 1.4, NFR 2.1, NFR 2.2, NFR 3.1, NFR 3.2_
   - _Boundary: KeyNestAutofillService, AssistStructureParser, FillResponseBuilder, ResolveAutofillCandidatesUseCase_
   - _Depends: T8.2, T8.4, T7.1_
-- [ ] T8.6 `AutofillUnlockActivity` 実装と Manifest 宣言
+- [x] T8.6 `AutofillUnlockActivity` 実装と Manifest 宣言
   - 触るファイル: `app/src/main/java/com/example/keynest/autofill/unlock/AutofillUnlockActivity.kt`, `app/src/main/AndroidManifest.xml`, `app/src/main/res/values/themes.xml`
   - extra から credentialId と AutofillId ペアを受け取り、BiometricPrompt を起動
   - 成功時：UnlockVaultUseCase で復号 → Dataset を組み立てて `EXTRA_AUTHENTICATION_RESULT` に set → `setResult(RESULT_OK)`
