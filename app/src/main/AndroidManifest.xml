@@ -66,6 +66,17 @@
             android:excludeFromRecents="true"
             android:taskAffinity="" />
 
+        <!-- T9.2 / T9.4 -->
+        <activity
+            android:name=".ui.edit.CredentialEditActivity"
+            android:exported="false"
+            android:label="@string/credential_edit_title_new" />
+
+        <activity
+            android:name=".ui.enable.AutofillEnableActivity"
+            android:exported="false"
+            android:label="@string/autofill_enable_title" />
+
     </application>
 
 </manifest>
