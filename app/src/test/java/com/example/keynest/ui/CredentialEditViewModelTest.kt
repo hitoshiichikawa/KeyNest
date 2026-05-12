@@ -1,0 +1,177 @@
+package com.example.keynest.ui
+
+import com.example.keynest.domain.model.CredentialId
+import com.example.keynest.domain.usecase.DeleteCredentialUseCase
+import com.example.keynest.domain.usecase.FakeCredentialRepository
+import com.example.keynest.domain.usecase.SaveCredentialUseCase
+import com.example.keynest.domain.usecase.StubAesGcmCipher
+import com.example.keynest.domain.usecase.UpdateCredentialUseCase
+import com.example.keynest.ui.edit.CredentialEditViewModel
+import com.example.keynest.util.PackageSignatureResolver
+import com.google.common.truth.Truth.assertThat
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Behaviour of [CredentialEditViewModel] error / success mapping.
+ *
+ * Backs Req 1.3 (validation error surface) and Req 1.5 (edit path
+ * dispatches to UpdateCredentialUseCase). Runs as pure JUnit - the
+ * ViewModel only touches use cases and StateFlow.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class CredentialEditViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun save_mapsPackageNameBlank_toFieldError() = runTest(testDispatcher) {
+        val vm = newViewModel()
+
+        vm.save(existingId = null, packageName = "  ", username = "alice", password = "pw".toCharArray(), label = "L")
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertThat(state).isInstanceOf(CredentialEditViewModel.State.FieldError::class.java)
+        val err = state as CredentialEditViewModel.State.FieldError
+        assertThat(err.field).isEqualTo(CredentialEditViewModel.Field.PackageName)
+        assertThat(err.kind).isEqualTo(CredentialEditViewModel.ErrorKind.Blank)
+    }
+
+    @Test
+    fun save_mapsPackageNameInvalid_toFieldError() = runTest(testDispatcher) {
+        val vm = newViewModel()
+
+        vm.save(null, "noDots", "alice", "pw".toCharArray(), "L")
+        advanceUntilIdle()
+
+        val err = vm.state.value as CredentialEditViewModel.State.FieldError
+        assertThat(err.field).isEqualTo(CredentialEditViewModel.Field.PackageName)
+        assertThat(err.kind).isEqualTo(CredentialEditViewModel.ErrorKind.Invalid)
+    }
+
+    @Test
+    fun save_emitsSavedNavigation_onSuccess() = runTest(testDispatcher) {
+        val vm = newViewModel()
+        val capturedNav = mutableListOf<Unit>()
+        // Collect in a child coroutine inside the same TestScope so the
+        // StandardTestDispatcher controls progression.
+        val collectorJob = launch { vm.navigation.collect { capturedNav.add(it) } }
+
+        vm.save(null, "com.example.target", "alice", "pw".toCharArray(), "L")
+        advanceUntilIdle()
+
+        assertThat(vm.state.value).isEqualTo(CredentialEditViewModel.State.Saved)
+        assertThat(capturedNav).hasSize(1)
+        collectorJob.cancel()
+    }
+
+    @Test
+    fun save_inEditMode_dispatchesToUpdateUseCase_andUpdatesSignature() = runTest(testDispatcher) {
+        val repo = FakeCredentialRepository()
+        repo.put(
+            com.example.keynest.domain.model.EncryptedCredentialRecord(
+                id = CredentialId(0L),
+                packageName = "com.example.target",
+                username = "alice",
+                label = "L",
+                passwordCiphertext = byteArrayOf(1),
+                passwordIv = ByteArray(12),
+                signatureSha256 = null,
+                signatureCapturedAt = null,
+                createdAt = 0L,
+                updatedAt = 0L,
+            ),
+        )
+        val id = repo.snapshot().single().id.value
+        val sigResolver = mockk<PackageSignatureResolver>()
+        val newHash = com.example.keynest.domain.model.SigningHash.ofSha256("NEW".toByteArray())
+        every { sigResolver.resolveSha256(any()) } returns newHash
+        val cipher = StubAesGcmCipher()
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val delete = DeleteCredentialUseCase(repo)
+        val vm = CredentialEditViewModel(repo, save, update, delete)
+
+        vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = charArrayOf(), label = "L2")
+        advanceUntilIdle()
+
+        assertThat(vm.state.value).isEqualTo(CredentialEditViewModel.State.Saved)
+        val updated = repo.snapshot().single()
+        assertThat(updated.username).isEqualTo("alice2")
+        assertThat(updated.label).isEqualTo("L2")
+        assertThat(updated.signatureSha256).isEqualTo(newHash)
+    }
+
+    private fun newViewModel(): CredentialEditViewModel {
+        val repo = FakeCredentialRepository()
+        val sigResolver = mockk<PackageSignatureResolver>().also { every { it.resolveSha256(any()) } returns null }
+        val cipher = StubAesGcmCipher()
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val delete = DeleteCredentialUseCase(repo)
+        return CredentialEditViewModel(repo, save, update, delete)
+    }
+
+    /**
+     * Issue #5 / AC 4.4.6 — `delete()` routes through the existing
+     * DeleteCredentialUseCase and emits the navigation signal so the
+     * activity can `finish()`. Verifies the wiring without crossing
+     * into the data layer (FakeCredentialRepository stands in).
+     */
+    @Test
+    fun delete_removesRecord_andEmitsNavigation() = runTest(testDispatcher) {
+        val repo = FakeCredentialRepository()
+        repo.put(
+            com.example.keynest.domain.model.EncryptedCredentialRecord(
+                id = CredentialId(0L),
+                packageName = "com.example.target",
+                username = "alice",
+                label = "L",
+                passwordCiphertext = byteArrayOf(1),
+                passwordIv = ByteArray(12),
+                signatureSha256 = null,
+                signatureCapturedAt = null,
+                createdAt = 0L,
+                updatedAt = 0L,
+            ),
+        )
+        val id = repo.snapshot().single().id.value
+        val sigResolver = mockk<PackageSignatureResolver>().also { every { it.resolveSha256(any()) } returns null }
+        val cipher = StubAesGcmCipher()
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val delete = DeleteCredentialUseCase(repo)
+        val vm = CredentialEditViewModel(repo, save, update, delete)
+        val capturedNav = mutableListOf<Unit>()
+        val collectorJob = launch { vm.navigation.collect { capturedNav.add(it) } }
+
+        vm.delete(id)
+        advanceUntilIdle()
+
+        assertThat(repo.snapshot()).isEmpty()
+        assertThat(capturedNav).hasSize(1)
+        collectorJob.cancel()
+    }
+}

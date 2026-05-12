@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Default (JP) strings. EN translations live in values-en/strings.xml.
+
+    Wording reflects `design/spec.md` §9 「i18n キー命名」. Existing
+    string resource KEYS are preserved (AC 4.9.5 / NFR 3.2) — only the
+    user-facing values change. A small number of new keys (eyebrow
+    labels, hero copy, badge text…) were added to back AC 4.x.x; none
+    of the existing keys are removed.
+-->
+<resources>
+    <string name="app_name">KeyNest</string>
+
+    <!-- ============ Credential list ============ -->
+    <string name="credential_list_title">Vault</string>
+    <string name="credential_list_eyebrow">KeyNest</string>
+    <string name="credential_list_empty_title">最初の鍵を巣に入れよう</string>
+    <string name="credential_list_empty">最初の鍵を巣に入れよう</string>
+    <string name="credential_list_empty_description">業務アプリのID/パスワードを登録すると、ログイン画面で候補として表示されます。すべてこの端末の中だけに保存。</string>
+    <string name="credential_list_empty_footer">AES-GCM · 端末ローカルのみ</string>
+    <string name="action_add_credential">クレデンシャルを登録</string>
+    <string name="action_edit_credential">編集</string>
+    <string name="action_delete_credential">削除</string>
+    <string name="menu_open_autofill_settings">Autofill 設定</string>
+
+    <!-- ============ Credential edit ============ -->
+    <string name="credential_edit_title_new">新しいクレデンシャル</string>
+    <string name="credential_edit_title_edit">クレデンシャル編集</string>
+    <string name="label_package_name">パッケージ名</string>
+    <string name="label_username">ユーザー名 / メール</string>
+    <string name="label_password">パスワード</string>
+    <string name="label_display_name">表示名</string>
+    <string name="label_display_name_help">Autofill 候補のラベル</string>
+    <string name="label_target_app">対象アプリ</string>
+    <string name="action_pick_installed_app">変更</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete_credential_destructive">このクレデンシャルを削除</string>
+    <string name="error_package_name_blank">パッケージ名は必須です。</string>
+    <string name="error_package_name_invalid">パッケージ名の形式が正しくありません。</string>
+    <string name="error_username_blank">ユーザー名は必須です。</string>
+    <string name="error_password_blank">パスワードは必須です。</string>
+    <string name="error_label_blank">表示名は必須です。</string>
+    <string name="error_save_failed">クレデンシャルを保存できませんでした。</string>
+    <string name="message_credential_saved">保存しました。</string>
+    <string name="error_save_failed_with_reason">クレデンシャルを保存できませんでした: %1$s</string>
+    <string name="message_signature_not_captured">署名なし（アプリが未インストールのため）。再インストール後に再保存するまで Autofill 候補には現れません。</string>
+
+    <!-- Status chips on the target app card -->
+    <string name="signature_match">署名一致</string>
+    <string name="signature_missing">署名なし</string>
+    <string name="signature_captured_chip">署名取得済み · SHA-256</string>
+
+    <!-- ============ Autofill enable ============ -->
+    <string name="autofill_enable_title">Android の Autofill を KeyNest に切り替える</string>
+    <string name="autofill_enable_description">ログイン画面で保存済みのID/パスワードを候補表示するために、Autofill サービスを KeyNest に設定します。</string>
+    <string name="autofill_enable_action">設定を開く</string>
+    <string name="autofill_enable_dismiss">あとで</string>
+    <string name="autofill_enable_already_enabled">KeyNest はすでに Autofill サービスに設定されています。</string>
+    <string name="autofill_enable_settings_unavailable">この端末では Autofill 設定画面を開けません。</string>
+    <string name="autofill_enable_step1_title">「設定を開く」をタップ</string>
+    <string name="autofill_enable_step1_description">Android の設定画面に移動します</string>
+    <string name="autofill_enable_step2_title">「KeyNest」を選択</string>
+    <string name="autofill_enable_step2_description">パスワードとアカウントの項目で</string>
+    <string name="autofill_enable_step3_title">戻ってきたら準備完了</string>
+    <string name="autofill_enable_step3_description">クレデンシャルを登録できます</string>
+
+    <!-- ============ Autofill unlock ============ -->
+    <string name="biometric_prompt_title">クレデンシャルをアンロック</string>
+    <string name="biometric_prompt_subtitle">保存済みのクレデンシャルを入力するために認証してください。</string>
+
+    <!-- ============ Package picker ============ -->
+    <string name="package_picker_title">アプリを選択</string>
+    <string name="package_picker_subtitle">署名情報も同時に取得します</string>
+</resources>

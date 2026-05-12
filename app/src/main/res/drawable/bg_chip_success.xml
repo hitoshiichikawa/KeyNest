@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pill-shaped chip with the soft success colour, used for the
+    "署名取得済み" badge on the target app card (AC 4.4.2).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/kn_radius_pill" />
+    <solid android:color="@color/kn_success_soft" />
+</shape>

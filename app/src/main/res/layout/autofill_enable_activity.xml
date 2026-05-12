@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Autofill enable / onboarding screen.
+
+    Maps `design/screens/screens-1.jsx` <ScreenOnboarding/>:
+      - brand mark hero
+      - bold title (28sp/800) + body
+      - 3-step instruction card (number pill + title + description)
+      - primary CTA anchored near the bottom ("設定を開く")
+      - "already enabled" badge replaces the CTA when KeyNest is the
+        current autofill service
+
+    IDs kept: btn_enable, text_already_enabled, text_title,
+    text_description (NFR 3.2).
+
+    Requirements: 4.6.1-4.6.3, 4.9.1, NFR 3.2
+
+    Open Question OQ-1 (progress dots): omitted — the existing flow is a
+    single screen so a "step 2 of 3" indicator would be misleading.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/kn_pad_screen_horizontal"
+        android:paddingTop="@dimen/kn_space_5"
+        android:paddingBottom="@dimen/kn_space_6">
+
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/kn_space_3"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/ic_kn_mark" />
+
+        <TextView
+            android:id="@+id/text_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/kn_space_6"
+            android:letterSpacing="-0.02"
+            android:lineSpacingMultiplier="1.15"
+            android:text="@string/autofill_enable_title"
+            android:textAppearance="@style/TextAppearance.KeyNest.SectionTitle"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/text_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/kn_space_3"
+            android:lineSpacingExtra="4dp"
+            android:text="@string/autofill_enable_description"
+            android:textAppearance="@style/TextAppearance.KeyNest.Body"
+            android:textSize="15sp" />
+
+        <!-- Step instruction card (3 rows). -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/kn_space_6"
+            android:background="@drawable/bg_card_surface"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/kn_space_4"
+            android:paddingVertical="@dimen/kn_space_2">
+
+            <!-- Step 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="@dimen/kn_space_3">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_step_number"
+                    android:gravity="center"
+                    android:text="1"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/kn_space_3"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/autofill_enable_step1_title"
+                        android:textAppearance="@style/TextAppearance.KeyNest.CardTitle"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/autofill_enable_step1_description"
+                        android:textAppearance="@style/TextAppearance.KeyNest.Meta"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/kn_border" />
+
+            <!-- Step 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="@dimen/kn_space_3">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_step_number"
+                    android:gravity="center"
+                    android:text="2"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/kn_space_3"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/autofill_enable_step2_title"
+                        android:textAppearance="@style/TextAppearance.KeyNest.CardTitle"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/autofill_enable_step2_description"
+                        android:textAppearance="@style/TextAppearance.KeyNest.Meta"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/kn_border" />
+
+            <!-- Step 3 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingVertical="@dimen/kn_space_3">
+
+                <TextView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:background="@drawable/bg_step_number"
+                    android:gravity="center"
+                    android:text="3"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/kn_space_3"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/autofill_enable_step3_title"
+                        android:textAppearance="@style/TextAppearance.KeyNest.CardTitle"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/autofill_enable_step3_description"
+                        android:textAppearance="@style/TextAppearance.KeyNest.Meta"
+                        android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!--
+            "Already enabled" badge: replaces the primary CTA when
+            AutofillServiceStatus.isCurrentService returns true. id
+            preserved (NFR 3.2 — Kotlin sets visibility on
+            `binding.textAlreadyEnabled`).
+        -->
+        <LinearLayout
+            android:id="@+id/text_already_enabled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/kn_space_6"
+            android:background="@drawable/bg_chip_success"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/kn_space_3"
+            android:paddingVertical="@dimen/kn_space_1"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_kn_shield"
+                app:tint="@color/kn_success" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/kn_space_1"
+                android:text="@string/autofill_enable_already_enabled"
+                android:textColor="@color/kn_success"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_enable"
+            style="@style/Widget.KeyNest.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/kn_space_8"
+            android:text="@string/autofill_enable_action" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    KeyNest design tokens (Light).
+
+    Mapped 1:1 from `design/tokens.css` (.kn-light section) and
+    `design/spec.md` §1–§3. Dark counterparts live in
+    `values-night/colors.xml`. Material theme attributes (colorPrimary etc.)
+    are bound to these tokens in `values/themes.xml`.
+
+    Color resource naming convention: `kn_<category>_<role>` for raw brand
+    palette entries; semantic role aliases (kn_bg, kn_surface, kn_text…)
+    point at the active palette so layouts only need to reference roles.
+
+    Requirements: 4.1.1, 4.1.4, 4.1.5
+-->
+<resources>
+
+    <!-- ── Brand palette (raw) ── -->
+    <color name="kn_blue_50">#EAF2FE</color>
+    <color name="kn_blue_100">#D0E0FC</color>
+    <color name="kn_blue_200">#A6C4F8</color>
+    <color name="kn_blue_300">#6FA1F2</color>
+    <color name="kn_blue_500">#1F6FEB</color> <!-- primary -->
+    <color name="kn_blue_600">#1457C9</color> <!-- pressed / variant -->
+    <color name="kn_blue_700">#0F4AA8</color> <!-- hero gradient end -->
+    <color name="kn_blue_900">#0A2E66</color>
+    <color name="kn_accent_500">#6366F1</color>
+
+    <!-- ── Neutrals (Light) ── -->
+    <color name="kn_paper">#F6F8FC</color>
+    <color name="kn_white">#FFFFFF</color>
+    <color name="kn_ink_50">#F1F4FA</color>
+    <color name="kn_ink_100">#E3E8F1</color>
+    <color name="kn_ink_200">#C6CFE0</color>
+    <color name="kn_ink_300">#9CA9C7</color>
+    <color name="kn_ink_400">#7A89AD</color>
+    <color name="kn_ink_500">#5C6B8E</color>
+    <color name="kn_ink_700">#2E3B62</color>
+    <color name="kn_ink_750">#243054</color>
+    <color name="kn_ink_800">#1A2540</color>
+    <color name="kn_ink_850">#131C33</color>
+    <color name="kn_ink_900">#0F1729</color>
+    <color name="kn_ink_950">#0A1020</color>
+    <color name="kn_text">#0B1220</color>
+
+    <!-- ── Status ── -->
+    <color name="kn_success">#10B981</color>
+    <color name="kn_success_soft">#D1FAE5</color>
+    <color name="kn_warning">#F59E0B</color>
+    <color name="kn_warning_soft">#FEF3C7</color>
+    <color name="kn_danger">#EF4444</color>
+    <color name="kn_danger_soft">#FEE2E2</color>
+    <color name="kn_info">#38BDF8</color>
+
+    <!-- ── Semantic roles (Light) ──
+         These match the `.kn-light` aliases in tokens.css. Layouts and
+         drawables should prefer these over raw brand palette entries.
+    -->
+    <color name="kn_bg">@color/kn_paper</color>
+    <color name="kn_bg_elev">@color/kn_white</color>
+    <color name="kn_surface">@color/kn_white</color>
+    <color name="kn_surface_2">@color/kn_ink_50</color>
+    <color name="kn_surface_tint">@color/kn_blue_50</color>
+    <!-- 0x14 / 0x24 = 8% / 14% black -->
+    <color name="kn_border">#140F1729</color>
+    <color name="kn_border_strong">#240F1729</color>
+    <color name="kn_text_primary">@color/kn_text</color>
+    <color name="kn_text_2">@color/kn_ink_500</color>
+    <color name="kn_text_3">@color/kn_ink_400</color>
+    <color name="kn_on_primary">#FFFFFF</color>
+    <color name="kn_primary">@color/kn_blue_500</color>
+    <color name="kn_primary_hover">@color/kn_blue_600</color>
+
+    <!-- ── Legacy aliases ──
+         Kept so any reference from earlier resources continues to compile.
+         Issue #5 AC 4.9.5 / NFR 3.2: don't rename ids/keys consumed by
+         existing code paths.
+    -->
+    <color name="keynest_primary">@color/kn_primary</color>
+    <color name="keynest_primary_variant">@color/kn_primary_hover</color>
+    <color name="keynest_secondary">@color/kn_accent_500</color>
+</resources>
