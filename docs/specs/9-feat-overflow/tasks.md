@@ -109,8 +109,8 @@
   - _Boundary: CredentialListActivity, CredentialListAdapter_
   - _Depends: 5.2, 6.1, 6.2_
 
-- [ ] 7. UI 結合テストを追加
-- [ ] 7.1 Espresso UI テストを `app/src/androidTest/` に追加
+- [x] 7. UI 結合テストを追加
+- [x] 7.1 Espresso UI テストを `app/src/androidTest/` に追加
   - `ui/list/CredentialListActivityTest.kt` を新規作成。design.md「Testing Strategy / E2E」5 ケースを実装
     - 検索 incremental（1 文字入力 → 部分一致絞り込み、クリアで全件復帰）
     - ChipGroup 排他選択（片方→他方で前者解除）
