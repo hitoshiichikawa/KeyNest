@@ -129,7 +129,7 @@ class KeyNestAutofillService : AutofillService() {
                 SafeLogger.info(
                     message = "onFillRequest pkg=$callerPackage candidates=${candidates.size} " +
                         "userId=${parsed.usernameId != null} passId=${parsed.passwordId != null} " +
-                        "elapsedMs=$elapsed",
+                        "inlineSpecs=${inlineSpecs.size} elapsedMs=$elapsed",
                 )
 
                 if (handlerJob.isActive) callback.onSuccess(response)
