@@ -51,8 +51,8 @@
   - _Boundary: ObserveRecentlyUsedUseCase, MarkCredentialUsedUseCase, DuplicateCredentialUseCase, ListCredentialsUseCase, ServiceLocator_
   - _Depends: 2.2_
 
-- [ ] 4. `AutofillUnlockActivity` で auth 成功直後に `markUsed` を fire-and-forget
-- [ ] 4.1 auth success → unlock success → `markUsed(id, now)` を `launch(Dispatchers.IO)` で実行
+- [x] 4. `AutofillUnlockActivity` で auth 成功直後に `markUsed` を fire-and-forget
+- [x] 4.1 auth success → unlock success → `markUsed(id, now)` を `launch(Dispatchers.IO)` で実行
   - 呼び出し位置は `plain.close()` の直前（design.md「Autofill Layer」参照）
   - 失敗時は `SafeLogger.warn` で残し、unlock 結果には影響させない（NFR 1.2: 失敗 log に平文を含めない → reason は class name のみ）
   - `MarkCredentialUsedUseCase` 単独で失敗しても `setResult(RESULT_OK, ...)` の挙動は変えない（既存 `onFillRequest` 経路の挙動を保つ Req 6.3）
