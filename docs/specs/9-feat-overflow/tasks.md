@@ -41,8 +41,8 @@
   - _Boundary: CredentialRepository, CredentialRepositoryImpl_
   - _Depends: 2.1_
 
-- [ ] 3. Domain use-case 3 種を追加
-- [ ] 3.1 `ObserveRecentlyUsedUseCase` / `MarkCredentialUsedUseCase` / `DuplicateCredentialUseCase` (P)
+- [x] 3. Domain use-case 3 種を追加
+- [x] 3.1 `ObserveRecentlyUsedUseCase` / `MarkCredentialUsedUseCase` / `DuplicateCredentialUseCase` (P)
   - 3 ファイルを `domain/usecase/` に新規作成（design.md「Components and Interfaces」記載の signature）
   - 各 use-case の単体テスト（`FakeCredentialRepository` で fixture）を `domain/usecase/` 配下に追加
   - `ListCredentialsUseCase` の `invoke()` に `order: CredentialSortOrder = UpdatedAtDesc` を default 引数で追加し、`repo.observeBySort(order)` を呼ぶ
