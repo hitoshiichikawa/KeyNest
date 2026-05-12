@@ -87,7 +87,7 @@
   - chip は Material `Chip`（`android:checkable="true"`）+ ChipGroup `singleSelection` を使用し、selected/not selected 状態が a11y に公開されることを確認（NFR 3.3）
   - _Requirements: 2.1, 3.1, 4.1, 5.1, 5.2, 5.5, NFR 1.3, NFR 3.1, NFR 3.2, NFR 3.3, NFR 4.1_
 
-- [ ] 6.2 `RecentlyUsedCarouselAdapter` を新規作成
+- [x] 6.2 `RecentlyUsedCarouselAdapter` を新規作成
   - `ui/list/RecentlyUsedCarouselAdapter.kt`: `ListAdapter<Credential, ...>` + `DiffUtil`（`id` + `lastUsedAt` で content 比較）、card の `contentDescription` に label / 相対時刻 を埋め込み
   - password / ciphertext を bind しない（NFR 1.3）
   - _Requirements: 3.1, 3.5, NFR 1.3, NFR 3.1_
