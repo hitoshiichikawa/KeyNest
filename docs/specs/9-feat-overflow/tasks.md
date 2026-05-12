@@ -1,7 +1,7 @@
 # Implementation Plan
 
 - [ ] 1. Room schema v2 拡張（`last_used_at` カラム + Migration）
-- [ ] 1.1 `CredentialEntity` / `Credential` / `EncryptedCredentialRecord` に `lastUsedAt: Long?` を追加
+- [x] 1.1 `CredentialEntity` / `Credential` / `EncryptedCredentialRecord` に `lastUsedAt: Long?` を追加
   - `data/entity/CredentialEntity.kt` に `@ColumnInfo(name = "last_used_at") val lastUsedAt: Long?` を追加（nullable, default なし）
   - `equals` / `hashCode` / `toString` に `lastUsedAt` を反映（既存 NFR 1.3 ポリシー継承 — `toString` で平文露出しないこと）
   - `domain/model/Credential.kt` の `Credential` および `EncryptedCredentialRecord` に同フィールドを追加
