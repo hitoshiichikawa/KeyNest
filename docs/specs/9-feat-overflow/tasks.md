@@ -21,7 +21,7 @@
   - `app/src/test/java/com/example/keynest/data/CredentialDaoTest.kt` の既存テスト群に対して `lastUsedAt` の追加が影響しないことを既存 assertion で担保（変更不要）
   - _Requirements: 3.1, 3.3, 3.4, 6.1_
 
-- [ ] 2. DAO / Repository に検索・並び替え・直近 5 件・last_used_at 更新を追加
+- [x] 2. DAO / Repository に検索・並び替え・直近 5 件・last_used_at 更新を追加
 - [x] 2.1 `CredentialDao` に新 query 5 本を追加
   - `observeByUpdatedAtDesc()` / `observeByLabelAsc()` / `observeByPackageAsc()` を `@Query` で実装（label / packageName は `COLLATE NOCASE`、tiebreaker は `updated_at DESC`）
   - `observeRecentlyUsed(limit: Int): Flow<List<CredentialEntity>>` を `WHERE last_used_at IS NOT NULL ORDER BY last_used_at DESC LIMIT :limit` で実装
@@ -31,7 +31,7 @@
   - _Requirements: 3.1, 3.7, 4.1, 4.2, 4.3, NFR 1.1_
   - _Boundary: CredentialDao_
 
-- [ ] 2.2 `CredentialRepository` / `CredentialRepositoryImpl` に新 IF を追加 (P)
+- [x] 2.2 `CredentialRepository` / `CredentialRepositoryImpl` に新 IF を追加 (P)
   - IF: `observeBySort(order: CredentialSortOrder)`, `observeRecentlyUsed(limit: Int)`, `markUsed(id, timestamp)`, `duplicate(sourceId, timestamp): Result<CredentialId>`
   - `CredentialSortOrder` / `DuplicateFailure` は `ui/list/` ではなく `domain/model/` 配下に置いて domain 層で定義（UI 依存させないため）→ `domain/model/CredentialSortOrder.kt` / `domain/model/DuplicateFailure.kt` を新規作成
   - 実装側: `observeBySort` は 3 DAO Flow を `when(order)` で振り分け、`duplicate` は `findById` + 新 `EncryptedCredentialRecord.copy(id = CredentialId(0L), createdAt = ts, updatedAt = ts, lastUsedAt = null)` を `save` する（plaintext 経路を踏まない）
