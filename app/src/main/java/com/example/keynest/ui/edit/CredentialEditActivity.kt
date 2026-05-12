@@ -1,6 +1,5 @@
 package com.example.keynest.ui.edit
 
-import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -181,8 +180,7 @@ class CredentialEditActivity : AppCompatActivity() {
      */
     private fun renderAdvancedDetails(details: CredentialEditViewModel.AdvancedDetails) {
         binding.advancedContent.visibility = if (details.expanded) View.VISIBLE else View.GONE
-        // Chevron: 0deg pointing down (collapsed), 180deg pointing up (expanded).
-        binding.advancedChevron.rotation = if (details.expanded) CHEVRON_EXPANDED_DEG else CHEVRON_COLLAPSED_DEG
+        binding.advancedChevron.rotation = chevronRotationFor(details.expanded)
 
         renderTimestampRow(binding.valueCreatedAt, details.createdAt)
         renderTimestampRow(binding.valueUpdatedAt, details.updatedAt)
@@ -247,7 +245,10 @@ class CredentialEditActivity : AppCompatActivity() {
         // payload is the full 64-char hex. We must NEVER pass the full hex
         // to SafeLogger -- only the 8-char preview.
         clipboard.setPrimaryClip(
-            ClipData.newPlainText(getString(R.string.clipboard_label_signature_hex), hex),
+            SignatureClipboardPayload.build(
+                label = getString(R.string.clipboard_label_signature_hex),
+                hex = hex,
+            ),
         )
         SafeLogger.info(
             tag = TAG,
@@ -262,6 +263,17 @@ class CredentialEditActivity : AppCompatActivity() {
         private const val TAG = "KeyNest.Edit"
         private const val CHEVRON_COLLAPSED_DEG = 0f
         private const val CHEVRON_EXPANDED_DEG = 180f
+
+        /**
+         * Pure helper: returns the chevron rotation (in degrees) for the
+         * given expanded state. Extracted so the rotation policy can be
+         * unit-tested without spinning up the whole Activity.
+         *
+         * Backs Req 1.4 (chevron flips to indicate expanded state).
+         */
+        @JvmStatic
+        internal fun chevronRotationFor(expanded: Boolean): Float =
+            if (expanded) CHEVRON_EXPANDED_DEG else CHEVRON_COLLAPSED_DEG
 
         fun newIntent(context: Context, credentialId: Long? = null): Intent {
             return Intent(context, CredentialEditActivity::class.java).apply {

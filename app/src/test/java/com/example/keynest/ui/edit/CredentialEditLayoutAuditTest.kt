@@ -65,6 +65,37 @@ class CredentialEditLayoutAuditTest {
     }
 
     @Test
+    fun signatureHexValue_usesMonospaceFont() {
+        // Req 3.5: SHA-256 hex must be displayed in monospace so the
+        // 64 characters line up readably.
+        val xml = layoutFile.readText()
+        val valueSection = xml.substringAfter("@+id/value_signature_hex").substringBefore("/>")
+        assertThat(valueSection).contains("android:fontFamily=\"monospace\"")
+    }
+
+    @Test
+    fun advancedRows_areReadOnly_notFocusableNorEditable() {
+        // Req 6.3: every value cell in the Advanced section must be
+        // non-editable. We approximate "read-only" by pinning
+        // focusable=false on the regular value rows so that the framework
+        // does not treat them as input. The signature-hex value is allowed
+        // to be selectable (to support copy via long-press) -- the copy
+        // action is read-only by definition.
+        val xml = layoutFile.readText()
+        val readOnlyTargets = listOf(
+            "@+id/value_created_at",
+            "@+id/value_updated_at",
+            "@+id/value_signature_captured_at",
+            "@+id/value_credential_id",
+        )
+        readOnlyTargets.forEach { id ->
+            val section = xml.substringAfter(id).substringBefore("/>")
+            assertThat(section).contains("android:focusable=\"false\"")
+            assertThat(section).contains("android:textIsSelectable=\"false\"")
+        }
+    }
+
+    @Test
     fun allAdvancedSectionStrings_areResources_notLiterals() {
         val xml = layoutFile.readText()
 

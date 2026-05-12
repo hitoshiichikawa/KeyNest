@@ -174,6 +174,24 @@ class CredentialEditAdvancedStateTest {
     }
 
     @Test
+    fun toggleAdvancedExpanded_doesNotResetTransientFormState_norTriggerSave() = runTest(testDispatcher) {
+        // Req 6.2: toggling the advanced section MUST NOT clear the user's
+        // in-progress form input. The Activity owns the form text via its
+        // TextInputEditText widgets, so the ViewModel-level guarantee we
+        // can pin here is "toggling doesn't transition to Saving / Saved /
+        // FieldError". An Activity rendering test would be required to
+        // verify EditText survival.
+        val repo = FakeCredentialRepository()
+        val vm = newViewModel(repo)
+        val before = vm.state.value
+
+        vm.toggleAdvancedExpanded()
+        vm.toggleCredentialIdVisible()
+
+        assertThat(vm.state.value).isSameInstanceAs(before)
+    }
+
+    @Test
     fun load_withNonexistentId_keepsNewModeAndNullFields() = runTest(testDispatcher) {
         // Arrange: empty repository, look up an id that doesn't exist
         val repo = FakeCredentialRepository()
