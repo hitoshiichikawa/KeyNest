@@ -60,7 +60,7 @@
   - _Requirements: 3.2, 6.1, 6.3, NFR 1.2, NFR 2.2_
 
 - [ ] 5. ViewModel state 拡張: query / filter / sort / recentList を combine
-- [ ] 5.1 `CredentialListUiState` / `CredentialFilter` / `EmptyKind` を新規作成
+- [x] 5.1 `CredentialListUiState` / `CredentialFilter` / `EmptyKind` を新規作成
   - `ui/list/CredentialListUiState.kt`, `ui/list/CredentialFilter.kt`, `ui/list/EmptyKind.kt` を作成（design.md 記載の data class / sealed / enum 定義）
   - `CredentialSortOrder` は task 2.2 で domain 層に置いたものを import
   - _Requirements: 1.3, 1.4, 2.1, 2.5, 4.1, 4.2_
