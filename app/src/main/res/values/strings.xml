@@ -42,4 +42,22 @@
 
     <!-- Package picker -->
     <string name="package_picker_title">Pick an installed app</string>
+
+    <!-- Advanced details section (Issue #14) -->
+    <string name="advanced_section_title">Advanced details</string>
+    <string name="advanced_section_header_a11y">Advanced details, double tap to expand or collapse</string>
+    <string name="advanced_label_created_at">Created at</string>
+    <string name="advanced_label_updated_at">Updated at</string>
+    <string name="advanced_label_signature_sha256">Signing certificate SHA-256</string>
+    <string name="advanced_label_signature_captured_at">Signature captured at</string>
+    <string name="advanced_label_credential_id">Credential ID</string>
+    <string name="advanced_value_unsaved">Not saved yet</string>
+    <string name="advanced_value_not_captured">Not captured</string>
+    <string name="advanced_value_id_hidden">••••</string>
+    <string name="advanced_toggle_show_id">Show ID</string>
+    <string name="advanced_toggle_show_id_a11y">Show credential ID. Disabled by default.</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copy_signature_a11y">Copy signing certificate SHA-256 to clipboard</string>
+    <string name="message_signature_hex_copied">Signature hash copied</string>
+    <string name="clipboard_label_signature_hex">KeyNest signature SHA-256</string>
 </resources>

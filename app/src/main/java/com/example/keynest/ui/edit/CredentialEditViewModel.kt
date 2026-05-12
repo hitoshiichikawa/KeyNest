@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.keynest.domain.model.CredentialId
+import com.example.keynest.domain.model.EncryptedCredentialRecord
 import com.example.keynest.domain.repository.CredentialRepository
 import com.example.keynest.domain.usecase.NewCredentialInput
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
@@ -11,6 +12,7 @@ import com.example.keynest.domain.usecase.SaveFailure
 import com.example.keynest.domain.usecase.UpdateCredentialInput
 import com.example.keynest.domain.usecase.UpdateCredentialUseCase
 import com.example.keynest.domain.usecase.UpdateFailure
+import com.example.keynest.util.AdvancedDetailsFormatter
 import com.example.keynest.util.SafeLogger
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,12 +20,18 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
  * Backs [CredentialEditActivity].
  *
- * Requirements: 1.1, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3
+ * Requirements: 1.1, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, plus Issue #14:
+ * 1.1, 1.2, 1.5 (advanced section collapse state lifetime),
+ * 2.1, 2.2, 2.3, 2.4 (createdAt / updatedAt exposure),
+ * 3.1, 3.4 (full 64-char SHA-256 hex exposure, or null placeholder),
+ * 4.1, 4.2 (signature captured timestamp / "not captured" branch),
+ * 5.1-5.5 (credential ID toggle), 6.x (don't disturb existing edit flow).
  *
  * Distinguishes "new" vs "edit" mode via the [credentialId]:
  * - null  -> new -> SaveCredentialUseCase
@@ -31,6 +39,13 @@ import kotlinx.coroutines.launch
  *   per Req 2.3)
  *
  * Surfaces field-level [FieldError]s for the UI to render inline.
+ *
+ * Advanced details (Issue #14): the [advancedDetails] StateFlow exposes
+ * read-only metadata of the currently loaded credential plus the two
+ * UI toggles (expanded, idVisible). The toggles live on the ViewModel
+ * (rather than savedInstanceState) so they survive configuration changes
+ * but are scoped to a single Edit Activity lifetime per Req 1.5 -- a
+ * fresh navigation to the Edit screen starts with collapsed + id hidden.
  */
 class CredentialEditViewModel(
     private val repository: CredentialRepository,
@@ -49,11 +64,58 @@ class CredentialEditViewModel(
     enum class Field { PackageName, Username, Password, Label }
     enum class ErrorKind { Blank, Invalid }
 
+    /** Whether the user is creating a new credential or editing an existing one. */
+    enum class Mode { New, Edit }
+
+    /**
+     * Read-only metadata + UI toggle state for the "Advanced details" section.
+     *
+     * - In [Mode.New], the timestamp / hex / ID fields are all null and the
+     *   UI renders "unsaved" placeholders (Req 2.3 / 5.5).
+     * - In [Mode.Edit], the fields are filled from the loaded
+     *   [EncryptedCredentialRecord]. A null [signatureSha256Hex] / null
+     *   [signatureCapturedAt] means the credential was saved while the
+     *   target app was not installed -- the UI must show "not captured"
+     *   and disable the copy affordance (Req 3.4 / 4.2).
+     * - [expanded] toggles via [toggleAdvancedExpanded]; starts collapsed
+     *   per Req 1.1.
+     * - [credentialIdVisible] toggles via [toggleCredentialIdVisible];
+     *   starts hidden per Req 5.2. The numeric ID is only ever materialised
+     *   into a String when this flag is true (NFR 1.3).
+     */
+    data class AdvancedDetails(
+        val mode: Mode,
+        val credentialId: Long?,
+        val createdAt: Long?,
+        val updatedAt: Long?,
+        val signatureSha256Hex: String?,
+        val signatureCapturedAt: Long?,
+        val expanded: Boolean,
+        val credentialIdVisible: Boolean,
+    ) {
+        companion object {
+            /** Empty / new-mode default. */
+            val NewMode: AdvancedDetails = AdvancedDetails(
+                mode = Mode.New,
+                credentialId = null,
+                createdAt = null,
+                updatedAt = null,
+                signatureSha256Hex = null,
+                signatureCapturedAt = null,
+                expanded = false,
+                credentialIdVisible = false,
+            )
+        }
+    }
+
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
     private val _navigation = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigation: SharedFlow<Unit> = _navigation.asSharedFlow()
+
+    private val _advancedDetails = MutableStateFlow(AdvancedDetails.NewMode)
+    val advancedDetails: StateFlow<AdvancedDetails> = _advancedDetails.asStateFlow()
 
     /**
      * Save (or update) the credential. Ownership of [password] transfers to
@@ -105,8 +167,45 @@ class CredentialEditViewModel(
         }
     }
 
-    suspend fun load(credentialId: Long): com.example.keynest.domain.model.EncryptedCredentialRecord? {
-        return repository.findById(CredentialId(credentialId))
+    suspend fun load(credentialId: Long): EncryptedCredentialRecord? {
+        val record = repository.findById(CredentialId(credentialId))
+        // Issue #14: refresh the advanced-details snapshot every time a
+        // credential is loaded so the UI can populate the read-only rows.
+        // Preserve existing toggle state (expanded / idVisible) so an
+        // accidental reload does not collapse a section the user already
+        // expanded (Req 1.5).
+        _advancedDetails.update { current ->
+            if (record == null) {
+                current.copy(mode = Mode.New, credentialId = null, createdAt = null, updatedAt = null,
+                    signatureSha256Hex = null, signatureCapturedAt = null)
+            } else {
+                current.copy(
+                    mode = Mode.Edit,
+                    credentialId = record.id.value,
+                    createdAt = record.createdAt,
+                    updatedAt = record.updatedAt,
+                    signatureSha256Hex = AdvancedDetailsFormatter.formatSha256Hex(record.signatureSha256),
+                    signatureCapturedAt = record.signatureCapturedAt,
+                )
+            }
+        }
+        return record
+    }
+
+    /**
+     * Toggles the "Advanced details" section between collapsed and expanded
+     * (Req 1.2). Idempotent flip.
+     */
+    fun toggleAdvancedExpanded() {
+        _advancedDetails.update { it.copy(expanded = !it.expanded) }
+    }
+
+    /**
+     * Toggles whether the credential ID numeric value is visible (Req 5.3 /
+     * 5.4). Initial state is hidden (Req 5.2).
+     */
+    fun toggleCredentialIdVisible() {
+        _advancedDetails.update { it.copy(credentialIdVisible = !it.credentialIdVisible) }
     }
 
     private fun Throwable.toState(): State = when (this) {
