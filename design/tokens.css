@@ -1,0 +1,203 @@
+/* KeyNest — design tokens. Shared by every mock. */
+
+:root {
+  /* ── Brand ─────────────────────────────────── */
+  --kn-blue-50:  #EAF2FE;
+  --kn-blue-100: #D0E0FC;
+  --kn-blue-200: #A6C4F8;
+  --kn-blue-300: #6FA1F2;
+  --kn-blue-500: #1F6FEB;   /* primary */
+  --kn-blue-600: #1457C9;
+  --kn-blue-700: #0F4AA8;
+  --kn-blue-900: #0A2E66;
+
+  --kn-accent-500: #6366F1; /* secondary highlight (passkey-ish, settings chips) */
+  --kn-accent-600: #4F46E5;
+
+  /* ── Neutrals ──────────────────────────────── */
+  --kn-ink-950: #0A1020;    /* darkest bg */
+  --kn-ink-900: #0F1729;
+  --kn-ink-850: #131C33;
+  --kn-ink-800: #1A2540;    /* card on dark */
+  --kn-ink-750: #243054;
+  --kn-ink-700: #2E3B62;
+  --kn-ink-500: #5C6B8E;
+  --kn-ink-400: #7A89AD;
+  --kn-ink-300: #9CA9C7;
+  --kn-ink-200: #C6CFE0;
+  --kn-ink-100: #E3E8F1;
+  --kn-ink-50:  #F1F4FA;
+  --kn-paper:   #F6F8FC;
+  --kn-white:   #FFFFFF;
+
+  /* ── Status ────────────────────────────────── */
+  --kn-success: #10B981;
+  --kn-success-soft: #D1FAE5;
+  --kn-warning: #F59E0B;
+  --kn-warning-soft: #FEF3C7;
+  --kn-danger:  #EF4444;
+  --kn-danger-soft: #FEE2E2;
+  --kn-info:    #38BDF8;
+
+  /* ── Radii ─────────────────────────────────── */
+  --kn-r-xs: 8px;
+  --kn-r-sm: 12px;
+  --kn-r-md: 16px;
+  --kn-r-lg: 20px;
+  --kn-r-xl: 28px;
+  --kn-r-pill: 999px;
+
+  /* ── Spacing scale (4-pt) ──────────────────── */
+  --kn-s-1: 4px;
+  --kn-s-2: 8px;
+  --kn-s-3: 12px;
+  --kn-s-4: 16px;
+  --kn-s-5: 20px;
+  --kn-s-6: 24px;
+  --kn-s-8: 32px;
+  --kn-s-10: 40px;
+  --kn-s-12: 48px;
+  --kn-s-16: 64px;
+
+  /* ── Type ──────────────────────────────────── */
+  --kn-font-ui: 'Manrope', 'Noto Sans JP', system-ui, sans-serif;
+  --kn-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Shadows (light) ───────────────────────── */
+  --kn-shadow-1: 0 1px 2px rgba(15, 23, 41, 0.06), 0 1px 1px rgba(15, 23, 41, 0.04);
+  --kn-shadow-2: 0 4px 12px rgba(15, 23, 41, 0.08), 0 1px 3px rgba(15, 23, 41, 0.05);
+  --kn-shadow-3: 0 12px 32px rgba(15, 23, 41, 0.14), 0 4px 12px rgba(15, 23, 41, 0.06);
+  --kn-shadow-press: 0 24px 56px rgba(31, 111, 235, 0.32);
+}
+
+/* Theme: LIGHT */
+.kn-light {
+  --bg: var(--kn-paper);
+  --bg-elev: var(--kn-white);
+  --surface: var(--kn-white);
+  --surface-2: var(--kn-ink-50);
+  --surface-tint: var(--kn-blue-50);
+  --border: rgba(15, 23, 41, 0.08);
+  --border-strong: rgba(15, 23, 41, 0.14);
+  --text: #0B1220;
+  --text-2: var(--kn-ink-500);
+  --text-3: var(--kn-ink-400);
+  --on-primary: #FFFFFF;
+  --primary: var(--kn-blue-500);
+  --primary-hover: var(--kn-blue-600);
+  --shadow-1: var(--kn-shadow-1);
+  --shadow-2: var(--kn-shadow-2);
+  --shadow-3: var(--kn-shadow-3);
+}
+
+/* Theme: DARK */
+.kn-dark {
+  --bg: var(--kn-ink-950);
+  --bg-elev: var(--kn-ink-900);
+  --surface: var(--kn-ink-850);
+  --surface-2: var(--kn-ink-800);
+  --surface-tint: rgba(31, 111, 235, 0.16);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --text: #ECF1FA;
+  --text-2: var(--kn-ink-300);
+  --text-3: var(--kn-ink-400);
+  --on-primary: #FFFFFF;
+  --primary: #4D8DF4;
+  --primary-hover: #6FA1F2;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-2: 0 8px 20px rgba(0,0,0,.45);
+  --shadow-3: 0 16px 40px rgba(0,0,0,.55);
+}
+
+/* Phone container (used inside artboards) */
+.kn-phone {
+  width: 360px;
+  height: 740px;
+  font-family: var(--kn-font-ui);
+  background: var(--bg);
+  color: var(--text);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+
+.kn-phone * { box-sizing: border-box; }
+
+/* Status bar */
+.kn-status {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px 0 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+.kn-status-r { display: flex; align-items: center; gap: 5px; }
+
+/* Nav home indicator (gesture) */
+.kn-home {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  width: 120px; height: 4px; border-radius: 2px;
+  background: var(--text); opacity: 0.5;
+}
+
+/* App bar */
+.kn-appbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 16px 4px;
+  flex-shrink: 0;
+}
+.kn-appbar-title {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.02em;
+}
+
+/* Icon buttons */
+.kn-iconbtn {
+  width: 40px; height: 40px; border-radius: var(--kn-r-pill);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: var(--text);
+  cursor: pointer;
+}
+.kn-iconbtn:hover { background: var(--surface-2); }
+
+/* Buttons */
+.kn-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 52px; padding: 0 24px; border-radius: var(--kn-r-md);
+  font: 700 15px/1 var(--kn-font-ui); letter-spacing: -0.005em;
+  border: none; cursor: pointer;
+}
+.kn-btn--primary {
+  background: var(--primary); color: var(--on-primary);
+  box-shadow: var(--shadow-1);
+}
+.kn-btn--ghost { background: transparent; color: var(--primary); }
+.kn-btn--full { width: 100%; }
+
+/* Card / surface */
+.kn-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--kn-r-lg);
+}
+
+/* Brand icon tile background helper */
+.kn-icontile {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: 800 18px/1 var(--kn-font-ui);
+  color: white;
+  flex-shrink: 0;
+}
+
+/* Scrollbar hide */
+.kn-noscroll::-webkit-scrollbar { display: none; }
+.kn-noscroll { scrollbar-width: none; }
