@@ -9,7 +9,7 @@
   - 既存テスト（`FakeCredentialRepository`、`CredentialDaoTest`、`CredentialRepositoryImplTest`、`CredentialEditViewModelTest` 等）の Credential / EncryptedCredentialRecord コンストラクタ呼び出しに `lastUsedAt = null` を追加して compile を通す
   - _Requirements: 3.1, 3.3, 6.1_
 
-- [ ] 1.2 `KeyNestDatabase` を v2 化し `Migration_1_2` を提供
+- [x] 1.2 `KeyNestDatabase` を v2 化し `Migration_1_2` を提供
   - `data/migration/Migration_1_2.kt` を新規作成。`ALTER TABLE credentials ADD COLUMN last_used_at INTEGER` を `migrate()` で実行
   - `data/KeyNestDatabase.kt` の `version = 1` → `version = 2`、`databaseBuilder().addMigrations(Migration_1_2)`
   - `app/build.gradle.kts` に `ksp { arg("room.schemaLocation", "$projectDir/schemas") }` を追加（Migration test の前提）
