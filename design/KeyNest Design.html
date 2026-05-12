@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"/>
+<title>KeyNest — Design</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="tokens.css"/>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #F0EEE9; font-family: 'Manrope', 'Noto Sans JP', system-ui, sans-serif; }
+  /* hide caret animation referenced in dataset screen */
+  @keyframes caret { 50% { opacity: 0; } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="screens/shared.jsx"></script>
+<script type="text/babel" src="screens/icons.jsx"></script>
+<script type="text/babel" src="screens/screens-1.jsx"></script>
+<script type="text/babel" src="screens/screens-2.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+// Wrapper: theme + phone-sized artboard
+function Themed({ theme = 'light', children }) {
+  return <div className={theme === 'dark' ? 'kn-dark' : 'kn-light'} style={{ width: PHONE_W, height: PHONE_H, background: 'var(--bg)' }}>{children}</div>;
+}
+
+function PhonePair({ render, label }) {
+  // Used inside an artboard set to width 760 height 760 to show light + dark side-by-side
+  return (
+    <div style={{ display: 'flex', gap: 20, padding: 20, background: '#F0EEE9' }}>
+      <div>
+        <div style={{ font: '700 11px/1 Manrope', color: '#5C6B8E', letterSpacing: '.08em', marginBottom: 8, textTransform: 'uppercase' }}>{label} · Light</div>
+        <Themed theme="light">{render()}</Themed>
+      </div>
+      <div>
+        <div style={{ font: '700 11px/1 Manrope', color: '#5C6B8E', letterSpacing: '.08em', marginBottom: 8, textTransform: 'uppercase' }}>{label} · Dark</div>
+        <Themed theme="dark">{render()}</Themed>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="intro" title="KeyNest · モバイルデザイン" subtitle="アイコンは複数案・画面は1案 / Light + Dark 両対応 / Manrope + Noto Sans JP">
+        <DCArtboard id="cover" label="Concept" width={420} height={520}>
+          <div style={{ width: 420, height: 520, background: '#F4EBDC', display: 'flex', flexDirection: 'column', padding: 28, fontFamily: 'Manrope, sans-serif', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', right: -40, bottom: -40 }}>
+              <IconA size={280}/>
+            </div>
+            <div style={{ font: '700 12px/1 Manrope', color: '#1457C9', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 14 }}>KeyNest</div>
+            <div style={{ font: '800 36px/1.05 Manrope', letterSpacing: '-.025em', color: '#0B1220', marginBottom: 14 }}>
+              業務端末のための<br/>静かなパスワード巣箱。
+            </div>
+            <div style={{ font: '500 14px/1.55 Manrope', color: '#3A4567', maxWidth: 280 }}>
+              ローカル AES-GCM ・ 署名照合 ・ 生体認証アンロック。
+              Google アカウントを使わずに、Android Autofill から
+              安全に ID/PW を呼び出すための小さな箱。
+            </div>
+            <div style={{ marginTop: 'auto', display: 'flex', gap: 8, font: '700 11px/1 Manrope', color: '#5C6B8E', letterSpacing: '.08em', textTransform: 'uppercase' }}>
+              <span>AES-GCM</span><span>·</span><span>SHA-256</span><span>·</span><span>BiometricPrompt</span>
+            </div>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="palette" label="Tokens (Light / Dark)" width={420} height={520}>
+          <TokensCard/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="icons" title="アプリアイコン候補" subtitle="6 案 / 192·56·36 px の3サイズで確認 / Adaptive icon 22% squircle">
+        <DCArtboard id="icon-a" label="A · Shelter (推奨)" width={260} height={300}><IconArt el={<IconA size={180}/>}/></DCArtboard>
+        <DCArtboard id="icon-b" label="B · Filled K-Key"   width={260} height={300}><IconArt el={<IconB size={180}/>}/></DCArtboard>
+        <DCArtboard id="icon-c" label="C · Dark-first"     width={260} height={300}><IconArt el={<IconC size={180}/>}/></DCArtboard>
+        <DCArtboard id="icon-d" label="D · Linework"       width={260} height={300}><IconArt el={<IconD size={180}/>}/></DCArtboard>
+        <DCArtboard id="icon-e" label="E · Two-tone"       width={260} height={300}><IconArt el={<IconE size={180}/>}/></DCArtboard>
+        <DCArtboard id="icon-f" label="F · Wordmark"       width={260} height={300}><IconArt el={<IconF size={180}/>}/></DCArtboard>
+      </DCSection>
+
+      <DCSection id="onboarding" title="Onboarding — Autofill 有効化" subtitle="初回起動時に表示する 3 ステップの案内 / step 2 を例示">
+        <DCArtboard id="onb-pair" label="Light + Dark" width={760} height={780}>
+          <PhonePair label="Onboarding" render={() => <ScreenOnboarding step={2}/>}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="list" title="クレデンシャル一覧" subtitle="空状態 / 登録あり / 最近使った行 + 強度バー + 検索 + フィルター">
+        <DCArtboard id="list-empty" label="Empty · Light + Dark" width={760} height={780}>
+          <PhonePair label="Empty State" render={() => <ScreenListEmpty/>}/>
+        </DCArtboard>
+        <DCArtboard id="list-full" label="Populated · Light + Dark" width={760} height={780}>
+          <PhonePair label="Populated" render={() => <ScreenListPopulated/>}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="edit" title="クレデンシャル編集" subtitle="新規 / 編集 / 詳細 (パッケージ・SHA-256・登録日)">
+        <DCArtboard id="edit-pair" label="Edit · Light + Dark" width={760} height={780}>
+          <PhonePair label="Edit" render={() => <ScreenEdit mode="edit"/>}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="picker" title="インストール済みアプリの選択" subtitle="Bottom sheet — よく使う / 全アプリ / 手動入力フォールバック">
+        <DCArtboard id="picker-pair" label="Picker · Light + Dark" width={760} height={780}>
+          <PhonePair label="Picker" render={() => <ScreenPicker/>}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="dataset" title="Autofill 候補ドロップダウン" subtitle="ホスト (Salesforce 等) のログイン画面上に現れる KeyNest の Dataset Presentation">
+        <DCArtboard id="dataset" label="Dataset Presentation" width={400} height={780}>
+          <ScreenDataset/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="unlock" title="BiometricPrompt アンロック" subtitle="候補選択 → 生体認証 → 復号 → FillResponse 遅延返却">
+        <DCArtboard id="unlock-pair" label="Unlock · Light + Dark" width={760} height={780}>
+          <PhonePair label="Unlock" render={() => <ScreenUnlock/>}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="settings" title="設定 / About (新規)" subtitle="Autofill ステータス hero + セキュリティ / Vault / About">
+        <DCArtboard id="settings-pair" label="Settings · Light + Dark" width={760} height={780}>
+          <PhonePair label="Settings" render={() => <ScreenSettings/>}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="handoff" title="実装メモ" subtitle="Claude Code に渡す前のヒント">
+        <DCArtboard id="notes" label="Handoff Notes" width={760} height={420}>
+          <HandoffNotes/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+function IconArt({ el }) {
+  return (
+    <div style={{ width: 260, height: 300, background: '#F0EEE9', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      {el}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+        {React.cloneElement(el, { size: 56 })}
+        {React.cloneElement(el, { size: 36 })}
+      </div>
+    </div>
+  );
+}
+
+function TokensCard() {
+  const swatches = [
+    ['#1F6FEB', 'blue-500'], ['#1457C9', 'blue-600'], ['#0F4AA8', 'blue-700'], ['#EAF2FE', 'blue-50'],
+    ['#10B981', 'success'],  ['#F59E0B', 'warning'],  ['#EF4444', 'danger'],  ['#6366F1', 'accent'],
+    ['#0B1220', 'ink-950'],  ['#1A2540', 'ink-800'],  ['#5C6B8E', 'ink-500'], ['#F6F8FC', 'paper'],
+  ];
+  return (
+    <div style={{ width: 420, height: 520, background: 'white', padding: 24, fontFamily: 'Manrope, sans-serif', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div>
+        <div style={{ font: '800 22px/1 Manrope', letterSpacing: '-.02em', color: '#0B1220' }}>Design Tokens</div>
+        <div style={{ font: '500 12px/1.4 Manrope', color: '#5C6B8E', marginTop: 4 }}>spec.md 参照</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {swatches.map(([hex, name]) => (
+          <div key={name} style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(15,23,41,.08)' }}>
+            <div style={{ height: 44, background: hex }}/>
+            <div style={{ padding: '6px 8px' }}>
+              <div style={{ font: '700 10px/1.1 Manrope', color: '#0B1220' }}>{name}</div>
+              <div style={{ font: '500 9px/1.2 JetBrains Mono, monospace', color: '#5C6B8E' }}>{hex}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: '1px solid #E3E8F1', paddingTop: 14 }}>
+        <div style={{ font: '700 11px/1 Manrope', color: '#5C6B8E', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8 }}>Type</div>
+        <div style={{ font: '800 24px/1 Manrope', letterSpacing: '-.02em', color: '#0B1220' }}>クレデンシャル — Vault</div>
+        <div style={{ font: '500 14px/1.4 Manrope', color: '#3A4567', marginTop: 4 }}>Manrope (UI) + Noto Sans JP — 14/500 が本文</div>
+        <div style={{ font: '700 12px/1 JetBrains Mono', color: '#5C6B8E', marginTop: 6 }}>com.salesforce.chatter · SHA-256 a1:2f:9e</div>
+      </div>
+
+      <div style={{ borderTop: '1px solid #E3E8F1', paddingTop: 14, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ font: '700 11px/1 Manrope', color: '#5C6B8E', letterSpacing: '.06em', textTransform: 'uppercase' }}>Radii</div>
+        {[8, 12, 16, 20, 28].map(r => (
+          <div key={r} style={{ width: 40, height: 40, borderRadius: r, background: '#1F6FEB', display: 'flex', alignItems: 'center', justifyContent: 'center', font: '700 11px/1 Manrope', color: 'white' }}>{r}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HandoffNotes() {
+  return (
+    <div style={{ width: 760, height: 420, background: 'white', padding: 28, fontFamily: 'Manrope, sans-serif', color: '#0B1220', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
+      <div>
+        <div style={{ font: '800 16px/1 Manrope', letterSpacing: '-.01em', marginBottom: 10 }}>Compose 移植のヒント</div>
+        <ul style={{ font: '500 13px/1.6 Manrope', color: '#3A4567', paddingLeft: 18, margin: 0 }}>
+          <li><b>Theme:</b> <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>KeyNestColors.light/dark</code> を <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}>MaterialTheme.colorScheme</code> に注入。</li>
+          <li><b>Typography:</b> Google Fonts Provider 経由で Manrope + Noto Sans JP を読み込み。</li>
+          <li><b>Shape:</b> small=12, medium=16, large=20, extraLarge=28。</li>
+          <li><b>Icons:</b> Material Symbols outlined を基本、shield-fill / fingerprint は filled。</li>
+          <li><b>i18n:</b> 既存 strings.xml に JP 追加 → <code>values-ja/</code>。</li>
+          <li><b>Adaptive icon:</b> A 案を <code>ic_launcher_foreground.xml</code> に。背景は <code>#F4EBDC</code>。</li>
+        </ul>
+      </div>
+      <div>
+        <div style={{ font: '800 16px/1 Manrope', letterSpacing: '-.01em', marginBottom: 10 }}>本設計で <b>意図的に追加</b> した要素</div>
+        <ul style={{ font: '500 13px/1.6 Manrope', color: '#3A4567', paddingLeft: 18, margin: 0 }}>
+          <li>検索バー / フィルターチップ (一覧)</li>
+          <li>「最近使った」横スクロール行</li>
+          <li>パスワード強度バー (3 セグメント)</li>
+          <li>署名状態 chip (一致 / 未取得)</li>
+          <li>Onboarding 3 ステップ + ヒーロー</li>
+          <li>Settings / About 画面 (MVP では未着手)</li>
+          <li>Autofill dropdown のブランディング (KeyNest ヘッダー)</li>
+        </ul>
+        <div style={{ marginTop: 14, padding: 12, background: '#FEF3C7', borderRadius: 10, font: '600 12px/1.4 Manrope', color: '#92400E' }}>
+          ⚠ 一覧の「最近使った」と検索ヒストリ機能は MVP スコープ外。データモデル上の <code>last_used_at</code> 追加が必要。
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
