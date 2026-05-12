@@ -51,6 +51,10 @@ class CredentialListActivity : AppCompatActivity() {
         binding = CredentialListActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+        // The custom toolbar children render the "KeyNest" eyebrow and
+        // "Vault" title (AC 4.3.4). Suppress the framework-supplied
+        // title so it does not double up.
+        supportActionBar?.setDisplayShowTitleEnabled(false)
 
         adapter = CredentialListAdapter(
             onItemClick = { startEdit(it) },
