@@ -59,13 +59,13 @@
   - 既存テスト `AutofillFlowTest` が変更後も pass することを確認（fire-and-forget なので race 検証は別途）
   - _Requirements: 3.2, 6.1, 6.3, NFR 1.2, NFR 2.2_
 
-- [ ] 5. ViewModel state 拡張: query / filter / sort / recentList を combine
+- [x] 5. ViewModel state 拡張: query / filter / sort / recentList を combine
 - [x] 5.1 `CredentialListUiState` / `CredentialFilter` / `EmptyKind` を新規作成
   - `ui/list/CredentialListUiState.kt`, `ui/list/CredentialFilter.kt`, `ui/list/EmptyKind.kt` を作成（design.md 記載の data class / sealed / enum 定義）
   - `CredentialSortOrder` は task 2.2 で domain 層に置いたものを import
   - _Requirements: 1.3, 1.4, 2.1, 2.5, 4.1, 4.2_
 
-- [ ] 5.2 `CredentialListViewModel` を MVI 風入力 StateFlow に拡張
+- [x] 5.2 `CredentialListViewModel` を MVI 風入力 StateFlow に拡張
   - `MutableStateFlow` 3 本（query / filter / sort）と公開 `uiState: StateFlow<CredentialListUiState>` を追加
   - `combine` で `(query, filter, sort.flatMapLatest { listUseCase(it) })` → `mainList`、`recentUseCase()` と合流して `uiState` を構築
   - `onQueryChanged` / `onFilterChanged` / `onSortChanged` / `onDuplicate(id)` を公開、`delete(id)` は既存維持
