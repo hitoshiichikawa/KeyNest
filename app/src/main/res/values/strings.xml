@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">KeyNest</string>
+
+    <!-- Credential list -->
+    <string name="credential_list_title">Saved credentials</string>
+    <string name="credential_list_empty">No credentials yet. Tap + to add one.</string>
+    <string name="action_add_credential">Add credential</string>
+    <string name="action_edit_credential">Edit</string>
+    <string name="action_delete_credential">Delete</string>
+    <string name="menu_open_autofill_settings">Autofill settings</string>
+
+    <!-- Credential edit -->
+    <string name="credential_edit_title_new">New credential</string>
+    <string name="credential_edit_title_edit">Edit credential</string>
+    <string name="label_package_name">App package name</string>
+    <string name="label_username">Username</string>
+    <string name="label_password">Password</string>
+    <string name="label_display_name">Display name (label)</string>
+    <string name="action_pick_installed_app">Pick installed app</string>
+    <string name="action_save">Save</string>
+    <string name="error_package_name_blank">App package name is required.</string>
+    <string name="error_package_name_invalid">App package name format is invalid.</string>
+    <string name="error_username_blank">Username is required.</string>
+    <string name="error_password_blank">Password is required.</string>
+    <string name="error_label_blank">Display name is required.</string>
+    <string name="error_save_failed">Failed to save credential.</string>
+    <string name="message_credential_saved">Saved.</string>
+    <string name="error_save_failed_with_reason">Failed to save credential: %1$s</string>
+    <string name="message_signature_not_captured">Signature unavailable (app not installed). Candidates will not appear until you reinstall and re-save.</string>
+
+    <!-- Autofill enable -->
+    <string name="autofill_enable_title">Enable Autofill service</string>
+    <string name="autofill_enable_description">To suggest saved credentials, KeyNest needs to be selected as your Autofill service in Android Settings.</string>
+    <string name="autofill_enable_action">Enable in Settings</string>
+    <string name="autofill_enable_already_enabled">KeyNest is already set as your Autofill service.</string>
+    <string name="autofill_enable_settings_unavailable">Autofill Settings screen is not available on this device.</string>
+
+    <!-- Autofill unlock -->
+    <string name="biometric_prompt_title">Unlock credential</string>
+    <string name="biometric_prompt_subtitle">Authenticate to fill the saved credential.</string>
+
+    <!-- Package picker -->
+    <string name="package_picker_title">Pick an installed app</string>
+</resources>

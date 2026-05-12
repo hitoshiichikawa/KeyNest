@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        NFR 1.5: android.permission.INTERNET is intentionally NOT declared so that
+        any accidental network IO at runtime will fail-fast (SecurityException).
+        NFR 4.1: BIND_ACCESSIBILITY_SERVICE is intentionally NOT declared (no a11y dep).
+        NFR 4.3: no DeviceOwner / root permissions.
+    -->
+
+    <queries>
+        <!-- PackageSignatureResolver / PackagePickerBottomSheet need to enumerate
+             installed apps so the launcher activities are queryable on API 30+. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".KeyNestApp"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.KeyNest">
+
+        <!--
+            Launcher activity. Concrete UI activities are added in T9.x.
+            For T1.4 a placeholder Activity is wired so that the app is launchable
+            and the assembleDebug task passes.
+        -->
+        <activity
+            android:name=".ui.list.CredentialListActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            T8.5: AutofillService entry point. android:permission ensures only
+            the framework can bind. excludeFromRecents prevents the unlock
+            activity from appearing in the recent-apps list.
+        -->
+        <service
+            android:name=".autofill.KeyNestAutofillService"
+            android:exported="true"
+            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.autofill.AutofillService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.autofill"
+                android:resource="@xml/autofill_service_config" />
+        </service>
+
+        <!-- T8.6: Authentication intent target for locked datasets. -->
+        <activity
+            android:name=".autofill.unlock.AutofillUnlockActivity"
+            android:theme="@style/Theme.KeyNest.Translucent"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+
+        <!-- T9.2 / T9.4 -->
+        <activity
+            android:name=".ui.edit.CredentialEditActivity"
+            android:exported="false"
+            android:label="@string/credential_edit_title_new" />
+
+        <activity
+            android:name=".ui.enable.AutofillEnableActivity"
+            android:exported="false"
+            android:label="@string/autofill_enable_title" />
+
+    </application>
+
+</manifest>
