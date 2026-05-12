@@ -65,6 +65,7 @@ class CredentialRepositoryImpl(
             signatureCapturedAt = signatureCapturedAt,
             createdAt = createdAt,
             updatedAt = updatedAt,
+            lastUsedAt = lastUsedAt,
         )
 
     private fun CredentialEntity.toEncryptedRecord(): EncryptedCredentialRecord =
@@ -79,6 +80,7 @@ class CredentialRepositoryImpl(
             signatureCapturedAt = signatureCapturedAt,
             createdAt = createdAt,
             updatedAt = updatedAt,
+            lastUsedAt = lastUsedAt,
         )
 
     private fun CredentialEntity.toDomain(): Credential = Credential(
@@ -90,5 +92,6 @@ class CredentialRepositoryImpl(
         signatureCapturedAt = signatureCapturedAt,
         createdAt = createdAt,
         updatedAt = updatedAt,
+        lastUsedAt = lastUsedAt,
     )
 }

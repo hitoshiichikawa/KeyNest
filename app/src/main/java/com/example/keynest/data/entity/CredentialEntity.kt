@@ -55,6 +55,16 @@ data class CredentialEntity(
 
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long,
+
+    /**
+     * Wall-clock time (epoch millis) at which this credential was most
+     * recently consumed via the autofill unlock flow. Null = never used.
+     *
+     * Issue #9 requirements 3.1, 3.2, 3.3, 3.4. The column was added in
+     * Room schema v2 via [com.example.keynest.data.migration.Migration_1_2].
+     */
+    @ColumnInfo(name = "last_used_at")
+    val lastUsedAt: Long? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -70,7 +80,8 @@ data class CredentialEntity(
                     signatureSha256.contentEquals(other.signatureSha256))) &&
             signatureCapturedAt == other.signatureCapturedAt &&
             createdAt == other.createdAt &&
-            updatedAt == other.updatedAt
+            updatedAt == other.updatedAt &&
+            lastUsedAt == other.lastUsedAt
     }
 
     override fun hashCode(): Int {
@@ -84,6 +95,7 @@ data class CredentialEntity(
         result = 31 * result + (signatureCapturedAt?.hashCode() ?: 0)
         result = 31 * result + createdAt.hashCode()
         result = 31 * result + updatedAt.hashCode()
+        result = 31 * result + (lastUsedAt?.hashCode() ?: 0)
         return result
     }
 
@@ -92,5 +104,6 @@ data class CredentialEntity(
         "CredentialEntity(id=$id, packageName=$packageName, username=$username, label=$label, " +
             "ciphertext=<${passwordCiphertext.size}B>, iv=<${passwordIv.size}B>, " +
             "signatureSha256=${signatureSha256?.let { "<${it.size}B>" }}, " +
-            "signatureCapturedAt=$signatureCapturedAt, createdAt=$createdAt, updatedAt=$updatedAt)"
+            "signatureCapturedAt=$signatureCapturedAt, createdAt=$createdAt, updatedAt=$updatedAt, " +
+            "lastUsedAt=$lastUsedAt)"
 }

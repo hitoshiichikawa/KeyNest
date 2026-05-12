@@ -51,6 +51,7 @@ internal class FakeCredentialRepository : CredentialRepository {
                     signatureCapturedAt = it.signatureCapturedAt,
                     createdAt = it.createdAt,
                     updatedAt = it.updatedAt,
+                    lastUsedAt = it.lastUsedAt,
                 )
             },
     )
