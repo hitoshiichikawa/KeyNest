@@ -1,6 +1,7 @@
 package com.example.keynest.ui
 
 import com.example.keynest.domain.model.CredentialId
+import com.example.keynest.domain.usecase.DeleteCredentialUseCase
 import com.example.keynest.domain.usecase.FakeCredentialRepository
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
 import com.example.keynest.domain.usecase.StubAesGcmCipher
@@ -110,7 +111,8 @@ class CredentialEditViewModelTest {
         val cipher = StubAesGcmCipher()
         val save = SaveCredentialUseCase(repo, cipher, sigResolver)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
-        val vm = CredentialEditViewModel(repo, save, update)
+        val delete = DeleteCredentialUseCase(repo)
+        val vm = CredentialEditViewModel(repo, save, update, delete)
 
         vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = charArrayOf(), label = "L2")
         advanceUntilIdle()
@@ -128,6 +130,48 @@ class CredentialEditViewModelTest {
         val cipher = StubAesGcmCipher()
         val save = SaveCredentialUseCase(repo, cipher, sigResolver)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
-        return CredentialEditViewModel(repo, save, update)
+        val delete = DeleteCredentialUseCase(repo)
+        return CredentialEditViewModel(repo, save, update, delete)
+    }
+
+    /**
+     * Issue #5 / AC 4.4.6 — `delete()` routes through the existing
+     * DeleteCredentialUseCase and emits the navigation signal so the
+     * activity can `finish()`. Verifies the wiring without crossing
+     * into the data layer (FakeCredentialRepository stands in).
+     */
+    @Test
+    fun delete_removesRecord_andEmitsNavigation() = runTest(testDispatcher) {
+        val repo = FakeCredentialRepository()
+        repo.put(
+            com.example.keynest.domain.model.EncryptedCredentialRecord(
+                id = CredentialId(0L),
+                packageName = "com.example.target",
+                username = "alice",
+                label = "L",
+                passwordCiphertext = byteArrayOf(1),
+                passwordIv = ByteArray(12),
+                signatureSha256 = null,
+                signatureCapturedAt = null,
+                createdAt = 0L,
+                updatedAt = 0L,
+            ),
+        )
+        val id = repo.snapshot().single().id.value
+        val sigResolver = mockk<PackageSignatureResolver>().also { every { it.resolveSha256(any()) } returns null }
+        val cipher = StubAesGcmCipher()
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val delete = DeleteCredentialUseCase(repo)
+        val vm = CredentialEditViewModel(repo, save, update, delete)
+        val capturedNav = mutableListOf<Unit>()
+        val collectorJob = launch { vm.navigation.collect { capturedNav.add(it) } }
+
+        vm.delete(id)
+        advanceUntilIdle()
+
+        assertThat(repo.snapshot()).isEmpty()
+        assertThat(capturedNav).hasSize(1)
+        collectorJob.cancel()
     }
 }

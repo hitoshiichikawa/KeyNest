@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.keynest.domain.model.CredentialId
 import com.example.keynest.domain.repository.CredentialRepository
+import com.example.keynest.domain.usecase.DeleteCredentialUseCase
 import com.example.keynest.domain.usecase.NewCredentialInput
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
 import com.example.keynest.domain.usecase.SaveFailure
@@ -36,6 +37,7 @@ class CredentialEditViewModel(
     private val repository: CredentialRepository,
     private val saveUseCase: SaveCredentialUseCase,
     private val updateUseCase: UpdateCredentialUseCase,
+    private val deleteUseCase: DeleteCredentialUseCase,
 ) : ViewModel() {
 
     sealed class State {
@@ -109,6 +111,31 @@ class CredentialEditViewModel(
         return repository.findById(CredentialId(credentialId))
     }
 
+    /**
+     * Issue #5 Round 2 / AC 4.4.6 — delete the credential currently being
+     * edited. Pure delegation to the existing [DeleteCredentialUseCase]
+     * (the same path the list screen's long-press flow already uses);
+     * the navigation flow drives the activity to finish on success.
+     *
+     * Repository / DAO / domain layer are not modified — this is the
+     * smallest UI-binding wrapper required to surface the existing
+     * delete behaviour from the edit screen.
+     */
+    fun delete(credentialId: Long) {
+        viewModelScope.launch {
+            val result = deleteUseCase(CredentialId(credentialId))
+            result
+                .onSuccess {
+                    SafeLogger.info(tag = TAG, message = "credential delete ok")
+                    _navigation.tryEmit(Unit)
+                }
+                .onFailure { ex ->
+                    SafeLogger.error(tag = TAG, message = "credential delete failed", throwable = ex)
+                    _state.value = State.Error(cause = "delete")
+                }
+        }
+    }
+
     private fun Throwable.toState(): State = when (this) {
         is SaveFailure.PackageNameBlank -> State.FieldError(Field.PackageName, ErrorKind.Blank)
         is SaveFailure.PackageNameInvalid -> State.FieldError(Field.PackageName, ErrorKind.Invalid)
@@ -129,11 +156,12 @@ class CredentialEditViewModel(
         private val repository: CredentialRepository,
         private val saveUseCase: SaveCredentialUseCase,
         private val updateUseCase: UpdateCredentialUseCase,
+        private val deleteUseCase: DeleteCredentialUseCase,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass == CredentialEditViewModel::class.java)
-            return CredentialEditViewModel(repository, saveUseCase, updateUseCase) as T
+            return CredentialEditViewModel(repository, saveUseCase, updateUseCase, deleteUseCase) as T
         }
     }
 

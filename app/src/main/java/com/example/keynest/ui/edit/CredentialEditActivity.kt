@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
+import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -38,6 +40,7 @@ class CredentialEditActivity : AppCompatActivity() {
             ServiceLocator.credentialRepository,
             ServiceLocator.saveCredentialUseCase,
             ServiceLocator.updateCredentialUseCase,
+            ServiceLocator.deleteCredentialUseCase,
         )
     }
 
@@ -50,6 +53,13 @@ class CredentialEditActivity : AppCompatActivity() {
 
         editingId = intent.getLongExtra(EXTRA_CREDENTIAL_ID, INVALID_ID).takeIf { it != INVALID_ID }
         title = getString(if (editingId == null) R.string.credential_edit_title_new else R.string.credential_edit_title_edit)
+
+        // Issue #5 Round 2 / AC 4.4.6: surface the destructive delete
+        // button only in edit mode. The visibility is driven here (not
+        // in XML) so the button stays hidden when the activity is
+        // launched in "new" mode via newIntent(this).
+        binding.btnDelete.visibility = if (editingId != null) View.VISIBLE else View.GONE
+        binding.btnDelete.setOnClickListener { onDeleteClicked() }
 
         editingId?.let { id ->
             lifecycleScope.launch {
@@ -95,6 +105,22 @@ class CredentialEditActivity : AppCompatActivity() {
             password = passwordChars,
             label = label,
         )
+    }
+
+    /**
+     * Issue #5 / AC 4.4.6 — confirm + delete the credential currently
+     * being edited. Routes through the same DeleteCredentialUseCase
+     * the list screen's long-press flow uses (no new use case, no
+     * repository / DAO changes). Activity finishes via the navigation
+     * SharedFlow on success.
+     */
+    private fun onDeleteClicked() {
+        val id = editingId ?: return
+        AlertDialog.Builder(this)
+            .setMessage(R.string.action_delete_credential_destructive)
+            .setPositiveButton(R.string.action_delete_credential) { _, _ -> viewModel.delete(id) }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun takePasswordCharArray(): CharArray {
