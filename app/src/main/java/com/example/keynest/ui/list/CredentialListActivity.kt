@@ -42,6 +42,8 @@ class CredentialListActivity : AppCompatActivity() {
     private val viewModel: CredentialListViewModel by viewModels {
         CredentialListViewModel.Factory(
             ServiceLocator.listCredentialsUseCase,
+            ServiceLocator.observeRecentlyUsedUseCase,
+            ServiceLocator.duplicateCredentialUseCase,
             ServiceLocator.deleteCredentialUseCase,
         )
     }
