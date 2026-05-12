@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Room schema v2 拡張（`last_used_at` カラム + Migration）
+- [x] 1. Room schema v2 拡張（`last_used_at` カラム + Migration）
 - [x] 1.1 `CredentialEntity` / `Credential` / `EncryptedCredentialRecord` に `lastUsedAt: Long?` を追加
   - `data/entity/CredentialEntity.kt` に `@ColumnInfo(name = "last_used_at") val lastUsedAt: Long?` を追加（nullable, default なし）
   - `equals` / `hashCode` / `toString` に `lastUsedAt` を反映（既存 NFR 1.3 ポリシー継承 — `toString` で平文露出しないこと）
@@ -16,7 +16,7 @@
   - `app/schemas/com.example.keynest.data.KeyNestDatabase/1.json` および `2.json` を build 出力から取り込み（KSP が自動生成 → コミット）
   - _Requirements: 3.1, 3.2, 3.4, 6.1_
 
-- [ ] 1.3 Migration test を追加
+- [x] 1.3 Migration test を追加
   - `app/src/test/java/com/example/keynest/data/Migration_1_2_Test.kt` を新規作成。`MigrationTestHelper` で v1 schema を作成 → サンプル行を 1 件 INSERT → v2 へ migrate → 行が保持され `last_used_at IS NULL` を確認
   - `app/src/test/java/com/example/keynest/data/CredentialDaoTest.kt` の既存テスト群に対して `lastUsedAt` の追加が影響しないことを既存 assertion で担保（変更不要）
   - _Requirements: 3.1, 3.3, 3.4, 6.1_
