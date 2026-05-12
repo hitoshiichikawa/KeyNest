@@ -130,19 +130,123 @@ class CredentialDaoTest {
         assertThat(first.map { it.username }).containsExactly("u1", "u2")
     }
 
+    // ---- Issue #9: sort variants, recently-used, updateLastUsedAt -------
+
+    @Test
+    fun observeByUpdatedAtDesc_ordersNewestFirstWithLabelTiebreaker() = runTest {
+        // Req 4.1(a), 4.2: updated_at DESC, label ASC tiebreaker.
+        dao.insert(sample(packageName = "com.example.a", username = "u1", label = "Banana", updatedAt = 1L))
+        dao.insert(sample(packageName = "com.example.b", username = "u2", label = "Apple", updatedAt = 5L))
+        dao.insert(sample(packageName = "com.example.c", username = "u3", label = "Carrot", updatedAt = 5L))
+
+        val emitted = dao.observeByUpdatedAtDesc().first()
+
+        // Newest first; among the two updatedAt=5L rows, label ASC selects
+        // Apple before Carrot. Banana (updatedAt=1L) trails.
+        assertThat(emitted.map { it.label }).containsExactly("Apple", "Carrot", "Banana").inOrder()
+    }
+
+    @Test
+    fun observeByLabelAsc_isCaseInsensitive() = runTest {
+        // Req 4.1(b): label ASC COLLATE NOCASE.
+        dao.insert(sample(packageName = "com.example.a", username = "u1", label = "banana"))
+        dao.insert(sample(packageName = "com.example.b", username = "u2", label = "Apple"))
+        dao.insert(sample(packageName = "com.example.c", username = "u3", label = "carrot"))
+
+        val emitted = dao.observeByLabelAsc().first()
+
+        assertThat(emitted.map { it.label }).containsExactly("Apple", "banana", "carrot").inOrder()
+    }
+
+    @Test
+    fun observeByPackageAsc_isCaseInsensitive() = runTest {
+        // Req 4.1(c): package_name ASC COLLATE NOCASE.
+        dao.insert(sample(packageName = "com.example.Banana", username = "u1"))
+        dao.insert(sample(packageName = "com.example.apple", username = "u2"))
+        dao.insert(sample(packageName = "com.example.Carrot", username = "u3"))
+
+        val emitted = dao.observeByPackageAsc().first()
+
+        assertThat(emitted.map { it.packageName })
+            .containsExactly("com.example.apple", "com.example.Banana", "com.example.Carrot")
+            .inOrder()
+    }
+
+    @Test
+    fun observeRecentlyUsed_excludesNullLastUsedAt() = runTest {
+        // Req 3.1, 3.3, 3.4: never-used rows are excluded; result honours
+        // the LIMIT.
+        dao.insert(sample(packageName = "com.example.a", username = "never", lastUsedAt = null))
+        dao.insert(sample(packageName = "com.example.b", username = "old", lastUsedAt = 10L))
+        dao.insert(sample(packageName = "com.example.c", username = "newer", lastUsedAt = 20L))
+        dao.insert(sample(packageName = "com.example.d", username = "newest", lastUsedAt = 30L))
+
+        val emitted = dao.observeRecentlyUsed(limit = 5).first()
+
+        assertThat(emitted.map { it.username }).containsExactly("newest", "newer", "old").inOrder()
+    }
+
+    @Test
+    fun observeRecentlyUsed_respectsLimit() = runTest {
+        // Req 3.1: top-N by lastUsedAt DESC.
+        (1..7L).forEach { ts ->
+            dao.insert(sample(packageName = "com.example.$ts", username = "u$ts", lastUsedAt = ts))
+        }
+
+        val emitted = dao.observeRecentlyUsed(limit = 5).first()
+
+        assertThat(emitted).hasSize(5)
+        assertThat(emitted.first().username).isEqualTo("u7") // newest
+        assertThat(emitted.last().username).isEqualTo("u3")  // 5th newest
+    }
+
+    @Test
+    fun observeRecentlyUsed_returnsEmpty_whenAllRowsAreNull() = runTest {
+        // Req 3.4: 0 usable rows => empty flow value => carousel hides.
+        dao.insert(sample(packageName = "com.example.a", username = "u1", lastUsedAt = null))
+        dao.insert(sample(packageName = "com.example.b", username = "u2", lastUsedAt = null))
+
+        val emitted = dao.observeRecentlyUsed(limit = 5).first()
+        assertThat(emitted).isEmpty()
+    }
+
+    @Test
+    fun updateLastUsedAt_setsTimestamp_onTargetRowOnly() = runTest {
+        // Req 3.2.
+        val targetId = dao.insert(sample(packageName = "com.example.target", username = "u1", lastUsedAt = null))
+        val otherId = dao.insert(sample(packageName = "com.example.other", username = "u2", lastUsedAt = null))
+
+        dao.updateLastUsedAt(id = targetId, timestamp = 5555L)
+
+        assertThat(dao.findById(targetId)!!.lastUsedAt).isEqualTo(5555L)
+        assertThat(dao.findById(otherId)!!.lastUsedAt).isNull()
+    }
+
+    @Test
+    fun updateLastUsedAt_isSilent_whenIdMissing() = runTest {
+        // Req 3.2: a race where the row was deleted between the unlock and
+        // the markUsed update must not throw.
+        dao.updateLastUsedAt(id = 9999L, timestamp = 1234L)
+        // No exception -> success.
+        assertThat(true).isTrue()
+    }
+
     private fun sample(
         packageName: String,
         username: String,
         updatedAt: Long = 0L,
+        label: String = "Label-$username",
+        lastUsedAt: Long? = null,
     ) = CredentialEntity(
         packageName = packageName,
         username = username,
-        label = "Label-$username",
+        label = label,
         passwordCiphertext = byteArrayOf(0x01, 0x02, 0x03),
         passwordIv = ByteArray(12) { 0x10.toByte() },
         signatureSha256 = ByteArray(32) { 0x20.toByte() },
         signatureCapturedAt = 1000L,
         createdAt = 0L,
         updatedAt = updatedAt,
+        lastUsedAt = lastUsedAt,
     )
 }
