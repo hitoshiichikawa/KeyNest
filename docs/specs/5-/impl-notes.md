@@ -148,7 +148,7 @@
 | 4.2.1 (TextAppearance role) | `res/values/themes.xml` `TextAppearance.KeyNest.*` |
 | 4.2.2 (monospace) | `TextAppearance.KeyNest.Mono` / `Mono.Password`、`android:fontFamily="monospace"` を edit / picker row / dataset row の package name TextView に適用 |
 | 4.2.3 (最小 13sp) | `kn_text_min`、step row description / dataset subtitle は最小 11sp で要件 §10 の例外 (caption 範囲) |
-| 4.3.1 (CredCard) | `res/layout/credential_list_item.xml` |
+| 4.3.1 (CredCard) | `res/layout/credential_list_item.xml` (Round 2: package 行を `@+id/text_package` で分離 + monospace) |
 | 4.3.2 (1dp border + 20dp radius) | `drawable/bg_card_surface.xml` |
 | 4.3.3 (空状態) | `credential_list_activity.xml` `empty_view` LinearLayout |
 | 4.3.4 (Eyebrow + Vault) | `credential_list_activity.xml` toolbar 子要素 + `CredentialListActivity.kt` `setDisplayShowTitleEnabled(false)` |
@@ -159,12 +159,12 @@
 | 4.4.3 (outlined field) | `Widget.KeyNest.TextInputLayout` + `kn_text_field_stroke.xml` |
 | 4.4.4 (password monospace + .1em) | `credential_edit_activity.xml` `input_password` の `android:fontFamily="monospace"` + `android:letterSpacing="0.1"` |
 | 4.4.5 (visibility toggle) | `app:passwordToggleEnabled="true"` 維持 |
-| 4.4.6 (delete button) | `credential_edit_activity.xml` `btn_delete` (`Widget.KeyNest.Button.Danger`) |
+| 4.4.6 (delete button) | `credential_edit_activity.xml` `btn_delete` (`Widget.KeyNest.Button.Danger`)、Round 2: `CredentialEditActivity` で edit モード時 VISIBLE + AlertDialog → `viewModel.delete()` |
 | 4.4.7 (Pick installed app) | `credential_edit_activity.xml` `btn_pick_installed_app` (target card 右端「変更」)。Kotlin の `PackagePickerBottomSheet.show` ロジック変更なし |
 | 4.5.1 (28dp + handle) | `package_picker_bottom_sheet.xml` + `themes.xml` `ShapeAppearanceOverlay.KeyNest.BottomSheet` |
 | 4.5.2 (title + eyebrow) | `package_picker_bottom_sheet.xml` header |
 | 4.5.3 (IconTile + name + mono pkg) | `layout/package_picker_row.xml` + adapter binding |
-| 4.5.4 (selected tint + check) | **未実装**（Open Questions §6 参照: 現行 adapter は単発選択即 dismiss モデルなので選択状態 UI が不要） |
+| 4.5.4 (selected tint + check) | Round 2: `drawable/bg_picker_row_selected.xml` (selector) + `drawable/ic_kn_check.xml` + `package_picker_row.xml` の `@+id/check_icon` + Adapter の `selectedPosition` 管理 |
 | 4.6.1 (hero + title + 3 ステップ) | `autofill_enable_activity.xml` |
 | 4.6.2 (primary CTA + 既存 Intent) | `btn_enable` + 既存 `launchSettings()` |
 | 4.6.3 (already enabled) | `text_already_enabled` LinearLayout (success chip) + 既存 `AutofillServiceStatus` 経由 |
@@ -252,6 +252,60 @@
   AAPT2 が legacy raster fallback を生成する API 24-25 では gradient が
   シンプル色に flatten される可能性あり。minSdk 26 で adaptive-icon は
   v26+ のみなので影響なし。
+
+## Round 2 是正（Reviewer round=1 reject 対応）
+
+- **Finding 1 (AC 4.3.1 / 4.2.2)**: `af3c180` —
+  `credential_list_item.xml` に `@+id/text_package` を独立行として追加し、
+  `TextAppearance.KeyNest.Mono` (monospace, kn_text_3) + 11sp で描画。
+  `CredentialListAdapter.kt` の bind を `binding.textSubtitle.text =
+  item.username` / `binding.textPackage.text = item.packageName` に分離。
+  既存 `text_subtitle` id は維持（NFR 3.2）。
+- **Finding 2 (AC 4.4.6)**: `1c5eaa8` —
+  `CredentialEditActivity.kt` の onCreate で
+  `binding.btnDelete.visibility = if (editingId != null) VISIBLE else GONE`
+  を設定し、クリック時に AlertDialog で確認 → OK で `viewModel.delete(id)` を
+  呼び、既存の `_navigation` SharedFlow による `finish()` 経路で離脱。
+  ViewModel 側は **既存** `DeleteCredentialUseCase` を 1 行で呼ぶ薄いラッパ
+  `delete(credentialId: Long)` を追加（Repository / DAO / UseCase 自体は不変、
+  AC 4.10.2 の許容範囲内）。Factory に deleteUseCase を 1 引数追加し、
+  既存の `CredentialEditViewModelTest` のコンストラクタ呼び出しも
+  ペアで 4 引数化（テストの観点は不変）。新規テスト
+  `delete_removesRecord_andEmitsNavigation` で Fake repo 経由の削除 +
+  navigation emit を検証。
+- **Finding 3 (AC 4.5.4)**: `e7b021d` —
+  `drawable/bg_picker_row_selected.xml` (selector: state_selected ↔
+  `@color/kn_surface_tint`) と `drawable/ic_kn_check.xml` (primary tint) を
+  新規作成。`package_picker_row.xml` のルート背景を selector に置き換え
+  (ripple は `android:foreground=?attr/selectableItemBackground` に退避)、
+  行末に `@+id/check_icon` ImageView (visibility=gone, 20dp) を追加。
+  Adapter を `internal class` に格上げし `selectedPosition` を保持、
+  `handleRowTap(position, packageName)` で previous/new 双方を
+  `notifyItemChanged` した後に既存の `onClick(packageName)` を呼ぶ
+  (現行「タップ → dismiss」モデルの順序と挙動は完全維持)。`bind` で
+  `itemView.isSelected` と `checkIcon.visibility` を一括反映。
+  新規テスト `PackagePickerSelectionTest` (Robolectric) で 5 ケース:
+  初期 NO_POSITION / 単発タップ / 行間遷移 / NO_POSITION ガード /
+  submitList での選択リセット を検証。
+- **要件側へのフィードバック / 確認事項**: 無し。3 Finding すべて要件文に
+  整合する形で実装可能だった。`kn_surface_tint` カラーは values / values-night
+  両方に既定義 (Light=#EAF2FE, Dark=#291F6FEB) のため新規追加なし。
+- **テスト実行**: 環境制約により `./gradlew test` / `:app:assembleDebug` /
+  `:app:lintDebug` の自動実行は不可（Gradle / JDK / Android SDK が
+  ホストに存在しない、Reviewer も同条件）。代替検証として:
+  - 変更 / 追加 XML 5 件 (`credential_list_item.xml`,
+    `credential_edit_activity.xml`, `package_picker_row.xml`,
+    `bg_picker_row_selected.xml`, `ic_kn_check.xml`) を
+    `python3 xml.etree.ElementTree.parse` で well-formedness 検証 (全 OK)。
+  - `grep` で `@+id/text_subtitle`, `@+id/text_label`, `@+id/btn_delete`,
+    `@+id/check_icon`, `@+id/recycler` 等の参照点を再走査し、既存
+    `app/src/test/**` `app/src/androidTest/**` には layout id を直接
+    参照するテストが無いこと、Kotlin 側 `binding.*` アクセスが全て
+    対応する `@+id/...` を XML 側に持つことを確認。
+  - 既存 `CredentialEditViewModelTest` の 4 ケース + 新規 1 ケース、
+    新規 `PackagePickerSelectionTest` 5 ケースは Reviewer 環境で
+    `./gradlew :app:testDebugUnitTest` を実行することで最終確認をお願い
+    したい (NFR 3.1)。
 
 ## 7. ファイル一覧 (合計)
 
