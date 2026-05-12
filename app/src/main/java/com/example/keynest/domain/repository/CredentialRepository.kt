@@ -2,6 +2,8 @@ package com.example.keynest.domain.repository
 
 import com.example.keynest.domain.model.Credential
 import com.example.keynest.domain.model.CredentialId
+import com.example.keynest.domain.model.CredentialSortOrder
+import com.example.keynest.domain.model.DuplicateFailure
 import com.example.keynest.domain.model.EncryptedCredentialRecord
 import kotlinx.coroutines.flow.Flow
 
@@ -14,7 +16,9 @@ import kotlinx.coroutines.flow.Flow
  * intentionally never sees plaintext passwords: encryption / decryption is
  * the cipher's responsibility.
  *
- * Requirements: 1.1, 1.4, 1.5, 2.1, 2.2, 2.3
+ * Requirements: 1.1, 1.4, 1.5, 2.1, 2.2, 2.3 (MVP); Issue #9 Req 3.1, 3.2,
+ * 4.1, 4.3, 5.3, 5.4, NFR 1.4 (sort variants / recently-used / markUsed /
+ * duplicate).
  */
 interface CredentialRepository {
 
@@ -37,6 +41,38 @@ interface CredentialRepository {
      * Observes the entire credential set. The emitted [Credential] objects
      * intentionally omit ciphertext / IV because callers only need
      * non-sensitive metadata to render the list (NFR 1.3).
+     *
+     * Equivalent to [observeBySort] with [CredentialSortOrder.UpdatedAtDesc];
+     * preserved for source compatibility with pre-#9 callers.
      */
     fun observeAll(): Flow<List<Credential>>
+
+    /**
+     * Observes the credential set sorted by [order]. Issue #9 Req 4.1, 4.3.
+     */
+    fun observeBySort(order: CredentialSortOrder): Flow<List<Credential>>
+
+    /**
+     * Observes the most-recently-used credentials (top [limit] rows by
+     * `lastUsedAt DESC`). Never-used credentials (NULL `lastUsedAt`) are
+     * excluded. Issue #9 Req 3.1, 3.3, 3.4.
+     */
+    fun observeRecentlyUsed(limit: Int): Flow<List<Credential>>
+
+    /**
+     * Stamps [timestamp] onto the `lastUsedAt` of the credential with [id].
+     * Silent no-op if the row was deleted in a race. Issue #9 Req 3.2.
+     */
+    suspend fun markUsed(id: CredentialId, timestamp: Long)
+
+    /**
+     * Creates a copy of the credential at [sourceId]. The new row inherits
+     * label / username / packageName / passwordCiphertext / passwordIv /
+     * signatureSha256 / signatureCapturedAt unchanged (avoids a
+     * decrypt -> re-encrypt cycle on plaintext per NFR 1.3 / 1.4). The
+     * timestamps are reset to [timestamp] and `lastUsedAt` is null.
+     *
+     * Issue #9 Req 5.3, 5.4.
+     */
+    suspend fun duplicate(sourceId: CredentialId, timestamp: Long): Result<CredentialId>
 }

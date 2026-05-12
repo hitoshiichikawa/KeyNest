@@ -4,6 +4,8 @@ import com.example.keynest.data.dao.CredentialDao
 import com.example.keynest.data.entity.CredentialEntity
 import com.example.keynest.domain.model.Credential
 import com.example.keynest.domain.model.CredentialId
+import com.example.keynest.domain.model.CredentialSortOrder
+import com.example.keynest.domain.model.DuplicateFailure
 import com.example.keynest.domain.model.EncryptedCredentialRecord
 import com.example.keynest.domain.model.SigningHash
 import com.example.keynest.domain.repository.CredentialRepository
@@ -49,6 +51,47 @@ class CredentialRepositoryImpl(
 
     override fun observeAll(): Flow<List<Credential>> {
         return dao.observeAll().map { list -> list.map { it.toDomain() } }
+    }
+
+    override fun observeBySort(order: CredentialSortOrder): Flow<List<Credential>> {
+        val source = when (order) {
+            CredentialSortOrder.UpdatedAtDesc -> dao.observeByUpdatedAtDesc()
+            CredentialSortOrder.LabelAsc -> dao.observeByLabelAsc()
+            CredentialSortOrder.PackageAsc -> dao.observeByPackageAsc()
+        }
+        return source.map { list -> list.map { it.toDomain() } }
+    }
+
+    override fun observeRecentlyUsed(limit: Int): Flow<List<Credential>> {
+        require(limit > 0) { "limit must be positive" }
+        return dao.observeRecentlyUsed(limit).map { list -> list.map { it.toDomain() } }
+    }
+
+    override suspend fun markUsed(id: CredentialId, timestamp: Long) {
+        dao.updateLastUsedAt(id = id.value, timestamp = timestamp)
+    }
+
+    override suspend fun duplicate(
+        sourceId: CredentialId,
+        timestamp: Long,
+    ): Result<CredentialId> {
+        val source = dao.findById(sourceId.value)
+            ?: return Result.failure(DuplicateFailure.NotFound)
+        return try {
+            // Inherit ciphertext / IV / signature unchanged: this avoids
+            // decrypt -> re-encrypt and so never materialises plaintext
+            // during a duplicate (NFR 1.3 / 1.4).
+            val copy = source.copy(
+                id = 0L,            // autoGenerate
+                createdAt = timestamp,
+                updatedAt = timestamp,
+                lastUsedAt = null,  // duplicate is "fresh / never used"
+            )
+            val newId = dao.insert(copy)
+            Result.success(CredentialId(newId))
+        } catch (t: Throwable) {
+            Result.failure(DuplicateFailure.Storage(reason = t.javaClass.simpleName))
+        }
     }
 
     // ---- mapping helpers --------------------------------------------------
