@@ -44,9 +44,13 @@ class CredentialListAdapter(
                 ?.uppercaseChar()
                 ?.toString()
                 ?: "K"
-            // Subtitle: username @ packageName. Username is not sensitive at
-            // rest (it's also what we surface in the Autofill dataset chip).
-            binding.textSubtitle.text = "${item.username} @ ${item.packageName}"
+            // Issue #5 Round 2 — split the sub-line: subtitle = username
+            // alone (12sp/500 text-2), and the dedicated `text_package`
+            // row carries the package name (11sp/500 text-3, monospace)
+            // per AC 4.3.1 / 4.2.2. Username is not sensitive at rest;
+            // the package name lives outside the encrypted blob.
+            binding.textSubtitle.text = item.username
+            binding.textPackage.text = item.packageName
             binding.root.setOnClickListener { onClick(item) }
             binding.root.setOnLongClickListener {
                 onLongClick(item)
