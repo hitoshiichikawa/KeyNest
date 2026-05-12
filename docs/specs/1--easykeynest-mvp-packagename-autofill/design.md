@@ -148,6 +148,7 @@ flowchart TB
 | Security | Android Keystore (AES/GCM/NoPadding, 256bit), `javax.crypto.Cipher` | AES-GCM 鍵管理・暗号／復号 | 鍵は `setUserAuthenticationRequired(false)` で初期実装し、Vault アンロックはアプリ層 BiometricPrompt で実現（MVP 単純化）。 |
 | Auth | AndroidX Biometric 1.2+ | BiometricPrompt + 端末認証フォールバック | `BIOMETRIC_STRONG OR DEVICE_CREDENTIAL` を要求。 |
 | Autofill | `android.service.autofill.AutofillService` (API 26+) | onFillRequest 処理 | `AssistStructure` 走査は最大ノード数の guard を設ける。 |
+| Autofill / Inline UI | `androidx.autofill:autofill` 1.1+ | API 30+ で Inline Suggestions の `InlinePresentation` Slice を構築 | IME が `inlineSuggestionsRequest` を提供したときのみ利用。Slice content builder は `androidx.autofill.inline.v1.InlineSuggestionUi`。 |
 | Build | AGP 8.5+, Gradle 8.7+, Kotlin DSL | プロジェクトビルド | minSdk 26, compileSdk/targetSdk 34。 |
 | Test | JUnit 4, MockK, Robolectric (unit), AndroidX Test + Espresso (instrumented) | 単体 / 計装テスト | Room は `Room.inMemoryDatabaseBuilder` を使用。 |
 
@@ -229,7 +230,8 @@ flowchart TB
         │       └── util/
         │           ├── PackageSignatureResolver.kt    # PackageManager で SHA-256 取得
         │           ├── HexEncoding.kt
-        │           └── SafeLogger.kt                  # password マスク保証ログラッパ
+        │           ├── SafeLogger.kt                  # password マスク保証ログラッパ
+        │           └── AutofillServiceStatus.kt       # binder + Settings.Secure の二重判定（PR #3 で追加）
         ├── test/                          # JVM unit tests（Robolectric 含む）
         │   └── java/com/example/keynest/...
         └── androidTest/                   # 計装テスト
@@ -257,8 +259,8 @@ flowchart TB
 | 2.3 | 再保存時に最新ハッシュを再取得 | UpdateCredentialUseCase, PackageSignatureResolver | re-resolve | Flow A |
 | 3.1 | onFillRequest で package と credential を突合 | KeyNestAutofillService, ResolveAutofillCandidatesUseCase | `onFillRequest()` | Flow B |
 | 3.2 | username/password 推定不能時に空 FillResponse | AssistStructureParser, KeyNestAutofillService | parser returns empty | Flow B |
-| 3.3 | 候補を表示名付き Dataset で返す | FillResponseBuilder, DatasetPresentationFactory | `buildAuthentication(dataset)` | Flow B |
-| 3.4 | 確定時に username / password を入力 | FillResponseBuilder, AutofillUnlockActivity | `Dataset.Builder.setValue` | Flow C |
+| 3.3 | 候補を表示名付き Dataset で返す（API 30+ では IME 候補バー内に inline 表示） | FillResponseBuilder, DatasetPresentationFactory (`build`, `buildInline`) | `setValue(id, value, presentation[, inline])` | Flow B |
+| 3.4 | 確定時に username / password を入力 | FillResponseBuilder, AutofillUnlockActivity | `Dataset.Builder.setValue(id, value)` (auth result は 2 引数版固定) | Flow C |
 | 3.5 | onFillRequest 内でネットワーク・長時間ブロッキングを行わない | KeyNestAutofillService, ResolveAutofillCandidatesUseCase | IO-bound 部分の事前ロード／キャッシュ | Flow B |
 | 4.1 | 呼び出し元 package の現行 SHA-256 を取得し比較 | PackageSignatureResolver, ResolveAutofillCandidatesUseCase | `compare(stored, current)` | Flow B |
 | 4.2 | 不一致 credential を候補に含めない | ResolveAutofillCandidatesUseCase | filter | Flow B |
@@ -269,9 +271,9 @@ flowchart TB
 | 5.3 | 認証成功後に復号 credential を遅延返却 | AutofillUnlockActivity, UnlockVaultUseCase, AesGcmCipher | `setResult(EXTRA_AUTHENTICATION_RESULT)` | Flow C |
 | 5.4 | 認証失敗時は credential を返さず失敗応答 | AutofillUnlockActivity | `setResult(RESULT_CANCELED)` | Flow C |
 | 5.5 | 復号 credential を長時間メモリ保持しない | PlaintextCredential, AutofillUnlockActivity | `CharArray.fill(' ')` 等で zero-fill | Flow C |
-| 6.1 | 未有効化時に案内画面を提示 | AutofillEnableActivity, AutofillManager.hasEnabledAutofillServices | check at onResume | Flow D |
+| 6.1 | 未有効化時に案内画面を提示 | AutofillEnableActivity, CredentialListActivity, **AutofillServiceStatus** (binder + Settings.Secure 二重判定) | check at onResume | Flow D |
 | 6.2 | 設定画面へ遷移 | AutofillEnableActivity | `Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE` Intent | Flow D |
-| 6.3 | 有効化済みなら必須表示しない | AutofillEnableActivity | status branching | Flow D |
+| 6.3 | 有効化済みなら必須表示しない | AutofillEnableActivity, **AutofillServiceStatus** | status branching | Flow D |
 | 7.1 | API 26 以上で動作 | build.gradle.kts (minSdk 26) | gradle 設定 | — |
 | 7.2 | API 34 以上でも AutofillService が動作 | KeyNestAutofillService, AndroidManifest | targetSdk 34 検証 | — |
 | 7.3 | Accessibility / OCR / DeviceOwner / root 非依存 | 全コンポーネント | manifest に Accessibility permission を含めない | — |
@@ -561,14 +563,18 @@ sealed class AuthResult {
 | Requirements | 3.1, 3.2, 3.3, 3.5, 4.1, 4.2, 4.3, 4.4, 5.1, 7.2, NFR 2.1, NFR 2.2, NFR 3.1, NFR 3.2 |
 
 **Responsibilities & Constraints**
+- `onCreate`:
+  - `ServiceLocator.initialize(applicationContext)` を idempotent に呼ぶ
+  - **Room を pre-warm** する（`credentialRepository.findByPackage("__prewarm__")` を `Dispatchers.Default` で 1 回投げ捨て発行）。初回 `onFillRequest` 時のオーバーレイ遅延（典型 100–500ms の Room オープン待ち）を回避する。
 - `onFillRequest(request, cancellationSignal, callback)`:
   1. 直近の `AssistStructure` を取り出し、`AutofillFieldHeuristics` で username/password 候補ノードを抽出
   2. ノード抽出失敗時は `callback.onSuccess(null)`（NFR 3.1 / Req 3.2）
-  3. 呼び出し元 packageName を `AssistStructure.activityComponent` または `clientState` から取得
+  3. 呼び出し元 packageName を `AssistStructure.activityComponent` から取得（spoofing 不可な唯一の経路）
   4. `ResolveAutofillCandidatesUseCase` を呼び、署名一致 credential を取得
   5. 0 件なら `onSuccess(null)`
-  6. 1 件以上なら、各 credential に対し Authentication Intent（`AutofillUnlockActivity`）付き Dataset を生成し、`FillResponse` を構築
-  7. `onSaveRequest` は **空実装**（MVP スコープ外、Req `onSaveRequest` 非実装）
+  6. **Inline Suggestions 経路（API 30+）**: `request.inlineSuggestionsRequest?.inlinePresentationSpecs` を取得し、Dataset ごとに `InlinePresentation` を併用アタッチする（後述 FillResponseBuilder 参照）。IME 側が inline 非対応なら specs は null → popup のみで応答。
+  7. 1 件以上なら、各 credential に対し Authentication Intent（`AutofillUnlockActivity`）付き Dataset を生成し、`FillResponse` を構築
+  8. `onSaveRequest` は **空実装**（MVP スコープ外、Req `onSaveRequest` 非実装）
 - `cancellationSignal` を尊重し、キャンセル時は callback を呼ばない
 
 ##### Manifest 宣言
@@ -585,6 +591,17 @@ sealed class AuthResult {
       android:name="android.autofill"
       android:resource="@xml/autofill_service_config"/>
 </service>
+```
+
+`autofill_service_config.xml` には **`android:supportsInlineSuggestions="true"`** を必ず宣言する。
+これが無いとフレームワークが IME に inline スペック問い合わせ自体を行わないため、コード側で
+`InlinePresentation` を生成しても表示経路に乗らない（PR #3 で実装時に判明）。
+
+```xml
+<autofill-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity="com.example.keynest.ui.list.CredentialListActivity"
+    android:supportsInlineSuggestions="true" />
 ```
 
 #### AssistStructureParser / AutofillFieldHeuristics
@@ -607,13 +624,35 @@ sealed class AuthResult {
 
 | Field | Detail |
 |-------|--------|
-| Intent | Dataset / FillResponse の構築と認証 Intent の埋め込み |
+| Intent | Dataset / FillResponse の構築と認証 Intent の埋め込み、Inline Suggestions 対応 |
 | Requirements | 3.3, 3.4, 5.1, 5.3 |
 
 **Responsibilities & Constraints**
-- ロック中：各候補ごとに Dataset を作り、`setAuthentication(intentSender, presentation)` で `AutofillUnlockActivity` を起動するように設定
-- 認証成功後の遅延返却：`AutofillUnlockActivity` 側で復号済み Dataset を `EXTRA_AUTHENTICATION_RESULT` にセット
-- API 30 未満は `RemoteViews` ベース presentation、API 30+ は `Presentations` を併用
+
+ロック中 Dataset (`buildLockedResponse` / `buildLockedDataset`):
+- 各候補ごとに Dataset を作り、`setAuthentication(intentSender)` で `AutofillUnlockActivity` を起動するように設定
+- `setValue` には **popup 用 `RemoteViews` + inline 用 `InlinePresentation`** の両方をアタッチする:
+  - API 30+ かつ IME から spec が来ているとき → 4 引数 `setValue(id, value, presentation, inlinePresentation)`
+  - 上記以外 → 3 引数 `setValue(id, value, presentation)`
+- 値は `PLACEHOLDER = "••••••"` のハードコード値。framework は authentication ゲート前なのでこの値を form に書き込まない。
+- inline spec はリスト長 N に対し N+1 番目以降の Dataset には最後の spec を流用する（autofill framework の契約）。
+
+認証成功後の Dataset (`buildUnlockedDataset`):
+- `AutofillUnlockActivity` で復号済み username / password を `AutofillValue.forText` でセットし、
+  `EXTRA_AUTHENTICATION_RESULT` に乗せて返却。
+- **`setValue` は 2 引数版 `setValue(id, value)` を使う**（presentation を渡さない）。
+  - 理由: auth-result Dataset は picker に表示されないので presentation は不要。
+  - 3 引数 `setValue(id, value, presentation)` を渡すと一部 Android で「resolved value」ではなく
+    「新しい選択可能 Dataset」と解釈され、対象フォームへの注入が行われないことを PR #3 動作確認時に確認。
+  - Google の autofill サンプルも auth-result では 2 引数版を採用。
+
+`DatasetPresentationFactory` の API:
+- `build(label, subtitle): RemoteViews` — popup 用（全 API 共通）。
+- `buildInline(label, subtitle, spec): InlinePresentation?` — API 30+ のみ実装。`spec == null` または
+  API 30 未満なら null を返す（呼び出し側は popup-only にフォールバック）。Slice は
+  `androidx.autofill.inline.v1.InlineSuggestionUi.newContentBuilder(attributionPendingIntent)` で構築。
+  attribution PendingIntent は `CredentialListActivity` を指す（chip 長押しで「どこからの候補か」の
+  ナビゲーション先になるため、自アプリ launcher に飛ばすのが自然）。
 
 #### AutofillUnlockActivity
 
@@ -629,6 +668,24 @@ sealed class AuthResult {
 - 失敗／キャンセル時: `setResult(RESULT_CANCELED)` → Autofill UI に失敗応答
 - finish 直後に `PlaintextCredential.close()` を呼び CharArray を zero-fill（Req 5.5）
 
+##### 起動 Intent の制約
+
+PendingIntent に乗せる Intent には **`FLAG_ACTIVITY_NEW_TASK` を付与しない**。
+
+- AutofillService は非 Activity Context なので「startActivity には FLAG_ACTIVITY_NEW_TASK 必須」
+  という一般ルールから防御的に付けたくなるが、auth PendingIntent は最終的に framework
+  (system_server) が `send()` するため自身でタスク管理を行う。
+- NEW_TASK を付けると AutofillUnlockActivity が **別タスク**で起動され、`taskAffinity=""` と
+  あいまって独立タスクになる。`setResult(RESULT_OK)` 自体は届くが、framework が「呼び出し元
+  アプリのフォームに `EXTRA_AUTHENTICATION_RESULT` を適用する」フォーカス復帰経路を喪失し、
+  Dataset は届いていても**フォーム注入が起こらない**。これは PR #3 の動作確認で実際に観測。
+- Google の autofill サンプルも auth PendingIntent には NEW_TASK を付けていない。
+
+PendingIntent flags:
+- `FLAG_CANCEL_CURRENT` ベース + API 31+ で `FLAG_MUTABLE` を OR する
+  （framework が intent に `EXTRA_AUTHENTICATION_RESULT` 等を書き加えるため MUTABLE 必須）
+- `FLAG_IMMUTABLE` にすると framework の書き換えが失敗しコールバック自体が届かなくなる。
+
 ##### Manifest 宣言
 
 ```xml
@@ -636,7 +693,8 @@ sealed class AuthResult {
     android:name=".autofill.unlock.AutofillUnlockActivity"
     android:theme="@style/Theme.KeyNest.Translucent"
     android:exported="false"
-    android:excludeFromRecents="true"/>
+    android:excludeFromRecents="true"
+    android:taskAffinity="" />
 ```
 
 ### UI Layer
@@ -645,8 +703,15 @@ sealed class AuthResult {
 
 | Field | Detail |
 |-------|--------|
-| Intent | 登録済み credential の一覧と編集／削除導線 |
+| Intent | 登録済み credential の一覧と編集／削除導線、初回未有効化 nudge |
 | Requirements | 1.5, 6.1 |
+
+**Responsibilities & Constraints**
+- `ListCredentialsUseCase` の Flow を `repeatOnLifecycle(STARTED)` 内で購読
+- `onResume` で **`AutofillServiceStatus.isCurrentService(this)`** が false かつ in-process flag
+  `redirectShown` が false のときに限り `AutofillEnableActivity` に遷移（Req 6.1）。1 プロセス内
+  で 1 回のみ、`redirectShown=true` で固定。process death で flag はリセット（cold restart は
+  再度初回扱い）。
 
 #### CredentialEditActivity / CredentialEditViewModel / PackagePickerBottomSheet
 
@@ -659,6 +724,11 @@ sealed class AuthResult {
 - package 入力は手入力テキストフィールド + 「インストール済みアプリから選択」ボタン両対応（Open Q-1 への回答）
 - 「選択」を押下すると `PackagePickerBottomSheet` を表示し `PackageManager.getInstalledApplications` の結果を提示
 - password 入力は `TextInputEditText` (passwordToggleEnabled)、Submit 時は `CharArray` で保持し ViewModel へ渡す
+- 保存成功時のフィードバックは **`Toast`** で表示する（`Snackbar` ではない）。理由: `State.Saved`
+  から `_navigation.tryEmit(Unit)` → `finish()` が即座に走るため、ホスト View が無くなる `Snackbar`
+  は表示前に消える。`Toast` は Activity finish 後も surface に残るので確実に届く。
+- 保存失敗時の `State.Error` Snackbar には例外クラス名（`State.Error.cause`）を含めて表示する。
+  原因が見えないと「保存できたか分からない」というユーザフィードバックループに陥るため。
 
 #### AutofillEnableActivity
 
@@ -668,11 +738,45 @@ sealed class AuthResult {
 | Requirements | 6.1, 6.2, 6.3 |
 
 **Responsibilities & Constraints**
-- `onResume` で `AutofillManager.hasEnabledAutofillServices()` をチェックし、状態に応じて UI を出し分け
+- `onResume` で **`AutofillServiceStatus.isCurrentService(this)`** をチェックし、状態に応じて UI を出し分け
+  （`AutofillManager.hasEnabledAutofillServices()` を直接呼ばないこと。コールドスタート race の理由は
+  Util Layer の `AutofillServiceStatus` 節を参照）
 - 「有効化する」ボタンで `Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE).setData(Uri.parse("package:..."))` を起動
 - 起動時アプリ初回チェックは `KeyNestApp` 起動から `CredentialListActivity` への遷移時に行う（Open Q-5 への回答：初回未有効化のときのみ自動提示、それ以降は設定画面から到達）
 
 ### Util Layer
+
+#### AutofillServiceStatus
+
+| Field | Detail |
+|-------|--------|
+| Intent | 「自アプリが現在のシステム Autofill サービスか」を安定的に判定する |
+| Requirements | 6.1, 6.3 |
+
+**Responsibilities & Constraints**
+
+- `AutofillManager.hasEnabledAutofillServices()` は user-scoped な `AutofillManagerService`
+  への binder 呼び出しで、コールドスタート直後はサービス側 state が未 load で **false を返す
+  ことがある**（PR #3 で実害を確認）。これに依拠して onResume で有効化案内を出すと、ユーザが
+  既に KeyNest を選択済みでも初回起動で案内が出てしまう。
+- 対策として **`AutofillManager` の結果と `Settings.Secure.getString(cr, "autofill_service")`
+  の OR で判定する**。後者は persistent な設定ファイルの直読みなので binder 初期化に依存しない。
+- `Settings.Secure.AUTOFILL_SERVICE` 定数自体は `@SystemApi` で SDK から見えないため、
+  key 文字列 `"autofill_service"`（AOSP 安定）をハードコードし、定数として util に閉じ込める。
+- 返却値が flattened ComponentName `"<package>/<class>"` 形式かどうかをチェックし、自アプリ
+  package で始まれば true を返す。
+
+##### Service Interface
+
+```kotlin
+internal object AutofillServiceStatus {
+  fun isCurrentService(context: Context): Boolean
+}
+```
+
+呼び出し側:
+- `AutofillEnableActivity.renderState()` — 有効化済みなら「すでに設定済み」表示に切り替え
+- `CredentialListActivity.onResume()` — 未有効化のときだけ初回 1 回 `AutofillEnableActivity` に redirect
 
 #### PackageSignatureResolver
 
@@ -776,15 +880,29 @@ class PackageSignatureResolver(private val pm: PackageManager) {
 - `android.permission.INTERNET` を AndroidManifest で **宣言しない**（NFR 1.5 を機械的に保証）
 - ProGuard / R8 で domain.model package のフィールド名難読化を許容（Room エンティティは `@Keep` で保護）
 
+## UI Theming
+
+- `Theme.KeyNest` の親は `Theme.MaterialComponents.DayNight.NoActionBar`（端末ダークモードに追従）。
+- `android:windowBackground` には **`?attr/colorSurface`** を指定する（生色 `@android:color/white`
+  をハードコードしない）。後者を指定するとダークモード時にウィンドウは強制的に白、`textColorPrimary`
+  の default は dark variant = 白、となり **白文字 on 白背景でリストが描画されているのに読めない**
+  事故になる（PR #3 で実害発生）。
+- `Theme.KeyNest.Translucent` は `AutofillUnlockActivity` 用。`windowBackground=@android:color/transparent`
+  + `windowIsTranslucent=true` で BiometricPrompt を Activity 上で表示する設計。
+
 ## Performance & Scalability
 
 - credential 数の想定上限は 1,000 件以内（MVP）。`findByPackage` は `package_name` インデックスにより O(log N)
 - `onFillRequest` 内では DAO クエリ 1 回 + 署名取得 1 回 + メモリ上フィルタのみ
 - `AssistStructureParser` はノード走査最大 500 ノードで打ち切り、深さ最大 50
+- `KeyNestAutofillService.onCreate` で Room を pre-warm（dummy `findByPackage` を `Dispatchers.Default`
+  で発行）。初回 `onFillRequest` 時の DB オープン待ち (~100–500ms) を吸収し、NFR 2.1 の中央値 300ms
+  以内を維持しやすくする。
 
 ## Open Questions の決定結果
 
-要件側に残った 6 項目について、本設計で以下のとおり判断する。
+要件側に残った 6 項目 + 実装フィードバックから派生した 1 項目（OQ-7）について、
+本設計で以下のとおり判断する。
 
 | # | Open Question | 設計判断 |
 |---|---------------|----------|
@@ -794,6 +912,7 @@ class PackageSignatureResolver(private val pm: PackageManager) {
 | OQ-4 | Vault アンロック有効期間 | **候補選択ごとに毎回認証**。MVP ではセッションキャッシュを設けない（Req 5.5 を厳格化）。将来オプションとして拡張可能な設計（`UnlockVaultUseCase` 単位で完結）。 |
 | OQ-5 | Autofill Service 有効化導線 UX | アプリ初回起動かつ未有効化のときに `AutofillEnableActivity` を自動提示。それ以降は `CredentialListActivity` のオーバーフローメニュー「Autofill 設定」から到達。 |
 | OQ-6 | NFR 2.1 計測手段とリリース判定 | パフォーマンステスト T9.1 で Robolectric 上の 50 回計測中央値で判定。リリース判定基準は中央値 ≤ 300ms かつ p95 ≤ 600ms。本基準を CI に組み込む。 |
+| OQ-7 | autofill 候補表示 UI（popup vs inline）| **両方アタッチ**。API 30+ で IME が inline をサポートする場合は IME 候補バー内に表示、それ以外は popup。`AutofillService` 側で `supportsInlineSuggestions="true"` を宣言し、Dataset 構築時に `RemoteViews` + `InlinePresentation` を併用 attach する。これにより password 欄フォーカス時のキーボードと popup の重なり問題を Gboard 等で解消（PR #3 で実装）。 |
 
 ## リスクと既知の限界
 
@@ -803,3 +922,20 @@ class PackageSignatureResolver(private val pm: PackageManager) {
 - **API 26–27 の `GET_SIGNATURES`**: 署名スプーフィングへの耐性が API 28+ より弱い。本 MVP は API 28+ では `GET_SIGNING_CERTIFICATES` を優先することでリスクを軽減。
 - **Vault アンロック中の memory dump**: `PlaintextCredential.password` を `CharArray` で持ち zero-fill するが、`String` を経由する Android Framework API（`AutofillValue.forText` は `CharSequence`）で短時間 GC まで残存する可能性がある。MVP では受容、将来 native memory に置換の余地あり。
 - **`onSaveRequest` 未実装**: ユーザーが対象アプリで初回ログイン時、自動保存提案は出ない。アプリ内 UI で手動登録する必要がある（要件確定事項）。
+- **Inline Suggestions の IME 依存**: API 30+ で `InlinePresentation` を構築しても、IME 側が
+  `InlineSuggestionsRequest` を返さなければ popup にフォールバックする。Gboard など主要 IME は対応
+  しているが、古い／マイナー IME を使うユーザは popup のキーボード上重なり問題が残る。受容可。
+- **`AutofillManager.hasEnabledAutofillServices()` のコールドスタート race**: user-scoped な
+  `AutofillManagerService` が lazy 初期化のため、process cold start 直後の binder 呼び出しが
+  false を返すことがある。`AutofillServiceStatus` で `Settings.Secure` の二重判定により回避。
+  IME 互換性のためにこのロジックを直接呼ぶ実装パスを増やさない（全箇所が `AutofillServiceStatus`
+  を経由する規約）。
+- **auth PendingIntent の `FLAG_ACTIVITY_NEW_TASK` 禁止**: 付けると framework がフォーム注入時に
+  呼び出し元タスクへ復帰できず、`setResult(RESULT_OK)` が届いても Dataset が無視される。
+  `AutofillUnlockActivity` セクションを参照。
+- **auth-result Dataset の presentation 禁止**: `Dataset.Builder.setValue(id, value, presentation)`
+  の 3 引数版を auth-result 用 Dataset で使うと、一部 Android で「resolved value」ではなく「新規
+  選択 Dataset」とみなされフォーム注入が起きない。2 引数版を必ず使う。
+- **ダークモード時の windowBackground**: `Theme.MaterialComponents.DayNight` 親に対して
+  `android:windowBackground` を生色で固定すると、配色不整合（白 on 白など）で UI が事実上不可視に
+  なる。`?attr/colorSurface` で DayNight に追従させる（UI Theming セクション参照）。

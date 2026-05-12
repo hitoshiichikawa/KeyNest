@@ -165,3 +165,45 @@ KeyNest MVP の packageName ベースの Autofill 機能を、design.md / tasks.
 | NFR 5.1 | `SafeLoggerTest`, `SafeLoggerAuditTest`, 各ドメイン型の toString redaction |
 
 すべての requirement numeric ID は最低 1 テストで担保されている。
+
+---
+
+## Post-merge stabilization (PR #3 動作確認で判明した修正履歴)
+
+PR #3 がマージされて実機 / Emulator 上で動作確認したところ、ビルドエラー・UX 不具合・
+autofill フレームワーク固有の挙動由来の問題が複数発覚した。すべて design.md の該当節に
+反映済みで、ここでは履歴として時系列にまとめる。Reviewer が後続 Issue で同種の罠を踏まない
+ためのリファレンスを兼ねる。
+
+| Commit | 種別 | 症状 | 根本原因 | 修正 | 設計反映先 |
+|---|---|---|---|---|---|
+| 93e8b19 | build | `'cause' hides member of supertype 'Exception' and needs 'override' modifier` | `data class XxxFailure(val cause: String) : Exception(...)` が `Throwable.cause: Throwable?` と型衝突 | プロパティ名を `reason` に変更（`DeleteFailure` / `SaveFailure.Storage` / `UpdateFailure.Storage` / `UnlockFailure.Decrypt`） | 実装規約 — Exception 派生 data class では Throwable と同名プロパティを避ける |
+| 69da537 | build | `Unresolved reference: AUTOFILL_SERVICE` | `Context.AUTOFILL_SERVICE` は AOSP では `@SystemApi` で公開 SDK 不可視 | `getSystemService(AutofillManager::class.java)` の型ベース lookup に切替 | 実装規約 — system service 取得は型ベースの公開 API を使う |
+| bcc2615 | UX | 「保存できたか分からない」 | `State.Saved` に対する UI 反応が空（`-> Unit`）で finish() のみ | `Toast` で「保存しました」表示 + `KeyNest.Edit` / `KeyNest.List` の SafeLogger 追加 | design.md の `CredentialEditActivity` 責務に Toast パターン明記 |
+| a83b346 | UX | ダークモードで一覧が「空」に見える | `android:windowBackground=@android:color/white` を `DayNight` 親の上で強制し、`textColorPrimary` の dark variant (= 白) と衝突して白文字 on 白背景になっていた | `?attr/colorSurface` に切替 | design.md `UI Theming` 節を新設、Risk & Known Limits にも追記 |
+| 11cf91a | perf | 初回 `onFillRequest` のオーバーレイ表示が遅い | 初回時に Room DB のオープンが乗っていた（lazy 初期化） | `KeyNestAutofillService.onCreate` で `findByPackage("__prewarm__")` を `Dispatchers.Default` で発行 | design.md `KeyNestAutofillService.onCreate` 責務 + `Performance & Scalability` に pre-warm パターン |
+| a8bb22e | autofill | 認証通過してもテキスト欄に値が入らない | auth-result Dataset で 3 引数 `setValue(id, value, presentation)` を渡しており、framework によっては「新しい選択可能 Dataset」と解釈されフォーム注入が起きていなかった | `setValue(id, value)` の 2 引数版に切替（Google サンプル準拠） | design.md `FillResponseBuilder.buildUnlockedDataset` + Risk & Known Limits |
+| 8bdd764 | autofill | 上記が直っても**まだ**テキスト欄に値が入らないケースがあった（実際こちらが主犯） | auth PendingIntent の Intent に `FLAG_ACTIVITY_NEW_TASK` を付けていたため、`AutofillUnlockActivity` が **別タスク**で起動され、framework が呼び出し元タスクへフォーカス復帰できず Dataset が捨てられていた | `newIntent` から `addFlags(FLAG_ACTIVITY_NEW_TASK)` を削除 | design.md `AutofillUnlockActivity` 責務に「NEW_TASK 禁止」を明文化 |
+| 4ebc16f | UX | コールドスタート時に「設定済みなのに Autofill 有効化案内が出る」現象が散発 | `AutofillManager.hasEnabledAutofillServices()` が user-scoped binder + lazy 初期化のためコールドスタート直後に false を返すことがある | `AutofillServiceStatus` を新設し、`Settings.Secure.getString(cr, "autofill_service")` との OR で判定 | design.md `Util Layer` に `AutofillServiceStatus` を追加、`CredentialListActivity` / `AutofillEnableActivity` の呼び出し規約も更新 |
+| fb909d8 | feat | autofill popup がキーボードと重なって見えにくい（Gboard 等） | popup のみ実装で IME 候補バー内表示（Inline Suggestions）に対応していなかった | `androidx.autofill:autofill:1.1.0` を追加し、`DatasetPresentationFactory.buildInline` で `InlinePresentation` を構築、`FillResponseBuilder` で popup + inline を併用 attach | design.md `Technology Stack` に autofill artifact、`FillResponseBuilder` / `DatasetPresentationFactory` 責務、Open Questions OQ-7 |
+| 5047131 | feat | 上記実装後も Gboard に inline 候補が出なかった | `<autofill-service>` に `android:supportsInlineSuggestions="true"` を宣言していないと framework は IME に inline スペック問い合わせ自体を行わない | xml/autofill_service_config.xml に属性追加 | design.md `KeyNestAutofillService` の `autofill_service_config.xml` ブロックに属性を明記 |
+
+### Reviewer 向けの学び（次の似た MVP で警戒したいパターン）
+
+1. **autofill auth は PendingIntent の task flags が肝**。サービスから startActivity するときは
+   `FLAG_ACTIVITY_NEW_TASK` を反射的に付けたくなるが、PendingIntent.getActivity は framework が
+   send するため不要 — 付けると逆にフォーム注入が壊れる。Google サンプルで NEW_TASK が無い
+   ことには意味がある。
+2. **auth-result Dataset と locked Dataset で setValue の引数を分ける**。popup 用 locked は
+   presentation 必須、auth-result は presentation を渡してはいけない（framework の解釈が変わる）。
+3. **`AutofillManager` binder 系 API はコールドスタートで非決定的**。Settings.Secure 直読みを
+   フォールバックに用意する。
+4. **Inline Suggestions は XML 属性 + コード両方が必要**。コードだけ書いても `<autofill-service>` の
+   `supportsInlineSuggestions="true"` が無いと一切動かない。
+5. **`Theme.*.DayNight` 親に対して `windowBackground` を生色で固定しない**。配色不整合で UI 不可視
+   になる事故。`?attr/colorSurface` のような attribute 参照を使う。
+6. **`Exception` 派生 `data class` に `cause` プロパティを置かない**。Kotlin の override ルールで
+   `Throwable.cause: Throwable?` と衝突しコンパイル不能。`reason` 等にリネームする。
+7. **保存 / 復号など長い処理を伴う Activity finish 直前のフィードバックは `Toast` を使う**。
+   `Snackbar` はホスト View が消えると同時に消える。
+
