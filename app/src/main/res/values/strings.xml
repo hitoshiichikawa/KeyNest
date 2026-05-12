@@ -10,6 +10,24 @@
     <string name="action_delete_credential">Delete</string>
     <string name="menu_open_autofill_settings">Autofill settings</string>
 
+    <!-- Credential list: Issue #9 enhancements (search / filter / recent / sort / overflow) -->
+    <string name="credential_list_search_hint">Search by label, username, or package</string>
+    <string name="credential_list_search_a11y">Search saved credentials</string>
+    <string name="credential_list_chip_signature_matched">Signature captured</string>
+    <string name="credential_list_chip_signature_missing">Signature missing</string>
+    <string name="credential_list_recent_header">Recently used</string>
+    <string name="credential_list_empty_no_match">No matching credentials</string>
+    <string name="credential_list_sort_button">Sort</string>
+    <string name="credential_list_sort_button_a11y">Change sort order</string>
+    <string name="credential_list_sort_updated_at_desc">Recently updated</string>
+    <string name="credential_list_sort_label_asc">Label (A–Z)</string>
+    <string name="credential_list_sort_package_asc">Package name (A–Z)</string>
+    <string name="credential_list_row_overflow_a11y">More actions for %1$s</string>
+    <string name="credential_list_row_action_duplicate">Duplicate</string>
+    <string name="credential_list_recent_card_a11y">%1$s, used recently</string>
+    <string name="message_duplicate_failed">Failed to duplicate credential</string>
+    <string name="message_duplicate_success">Credential duplicated</string>
+
     <!-- Credential edit -->
     <string name="credential_edit_title_new">New credential</string>
     <string name="credential_edit_title_edit">Edit credential</string>
