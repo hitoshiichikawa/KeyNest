@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Adaptive launcher foreground. Reproduces `design/screens/icons.jsx`
+    IconA "Shelter (recommended)":
+      - tan nest base (bottom curve)
+      - blue gradient roof
+      - cream keyhole + bit
+      - tan twig accents
+
+    The original SVG draws on a 200×200 viewBox. We scale it into the
+    432×432 safe zone of the 1024×1024 (108×108dp) adaptive canvas — i.e.
+    we render the design inside the central 67.5×67.5 viewport range
+    (108 × 0.625) of the canvas.
+
+    AC 4.8.1, 4.8.2
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+    <!--
+        Roof gradient (#2A7BF5 → #1457C9) and tan colours are inlined
+        because AAPT2 cannot resolve <gradient> shared definitions across
+        VectorDrawables. The path data matches IconA: nest base (Q-curve),
+        blue roof, keyhole circle + rectangle, twig strokes.
+    -->
+    <path
+        android:fillColor="#D9C3A0"
+        android:pathData="M40,130 Q100,60 160,130 L160,152 Q100,132 40,152 Z" />
+    <path
+        android:pathData="M52,128 Q100,72 148,128 Z">
+        <aapt:attr name="android:fillColor" xmlns:aapt="http://schemas.android.com/aapt">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="200"
+                android:endY="200">
+                <item android:offset="0" android:color="#2A7BF5" />
+                <item android:offset="1" android:color="#1457C9" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Keyhole bow + bit (cream so it punches through the roof) -->
+    <path
+        android:fillColor="#F4EBDC"
+        android:pathData="M100,108 m-8.5,0 a8.5,8.5 0 1,0 17,0 a8.5,8.5 0 1,0 -17,0 Z" />
+    <path
+        android:fillColor="#F4EBDC"
+        android:pathData="M96.5,111 L103.5,111 L103.5,125 Q103.5,127.5 101,127.5 L99,127.5 Q96.5,127.5 96.5,125 Z" />
+    <!-- Twig accents: two short tan strokes flanking the nest base. -->
+    <path
+        android:strokeColor="#9B7A4A"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:pathData="M60,142 L86,138" />
+    <path
+        android:strokeColor="#9B7A4A"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:pathData="M118,138 L142,142" />
+</vector>

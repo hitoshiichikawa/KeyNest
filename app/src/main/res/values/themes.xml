@@ -1,16 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Theme.KeyNest — wires the design tokens defined in colors.xml / dimens.xml
+    into the Material Components DayNight theme. The night variant lives in
+    `values-night/themes.xml`; only attributes that need to differ in dark
+    mode are overridden there.
+
+    Requirements: 4.1.3, 4.1.4, 4.1.6, 4.2.1, 4.2.2, 4.2.3
+-->
 <resources>
+
+    <!-- ===== Shape Appearances (§6 / AC 4.1.3) ===== -->
+    <style name="ShapeAppearance.KeyNest.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/kn_radius_sm</item>
+    </style>
+
+    <style name="ShapeAppearance.KeyNest.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/kn_radius_md</item>
+    </style>
+
+    <style name="ShapeAppearance.KeyNest.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">@dimen/kn_radius_lg</item>
+    </style>
+
+    <!-- ===== TextAppearance roles (§4 / AC 4.2.1, 4.2.2) ===== -->
+    <!--
+        We don't ship Manrope / JetBrains Mono TTFs — the requirement
+        explicitly allows the system sans / monospace fallback as long as
+        the role/size/weight hierarchy is preserved. Activities can swap
+        fontFamily later via Downloadable Fonts without changing layouts.
+    -->
+    <style name="TextAppearance.KeyNest.AppBarTitle" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textSize">@dimen/kn_text_appbar</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textFontWeight">800</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.SectionTitle" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">@dimen/kn_text_section</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textFontWeight">800</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.CardTitle" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textSize">@dimen/kn_text_card</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Body" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">@dimen/kn_text_body</item>
+        <item name="android:textFontWeight">500</item>
+        <item name="android:textColor">@color/kn_text_2</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Meta" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">@dimen/kn_text_meta</item>
+        <item name="android:textFontWeight">500</item>
+        <item name="android:textColor">@color/kn_text_2</item>
+    </style>
+
+    <!--
+        Eyebrow / overline: uppercase 11–12 sp / 700 / +.06em letter spacing.
+        Used for "KeyNest" label above the Vault title, section headers in
+        the picker sheet, and outlined-field labels in the edit screen.
+    -->
+    <style name="TextAppearance.KeyNest.Eyebrow" parent="TextAppearance.MaterialComponents.Overline">
+        <item name="android:textSize">@dimen/kn_text_eyebrow</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textFontWeight">700</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:textColor">@color/kn_text_2</item>
+    </style>
+
+    <!--
+        Monospace role (AC 4.2.2). Package names / SHA-256 / passwords.
+        fontFamily="monospace" maps to the device default monospace
+        (UbuntuMono / Roboto Mono / etc.). Fallback per requirements.
+    -->
+    <style name="TextAppearance.KeyNest.Mono" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textSize">@dimen/kn_text_meta</item>
+        <item name="android:textColor">@color/kn_text_3</item>
+    </style>
+
+    <!-- Password field text: monospace + .1em letter spacing (AC 4.4.4) -->
+    <style name="TextAppearance.KeyNest.Mono.Password">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <!-- ===== App Theme ===== -->
     <style name="Theme.KeyNest" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/keynest_primary</item>
-        <item name="colorPrimaryVariant">@color/keynest_primary_variant</item>
-        <item name="colorOnPrimary">@android:color/white</item>
-        <item name="colorSecondary">@color/keynest_secondary</item>
+        <!-- Brand palette → Material colorScheme (AC 4.1.4) -->
+        <item name="colorPrimary">@color/kn_primary</item>
+        <item name="colorPrimaryVariant">@color/kn_primary_hover</item>
+        <item name="colorOnPrimary">@color/kn_on_primary</item>
+        <item name="colorSecondary">@color/kn_accent_500</item>
+        <item name="colorSecondaryVariant">@color/kn_accent_500</item>
+        <item name="colorOnSecondary">@color/kn_on_primary</item>
+
+        <item name="android:colorBackground">@color/kn_bg</item>
+        <item name="colorSurface">@color/kn_surface</item>
+        <item name="colorOnSurface">@color/kn_text_primary</item>
+        <item name="colorOnBackground">@color/kn_text_primary</item>
+
+        <item name="colorError">@color/kn_danger</item>
+        <item name="colorOnError">@color/kn_on_primary</item>
+
         <!--
-            Use the Material surface color (respects DayNight) so text colored
-            with textColorPrimary remains readable in both modes. Hard-pinning
-            windowBackground to white caused white-on-white text in dark mode.
+            windowBackground must resolve through ?attr/colorSurface — pinning
+            a raw color leads to the DayNight contrast regression captured in
+            design.md "UI Theming" (white-on-white in dark mode).
         -->
         <item name="android:windowBackground">?attr/colorSurface</item>
+
+        <!-- Shape system (AC 4.1.3) -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.KeyNest.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.KeyNest.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.KeyNest.LargeComponent</item>
+
+        <!-- Material text appearance bindings -->
+        <item name="textAppearanceHeadline5">@style/TextAppearance.KeyNest.AppBarTitle</item>
+        <item name="textAppearanceHeadline6">@style/TextAppearance.KeyNest.SectionTitle</item>
+        <item name="textAppearanceSubtitle1">@style/TextAppearance.KeyNest.CardTitle</item>
+        <item name="textAppearanceBody2">@style/TextAppearance.KeyNest.Body</item>
+        <item name="textAppearanceCaption">@style/TextAppearance.KeyNest.Meta</item>
+        <item name="textAppearanceOverline">@style/TextAppearance.KeyNest.Eyebrow</item>
+
+        <!-- Bottom sheet visual contract (AC 4.5.1) -->
+        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.KeyNest.BottomSheetDialog</item>
     </style>
 
     <style name="Theme.KeyNest.Translucent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
@@ -18,5 +148,76 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <!-- ===== Component styles ===== -->
+
+    <!-- Primary CTA button: 52dp tall, r-md (16dp) corners (AC 4.3.5 / 4.6.2). -->
+    <style name="Widget.KeyNest.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="android:minHeight">@dimen/kn_btn_height</item>
+        <item name="android:textSize">@dimen/kn_text_card</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.005</item>
+        <item name="cornerRadius">@dimen/kn_radius_md</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <style name="Widget.KeyNest.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
+    <!-- Danger button: r-md outline, danger text colour (AC 4.4.6) -->
+    <style name="Widget.KeyNest.Button.Danger" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:minHeight">@dimen/kn_btn_height</item>
+        <item name="android:textColor">@color/kn_danger</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="strokeColor">@color/kn_border_strong</item>
+        <item name="cornerRadius">@dimen/kn_radius_md</item>
+        <item name="rippleColor">@color/kn_danger_soft</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+    </style>
+
+    <!-- Outlined input fields (AC 4.4.3) -->
+    <style name="Widget.KeyNest.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.KeyNest.TextField</item>
+        <item name="boxStrokeColor">@color/kn_text_field_stroke</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="hintTextColor">@color/kn_primary</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.KeyNest.TextField" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
+    </style>
+
+    <!-- FAB tinted with brand primary (AC 4.3.5) -->
+    <style name="Widget.KeyNest.FloatingActionButton" parent="Widget.MaterialComponents.FloatingActionButton">
+        <item name="backgroundTint">?attr/colorPrimary</item>
+        <item name="tint">?attr/colorOnPrimary</item>
+    </style>
+
+    <!-- Bottom sheet dialog: 28dp top radius, surface background (AC 4.5.1) -->
+    <style name="ThemeOverlay.KeyNest.BottomSheetDialog" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.KeyNest.BottomSheet</item>
+    </style>
+
+    <style name="Widget.KeyNest.BottomSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.KeyNest.BottomSheet</item>
+        <item name="backgroundTint">?attr/colorSurface</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.KeyNest.BottomSheet" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">@dimen/kn_radius_xl</item>
+        <item name="cornerSizeTopRight">@dimen/kn_radius_xl</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
     </style>
 </resources>

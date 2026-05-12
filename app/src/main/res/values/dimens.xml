@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    KeyNest spacing & shape tokens.
+
+    Source: `design/spec.md` §5 (4pt spacing scale) / §6 (radius scale).
+    Use the semantic names (kn_pad_screen_*, kn_card_pad, kn_radius_card …)
+    from layout XML so values stay editable from one place.
+-->
+<resources>
+
+    <!-- ── 4pt spacing scale ── -->
+    <dimen name="kn_space_1">4dp</dimen>
+    <dimen name="kn_space_2">8dp</dimen>
+    <dimen name="kn_space_3">12dp</dimen>
+    <dimen name="kn_space_4">16dp</dimen>
+    <dimen name="kn_space_5">20dp</dimen>
+    <dimen name="kn_space_6">24dp</dimen>
+    <dimen name="kn_space_8">32dp</dimen>
+    <dimen name="kn_space_10">40dp</dimen>
+    <dimen name="kn_space_12">48dp</dimen>
+    <dimen name="kn_space_16">64dp</dimen>
+
+    <!-- ── Radius tokens (spec §6) ── -->
+    <dimen name="kn_radius_xs">8dp</dimen>
+    <dimen name="kn_radius_sm">12dp</dimen>
+    <dimen name="kn_radius_md">16dp</dimen>
+    <dimen name="kn_radius_lg">20dp</dimen>
+    <dimen name="kn_radius_xl">28dp</dimen>
+    <!-- Pill-ish — capped to avoid overflow with very tall containers. -->
+    <dimen name="kn_radius_pill">999dp</dimen>
+
+    <!-- ── Semantic spacing ── -->
+    <dimen name="kn_pad_screen_horizontal">20dp</dimen>
+    <dimen name="kn_pad_list_horizontal">16dp</dimen>
+    <dimen name="kn_pad_card">16dp</dimen>
+    <dimen name="kn_section_gap">24dp</dimen>
+
+    <!-- ── Component sizes ── -->
+    <dimen name="kn_btn_height">52dp</dimen>
+    <dimen name="kn_icontile_lg">44dp</dimen>
+    <dimen name="kn_icontile_md">40dp</dimen>
+    <dimen name="kn_icontile_sm">32dp</dimen>
+    <dimen name="kn_grab_handle_width">36dp</dimen>
+    <dimen name="kn_grab_handle_height">4dp</dimen>
+    <dimen name="kn_target_min">44dp</dimen>
+
+    <!-- ── Type sizes (matches spec.md §4 — minimum 13 sp) ── -->
+    <dimen name="kn_text_appbar">26sp</dimen>
+    <dimen name="kn_text_section">19sp</dimen>
+    <dimen name="kn_text_card">15sp</dimen>
+    <dimen name="kn_text_body">14sp</dimen>
+    <dimen name="kn_text_meta">12sp</dimen>
+    <dimen name="kn_text_eyebrow">12sp</dimen>
+    <dimen name="kn_text_min">13sp</dimen>
+</resources>

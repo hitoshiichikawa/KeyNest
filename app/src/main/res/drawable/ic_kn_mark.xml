@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    KeyNest brand mark used on the empty list state.
+    Reproduces `design/screens/shared.jsx` <KNMark/>:
+      - shielded nest peak (primary brand fill)
+      - key bow (small circle) + key bit (vertical rectangle) in surface
+        colour so they read as cut-outs over the peak.
+
+    Tint via android:tint at the call site if needed; default fill is the
+    raw primary so this drawable can be used on any surface.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="92dp"
+    android:height="92dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+    <!-- Shielded peak. Filled with brand primary. -->
+    <path
+        android:fillColor="#1F6FEB"
+        android:pathData="M20,5 L33,14 C33,27 27,33 20,35 C13,33 7,27 7,14 Z" />
+    <!-- Key bow -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,18 m-3.4,0 a3.4,3.4 0 1,0 6.8,0 a3.4,3.4 0 1,0 -6.8,0" />
+    <!-- Key bit -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M18.7,18 h2.6 v9 a1.1,1.1 0 0 1 -1.1,1.1 h-0.4 a1.1,1.1 0 0 1 -1.1,-1.1 z" />
+    <!-- Bit notch -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M21.3,22.5 h3 v1.6 h-3 z" />
+</vector>
