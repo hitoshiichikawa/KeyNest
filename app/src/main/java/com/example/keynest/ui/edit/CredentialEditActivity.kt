@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -16,7 +17,11 @@ import com.example.keynest.R
 import com.example.keynest.databinding.CredentialEditActivityBinding
 import com.example.keynest.di.ServiceLocator
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Add / edit credential screen.
@@ -34,6 +39,7 @@ class CredentialEditActivity : AppCompatActivity() {
 
     private lateinit var binding: CredentialEditActivityBinding
     private var editingId: Long? = null
+    private var signatureResolveJob: Job? = null
 
     private val viewModel: CredentialEditViewModel by viewModels {
         CredentialEditViewModel.Factory(
@@ -61,6 +67,16 @@ class CredentialEditActivity : AppCompatActivity() {
         binding.btnDelete.visibility = if (editingId != null) View.VISIBLE else View.GONE
         binding.btnDelete.setOnClickListener { onDeleteClicked() }
 
+        // Issue #5 / PR #7: mirror live input into the target app card so the
+        // preview elements (AC 4.4.2 — IconTile letter, display name,
+        // monospace package, signature chip) actually reflect the record
+        // being edited instead of staying as static placeholders.
+        binding.inputLabel.addTextChangedListener(afterTextChanged { renderTargetAppCard() })
+        binding.inputPackage.addTextChangedListener(afterTextChanged {
+            renderTargetAppCard()
+            scheduleSignatureChipRefresh()
+        })
+
         editingId?.let { id ->
             lifecycleScope.launch {
                 val rec = viewModel.load(id) ?: return@launch
@@ -72,6 +88,9 @@ class CredentialEditActivity : AppCompatActivity() {
                 binding.layoutPassword.hint = getString(R.string.label_password) + " (optional)"
             }
         }
+        // Seed an initial empty-state render for the new-credential path
+        // (the watchers above only fire on subsequent text changes).
+        renderTargetAppCard()
 
         binding.btnSave.setOnClickListener { onSaveClicked() }
         binding.btnPickInstalledApp.setOnClickListener {
@@ -171,9 +190,56 @@ class CredentialEditActivity : AppCompatActivity() {
         binding.layoutLabel.error = null
     }
 
+    private fun renderTargetAppCard() {
+        val label = binding.inputLabel.text?.toString()?.trim().orEmpty()
+        val pkg = binding.inputPackage.text?.toString()?.trim().orEmpty()
+        binding.targetAppName.text = when {
+            label.isNotEmpty() -> label
+            pkg.isNotEmpty() -> pkg
+            else -> getString(R.string.label_target_app)
+        }
+        binding.targetPackageName.text = pkg
+        val seed = if (label.isNotEmpty()) label else pkg
+        binding.targetIconLetter.text = seed
+            .firstOrNull { !it.isWhitespace() }
+            ?.uppercaseChar()
+            ?.toString()
+            ?: ""
+    }
+
+    /**
+     * AC 4.4.2 — the "署名取得済み" chip should appear once the entered
+     * package resolves to an installed app whose signing certificate can
+     * be read. We debounce keystrokes so the resolver doesn't run on
+     * every character and bounce visibility.
+     */
+    private fun scheduleSignatureChipRefresh() {
+        signatureResolveJob?.cancel()
+        val pkg = binding.inputPackage.text?.toString()?.trim().orEmpty()
+        if (pkg.isEmpty()) {
+            binding.targetSignatureChip.visibility = View.GONE
+            return
+        }
+        signatureResolveJob = lifecycleScope.launch {
+            delay(SIGNATURE_RESOLVE_DEBOUNCE_MS)
+            val resolved = withContext(Dispatchers.IO) {
+                ServiceLocator.packageSignatureResolver.resolveSha256(pkg)
+            }
+            binding.targetSignatureChip.visibility =
+                if (resolved != null) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun afterTextChanged(block: () -> Unit): TextWatcher = object : TextWatcher {
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+        override fun afterTextChanged(s: Editable?) = block()
+    }
+
     companion object {
         private const val EXTRA_CREDENTIAL_ID = "com.example.keynest.extra.CREDENTIAL_ID"
         private const val INVALID_ID = -1L
+        private const val SIGNATURE_RESOLVE_DEBOUNCE_MS = 250L
 
         fun newIntent(context: Context, credentialId: Long? = null): Intent {
             return Intent(context, CredentialEditActivity::class.java).apply {

@@ -307,6 +307,49 @@
     `./gradlew :app:testDebugUnitTest` を実行することで最終確認をお願い
     したい (NFR 3.1)。
 
+## Round 3 是正（PR iteration round=1: IF にあって実装が無い view の wiring）
+
+- **Finding (AC 4.4.2 / 4.4.7)**: `credential_edit_activity.xml` の
+  `target_app_card` 内 4 view (`@+id/target_icon_letter`,
+  `@+id/target_app_name`, `@+id/target_package_name`,
+  `@+id/target_signature_chip`) は Round 1/2 ではレイアウト追加のみで、
+  Kotlin 側のデータバインドが無く静的プレースホルダーのまま放置されて
+  いた。`screens-1.jsx` `ScreenEdit` 上部カードが「実際に選択した
+  対象アプリのアイコン / 名前 / パッケージ / 署名チップ」を表示する
+  デザイン意図に対して機能していなかった (IF に存在するが実装が無い)。
+- **対応**: `CredentialEditActivity.kt` のみを編集 (UI binding only、
+  AC 4.10.2 許容範囲):
+  - `input_label` / `input_package` に `TextWatcher` を追加し、
+    `target_app_name` (label 優先 / pkg → `label_target_app` の順で
+    フォールバック)、`target_package_name` (pkg をそのまま)、
+    `target_icon_letter` (label or pkg の先頭非空白文字を大文字化)
+    を live にミラー。
+  - `onCreate` 末尾で `renderTargetAppCard()` を 1 回呼び、新規モード
+    での空状態を初期描画する (TextWatcher はその後の変更でのみ発火する
+    ため)。編集モードでは既存の `setText(rec.packageName/...)` が
+    Watcher を駆動するので追加コードは不要。
+  - `scheduleSignatureChipRefresh()` で package 値変更を 250ms debounce
+    して `ServiceLocator.packageSignatureResolver.resolveSha256(pkg)` を
+    `Dispatchers.IO` で呼び、結果が非 null なら
+    `target_signature_chip` を `VISIBLE`、null なら `GONE` にする。
+    `Job` を持たせて次の入力で前ジョブを cancel し、bouncing を防ぐ。
+- **ViewModel / Repository / DAO / UseCase / Resolver 自体は不変** —
+  Activity 内の binding 追加のみ。`PackagePickerBottomSheet` の API
+  シグネチャ (`(String) -> Unit`) も変更していない (picker は
+  packageName を返すのみ、ラベル auto-fill は scope 外)。
+- **要件側へのフィードバック / 確認事項**: 無し。AC 4.4.2 の本来の
+  意図 (target app card が選択対象を表示する) に整合する形で実装可能
+  だった。
+- **テスト実行**: 環境制約により `./gradlew` 系列の自動実行は引き続き
+  不可。代替検証:
+  - `python3 -c "import xml.etree.ElementTree as ET; ET.parse('app/src/main/res/layout/credential_edit_activity.xml')"` で
+    layout XML well-formedness 再確認。
+  - `binding.targetAppName` / `targetPackageName` / `targetIconLetter`
+    / `targetSignatureChip` は既存 layout の `@+id/...` から生成済み
+    (Round 2 までで既に XML 上には存在)、追加 `@+id` はゼロ。
+  - 既存 `CredentialEditViewModelTest` 5 ケースは ViewModel API を
+    一切変更していないため影響なし。
+
 ## 7. ファイル一覧 (合計)
 
 ```
