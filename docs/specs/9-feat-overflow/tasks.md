@@ -77,7 +77,7 @@
   - _Depends: 3.1, 5.1_
 
 - [ ] 6. UI: 検索バー / フィルタチップ / 並び替え / カルーセル / 行 overflow を XML 拡張
-- [ ] 6.1 レイアウト / メニュー / 文字列リソースを追加
+- [x] 6.1 レイアウト / メニュー / 文字列リソースを追加
   - `res/layout/credential_list_activity.xml` を改修: AppBar 直下に検索 `TextInputLayout` + `ChipGroup`（`app:singleSelection="true"`） + 並び替えボタン、本体上部に「最近使った」header + 横スクロール `RecyclerView`（`recent_recycler`）、その下に従来 `recycler`、`empty_view` は維持
   - `res/layout/credential_list_item.xml` に右端 `ImageButton`（`btn_overflow`、minWidth/minHeight=48dp、`contentDescription="@string/credential_list_row_overflow_a11y"`）を追加 — adapter で password を bind しないこと（NFR 1.3）
   - `res/layout/credential_list_recent_item.xml` を新規作成（card 1 枚分。`minHeight=48dp`、label / username を表示。password は表示しない NFR 1.3）
