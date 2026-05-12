@@ -22,7 +22,7 @@
   - _Requirements: 3.1, 3.3, 3.4, 6.1_
 
 - [ ] 2. DAO / Repository に検索・並び替え・直近 5 件・last_used_at 更新を追加
-- [ ] 2.1 `CredentialDao` に新 query 5 本を追加
+- [x] 2.1 `CredentialDao` に新 query 5 本を追加
   - `observeByUpdatedAtDesc()` / `observeByLabelAsc()` / `observeByPackageAsc()` を `@Query` で実装（label / packageName は `COLLATE NOCASE`、tiebreaker は `updated_at DESC`）
   - `observeRecentlyUsed(limit: Int): Flow<List<CredentialEntity>>` を `WHERE last_used_at IS NOT NULL ORDER BY last_used_at DESC LIMIT :limit` で実装
   - `updateLastUsedAt(id: Long, timestamp: Long)` を `@Query("UPDATE ...")` で実装
