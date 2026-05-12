@@ -5,7 +5,10 @@ import com.example.keynest.data.KeyNestDatabase
 import com.example.keynest.data.repository.CredentialRepositoryImpl
 import com.example.keynest.domain.repository.CredentialRepository
 import com.example.keynest.domain.usecase.DeleteCredentialUseCase
+import com.example.keynest.domain.usecase.DuplicateCredentialUseCase
 import com.example.keynest.domain.usecase.ListCredentialsUseCase
+import com.example.keynest.domain.usecase.MarkCredentialUsedUseCase
+import com.example.keynest.domain.usecase.ObserveRecentlyUsedUseCase
 import com.example.keynest.domain.usecase.ResolveAutofillCandidatesUseCase
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
 import com.example.keynest.domain.usecase.UnlockVaultUseCase
@@ -74,6 +77,20 @@ object ServiceLocator {
 
     val unlockVaultUseCase: UnlockVaultUseCase by lazy {
         UnlockVaultUseCase(credentialRepository, aesGcmCipher)
+    }
+
+    // ---- Issue #9 use cases ---------------------------------------------
+
+    val observeRecentlyUsedUseCase: ObserveRecentlyUsedUseCase by lazy {
+        ObserveRecentlyUsedUseCase(credentialRepository)
+    }
+
+    val markCredentialUsedUseCase: MarkCredentialUsedUseCase by lazy {
+        MarkCredentialUsedUseCase(credentialRepository)
+    }
+
+    val duplicateCredentialUseCase: DuplicateCredentialUseCase by lazy {
+        DuplicateCredentialUseCase(credentialRepository)
     }
 
     // ---- bootstrap -------------------------------------------------------
