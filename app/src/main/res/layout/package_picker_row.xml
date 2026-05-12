@@ -1,49 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    CredCard — matches `design/screens/screens-1.jsx` <CredCard/>.
+    Row inside the package picker bottom sheet — mirrors
+    `design/screens/screens-2.jsx` <PickerRow/>:
+      - 40dp IconTile with the app's first letter
+      - app name (14sp/700)
+      - monospace package name (11sp/500 text-3)
 
-    Layout: 44dp brand IconTile, label (15sp/700), username (12sp/500
-    text-2), monospace package name (11sp/500 text-3). 1dp border,
-    20dp radius.
-
-    IDs preserved (text_label, text_subtitle) — adapter and existing
-    Kotlin code consume those (NFR 3.2). text_subtitle still carries the
-    "username @ packageName" string assembled by the adapter so no
-    Kotlin change is required to make the row functional. The dedicated
-    `text_package` row below is bound by the same adapter on a later
-    pass if the design team needs the typographic split; for now the
-    subtitle line carries both for backwards compat.
-
-    Requirements: 4.3.1, 4.3.2
+    AC 4.5.3 / 4.5.4
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="@dimen/kn_pad_list_horizontal"
-    android:layout_marginVertical="@dimen/kn_space_1"
-    android:background="@drawable/bg_card_surface"
-    android:foreground="?attr/selectableItemBackground"
+    android:background="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:minHeight="@dimen/kn_target_min"
     android:orientation="horizontal"
-    android:paddingHorizontal="@dimen/kn_pad_card"
-    android:paddingVertical="@dimen/kn_space_3">
+    android:paddingHorizontal="@dimen/kn_space_3"
+    android:paddingVertical="@dimen/kn_space_2">
 
     <FrameLayout
-        android:layout_width="@dimen/kn_icontile_lg"
-        android:layout_height="@dimen/kn_icontile_lg"
+        android:layout_width="@dimen/kn_icontile_md"
+        android:layout_height="@dimen/kn_icontile_md"
         android:background="@drawable/bg_icon_tile_primary">
 
         <TextView
-            android:id="@+id/text_icon_letter"
+            android:id="@+id/icon_letter"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
             android:textColor="@color/kn_on_primary"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            tools:text="K" />
+            tools:text="S" />
     </FrameLayout>
 
     <LinearLayout
@@ -54,23 +43,26 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/text_label"
+            android:id="@+id/app_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
             android:textAppearance="@style/TextAppearance.KeyNest.CardTitle"
+            android:textSize="14sp"
             tools:text="Salesforce Mobile" />
 
         <TextView
-            android:id="@+id/text_subtitle"
+            android:id="@+id/package_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:ellipsize="end"
+            android:fontFamily="monospace"
             android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.KeyNest.Meta"
-            tools:text="k.tanaka@company.co.jp · com.salesforce.chatter" />
+            android:textAppearance="@style/TextAppearance.KeyNest.Mono"
+            android:textSize="11sp"
+            tools:text="com.salesforce.chatter" />
     </LinearLayout>
 
 </LinearLayout>

@@ -1,23 +1,86 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Autofill dataset dropdown row (RemoteViews target).
+
+    Maps `design/screens/screens-2.jsx` <DatasetRow/>:
+      - 32dp IconTile (9dp radius — approximated via the tile shape drawable)
+      - label (13sp/700) + username/subtitle (11sp/500 text-2)
+
+    The autofill UI inflates this layout in the host app's process via
+    `RemoteViews`, so we must keep to the AOSP supported view set
+    (LinearLayout / FrameLayout / TextView / ImageView). No custom views,
+    no styles that resolve at theme time on the host side.
+
+    IDs MUST remain `dataset_label` and `dataset_subtitle` — they are
+    consumed verbatim by `DatasetPresentationFactory` (AC 4.7.2 /
+    NFR 3.2). The third TextView (`text_icon_letter`) is set from
+    Kotlin if/when the factory chooses to surface a monogram; ignoring
+    it just leaves the IconTile blank.
+
+    Note: We do NOT reference theme-resolved colours (?attr/...) here
+    because RemoteViews is inflated outside the KeyNest theme. We bind
+    raw `kn_*` colour resources so the row keeps its visual identity
+    regardless of the host app's palette.
+
+    Requirements: 4.7.1, 4.7.2
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:background="@drawable/bg_dataset_surface"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="14dp"
+    android:paddingVertical="10dp">
 
-    <TextView
-        android:id="@+id/dataset_label"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textStyle="bold"
-        android:textSize="14sp"
-        tools:ignore="HardcodedText"
-        xmlns:tools="http://schemas.android.com/tools" />
+    <FrameLayout
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_icon_tile_primary">
 
-    <TextView
-        android:id="@+id/dataset_subtitle"
-        android:layout_width="match_parent"
+        <!--
+            The factory binds dataset_label / dataset_subtitle, leaving
+            this monogram blank. We keep the slot wired so a future PR
+            can derive a letter from the credential label without
+            re-architecting the RemoteViews schema. Not in NFR 3.2 id set
+            (it's a new addition, not a rename).
+        -->
+        <TextView
+            android:id="@+id/dataset_icon_letter"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:textColor="@color/kn_on_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textSize="12sp" />
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/dataset_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/kn_text"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/dataset_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/kn_ink_500"
+            android:textSize="11sp" />
+    </LinearLayout>
 
 </LinearLayout>

@@ -9,6 +9,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keynest.databinding.PackagePickerBottomSheetBinding
+import com.example.keynest.databinding.PackagePickerRowBinding
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,27 +91,34 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val tv = android.widget.TextView(parent.context).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                )
-                val padding = (16 * resources.displayMetrics.density).toInt()
-                setPadding(padding, padding, padding, padding)
-                setTextAppearance(android.R.style.TextAppearance_Medium)
-            }
-            return VH(tv)
+            // Issue #5: rows now match `design/screens/screens-2.jsx`
+            // <PickerRow/> — IconTile + app name + monospace package.
+            // We inflate the dedicated row layout via ViewBinding so the
+            // styling lives entirely in XML.
+            val inflater = LayoutInflater.from(parent.context)
+            val binding = PackagePickerRowBinding.inflate(inflater, parent, false)
+            return VH(binding)
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = items[position]
-            (holder.itemView as android.widget.TextView).text = "${item.label}\n${item.packageName}"
-            holder.itemView.setOnClickListener { onClick(item.packageName) }
+            holder.bind(item, onClick)
         }
 
         override fun getItemCount(): Int = items.size
 
-        class VH(view: View) : RecyclerView.ViewHolder(view)
+        class VH(private val binding: PackagePickerRowBinding) : RecyclerView.ViewHolder(binding.root) {
+            fun bind(item: AppItem, onClick: (String) -> Unit) {
+                binding.appName.text = item.label
+                binding.packageName.text = item.packageName
+                binding.iconLetter.text = item.label
+                    .firstOrNull { !it.isWhitespace() }
+                    ?.uppercaseChar()
+                    ?.toString()
+                    ?: "?"
+                binding.root.setOnClickListener { onClick(item.packageName) }
+            }
+        }
     }
 
     companion object {

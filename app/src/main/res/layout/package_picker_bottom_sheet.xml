@@ -1,21 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Package picker bottom sheet.
+
+    Maps `design/screens/screens-2.jsx` <ScreenPicker/>:
+      - 28dp top radius (provided by the theme's BottomSheet shape overlay)
+      - 36×4dp grab handle at the top
+      - Title 「アプリを選択」 + eyebrow subtitle 「署名情報も同時に取得します」
+      - Row layout: IconTile (40dp) + アプリ名 + monospace パッケージ名
+
+    The selected row tint (`surface-tint` + check icon) lives in the
+    adapter's row layout — for now we keep the Kotlin-driven adapter
+    (PackagePickerBottomSheet.Adapter) which constructs simple TextView
+    rows programmatically. Row visual upgrades are tracked in
+    impl-notes.md "follow-ups" — see AC 4.5.4.
+
+    IDs kept: `recycler` (NFR 3.2).
+
+    Requirements: 4.5.1-4.5.4
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurface"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingBottom="@dimen/kn_space_6">
 
-    <TextView
+    <!-- Grab handle (36×4dp, border-strong). -->
+    <View
+        android:layout_width="@dimen/kn_grab_handle_width"
+        android:layout_height="@dimen/kn_grab_handle_height"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/kn_space_3"
+        android:background="@drawable/bg_grab_handle" />
+
+    <!-- Header: title + eyebrow subtitle -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/package_picker_title"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:paddingBottom="12dp" />
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/kn_pad_screen_horizontal"
+        android:paddingTop="@dimen/kn_space_4"
+        android:paddingBottom="@dimen/kn_space_3">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:letterSpacing="-0.02"
+            android:text="@string/package_picker_title"
+            android:textAppearance="@style/TextAppearance.KeyNest.SectionTitle" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="@string/package_picker_subtitle"
+            android:textAppearance="@style/TextAppearance.KeyNest.Meta" />
+    </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="wrap_content"
+        android:maxHeight="480dp"
+        android:paddingHorizontal="@dimen/kn_space_3"
+        android:paddingBottom="@dimen/kn_space_3"
+        android:scrollbars="vertical" />
 
 </LinearLayout>

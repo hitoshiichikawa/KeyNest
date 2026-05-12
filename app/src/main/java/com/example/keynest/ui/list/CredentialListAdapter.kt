@@ -35,6 +35,15 @@ class CredentialListAdapter(
             onLongClick: (Credential) -> Unit,
         ) {
             binding.textLabel.text = item.label
+            // IconTile letter: first non-whitespace character of the label.
+            // Issue #5 AC 4.3.1 — surface a single-character monogram in
+            // the brand-tinted tile (the design uses the label's leading
+            // glyph, falling back to a generic key when blank).
+            binding.textIconLetter.text = item.label
+                .firstOrNull { !it.isWhitespace() }
+                ?.uppercaseChar()
+                ?.toString()
+                ?: "K"
             // Subtitle: username @ packageName. Username is not sensitive at
             // rest (it's also what we surface in the Autofill dataset chip).
             binding.textSubtitle.text = "${item.username} @ ${item.packageName}"

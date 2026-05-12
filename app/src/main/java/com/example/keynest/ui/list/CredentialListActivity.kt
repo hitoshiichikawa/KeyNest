@@ -61,13 +61,25 @@ class CredentialListActivity : AppCompatActivity() {
         binding.fabAdd.setOnClickListener {
             startActivity(CredentialEditActivity.newIntent(this))
         }
+        // Empty-state CTA shares the same entry point as the FAB. Issue
+        // #5 / AC 4.3.3 surfaces a primary button on the brand-mark hero
+        // when the vault is empty; we route both controls through the
+        // FAB click for behavioural parity.
+        binding.btnEmptyCta.setOnClickListener { binding.fabAdd.performClick() }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.credentials.collect { list ->
                     SafeLogger.info(tag = TAG, message = "credential list emit size=${list.size}")
                     adapter.submitList(list)
-                    binding.emptyView.visibility = if (list.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE
+                    val empty = list.isEmpty()
+                    binding.emptyView.visibility = if (empty) android.view.View.VISIBLE else android.view.View.GONE
+                    // The empty state shows its own primary CTA, so hide
+                    // the FAB to avoid two competing entry points (the
+                    // FAB stays in the populated state). Both controls
+                    // share `binding.fabAdd.performClick()` so the user
+                    // ends up in CredentialEditActivity either way.
+                    binding.fabAdd.visibility = if (empty) android.view.View.GONE else android.view.View.VISIBLE
                 }
             }
         }
