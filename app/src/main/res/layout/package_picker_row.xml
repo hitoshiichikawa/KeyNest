@@ -5,6 +5,9 @@
       - 40dp IconTile with the app's first letter
       - app name (14sp/700)
       - monospace package name (11sp/500 text-3)
+      - selected state: surface-tint background + primary check icon
+        (AC 4.5.4) — selector resolves on `state_selected=true`,
+        adapter toggles `itemView.isSelected` per row tap.
 
     AC 4.5.3 / 4.5.4
 -->
@@ -12,7 +15,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:background="@drawable/bg_picker_row_selected"
+    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
     android:minHeight="@dimen/kn_target_min"
     android:orientation="horizontal"
@@ -64,5 +68,20 @@
             android:textSize="11sp"
             tools:text="com.salesforce.chatter" />
     </LinearLayout>
+
+    <!--
+        Selected check (AC 4.5.4). Hidden by default; the adapter flips
+        visibility when the row is the currently-selected position.
+        Tinted with the theme primary so it tracks Light/Dark.
+    -->
+    <ImageView
+        android:id="@+id/check_icon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="@dimen/kn_space_2"
+        android:contentDescription="@null"
+        android:src="@drawable/ic_kn_check"
+        android:visibility="gone"
+        tools:visibility="visible" />
 
 </LinearLayout>

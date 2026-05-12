@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    PackagePicker row background — paints `kn_surface_tint` when the
+    row is selected (AC 4.5.4) and stays transparent otherwise so the
+    bottom-sheet surface bleeds through.
+
+    The DayNight palette resolves `kn_surface_tint` to:
+      - Light: `kn_blue_50` (#EAF2FE) — subtle brand wash
+      - Dark : 16% primary  (#291F6FEB) — soft primary glow on navy
+
+    Requirements: 4.5.4
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_selected="true" android:drawable="@color/kn_surface_tint" />
+    <item android:drawable="@android:color/transparent" />
+</selector>

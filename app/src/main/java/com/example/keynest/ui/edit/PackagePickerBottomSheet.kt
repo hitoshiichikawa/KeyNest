@@ -78,15 +78,28 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
 
     data class AppItem(val packageName: String, val label: String)
 
-    private class Adapter(
+    /**
+     * Adapter for the picker rows. Maintains `selectedPosition` so a
+     * tapped row can briefly render the AC 4.5.4 selected state
+     * (`kn_surface_tint` background + primary check icon) before the
+     * sheet dismisses. The handler order `previous -> new -> onClick`
+     * ensures both the outgoing and incoming rows redraw exactly once.
+     */
+    internal class Adapter(
         private val onClick: (String) -> Unit,
     ) : RecyclerView.Adapter<Adapter.VH>() {
 
         private val items = mutableListOf<AppItem>()
 
+        // Public so unit tests can assert the selection contract; defaults
+        // to NO_POSITION (== nothing selected) per RecyclerView idiom.
+        var selectedPosition: Int = RecyclerView.NO_POSITION
+            private set
+
         fun submitList(list: List<AppItem>) {
             items.clear()
             items.addAll(list)
+            selectedPosition = RecyclerView.NO_POSITION
             notifyDataSetChanged()
         }
 
@@ -102,13 +115,30 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val item = items[position]
-            holder.bind(item, onClick)
+            val isSelected = position == selectedPosition
+            holder.bind(item, isSelected) {
+                handleRowTap(holder.bindingAdapterPosition, item.packageName)
+            }
         }
 
         override fun getItemCount(): Int = items.size
 
+        // Visible for tests — exercises the selectedPosition transition
+        // without needing an attached RecyclerView. The production path
+        // calls this from the row's OnClickListener.
+        internal fun handleRowTap(position: Int, packageName: String) {
+            if (position == RecyclerView.NO_POSITION) return
+            val previous = selectedPosition
+            selectedPosition = position
+            if (previous != RecyclerView.NO_POSITION && previous != position) {
+                notifyItemChanged(previous)
+            }
+            notifyItemChanged(position)
+            onClick(packageName)
+        }
+
         class VH(private val binding: PackagePickerRowBinding) : RecyclerView.ViewHolder(binding.root) {
-            fun bind(item: AppItem, onClick: (String) -> Unit) {
+            fun bind(item: AppItem, isSelected: Boolean, onTap: () -> Unit) {
                 binding.appName.text = item.label
                 binding.packageName.text = item.packageName
                 binding.iconLetter.text = item.label
@@ -116,7 +146,12 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
                     ?.uppercaseChar()
                     ?.toString()
                     ?: "?"
-                binding.root.setOnClickListener { onClick(item.packageName) }
+                // AC 4.5.4: the selector drawable picks up isSelected via
+                // android:state_selected; the check icon visibility is a
+                // direct mirror of the same flag.
+                binding.root.isSelected = isSelected
+                binding.checkIcon.visibility = if (isSelected) View.VISIBLE else View.GONE
+                binding.root.setOnClickListener { onTap() }
             }
         }
     }
