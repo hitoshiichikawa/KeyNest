@@ -89,4 +89,34 @@ interface CredentialDao {
      */
     @Query("UPDATE credentials SET last_used_at = :timestamp WHERE id = :id")
     suspend fun updateLastUsedAt(id: Long, timestamp: Long)
+
+    // ---- Issue #10: vault metadata + clear-all -------------------------
+
+    /**
+     * Reactive total credential count. Used by the Settings screen's
+     * "Vault" section. Returns 0 when the table is empty. Issue #10 Req
+     * 4.1, 4.5, 4.6.
+     */
+    @Query("SELECT COUNT(*) FROM credentials")
+    fun observeCount(): Flow<Int>
+
+    /**
+     * Reactive max `updated_at` across all credentials. Emits `null` when
+     * the table is empty (SQLite's MAX() on no rows returns NULL). The
+     * Settings screen treats null as "no credentials saved yet" and
+     * shows a placeholder instead of a date. Issue #10 Req 4.2, 4.3.
+     */
+    @Query("SELECT MAX(updated_at) FROM credentials")
+    fun observeLatestUpdatedAt(): Flow<Long?>
+
+    /**
+     * Removes every row from the `credentials` table in a single SQL
+     * statement. Used by the Danger Zone "Vault clear" flow (Issue #10
+     * Req 7.5). The statement is atomic at the SQLite transaction
+     * boundary, so callers do not need to wrap it in `runInTransaction`.
+     *
+     * Idempotent: deleting an already-empty table is a no-op.
+     */
+    @Query("DELETE FROM credentials")
+    suspend fun deleteAll()
 }

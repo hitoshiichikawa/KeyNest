@@ -1,7 +1,7 @@
 # Implementation Plan
 
-- [ ] 1. Data / Security 層の拡張（DAO 集計クエリ + Keystore alias 削除）
-- [ ] 1.1 `CredentialDao` に集計・全削除クエリを追加 (P)
+- [x] 1. Data / Security 層の拡張（DAO 集計クエリ + Keystore alias 削除）
+- [x] 1.1 `CredentialDao` に集計・全削除クエリを追加 (P)
   - `observeCount(): Flow<Int>` を `@Query("SELECT COUNT(*) FROM credentials")` で実装
   - `observeLatestUpdatedAt(): Flow<Long?>` を `@Query("SELECT MAX(updated_at) FROM credentials")` で実装（空テーブルで null emit を確認）
   - `deleteAll()` を `@Query("DELETE FROM credentials")` で実装（`suspend`）
@@ -12,7 +12,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.5, 4.6, 7.5, 7.8_
   - _Boundary: CredentialDao, CredentialRepository, CredentialRepositoryImpl_
 
-- [ ] 1.2 `KeystoreKeyProvider` に `deleteKey` / `hasKey` を追加 (P)
+- [x] 1.2 `KeystoreKeyProvider` に `deleteKey` / `hasKey` を追加 (P)
   - `open fun deleteKey()`: `KeyStore.getInstance(provider).load(null)` 後 `containsAlias` チェックして `deleteEntry`（idempotent）
   - `open fun hasKey(): Boolean`: `containsAlias` の戻り値
   - test は Robolectric の AndroidKeyStore 上で `getOrCreateKey` → `hasKey == true` → `deleteKey()` → `hasKey == false` を確認
@@ -20,8 +20,8 @@
   - _Requirements: 7.5, 7.7_
   - _Boundary: KeystoreKeyProvider_
 
-- [ ] 2. Domain 層の追加（型・use-case 4 種）
-- [ ] 2.1 ドメイン型と use-case を新規追加 (P)
+- [x] 2. Domain 層の追加（型・use-case 4 種）
+- [x] 2.1 ドメイン型と use-case を新規追加 (P)
   - `domain/model/` に 5 型: `VaultMetadata` / `DeviceLockStatus`（sealed 4 値） / `AutofillStatus`（enum） / `AppInfo` / `ClearVaultFailure`（sealed）
   - `domain/usecase/ObserveVaultMetadataUseCase`: `repo.observeMetadata()` をそのまま返す
   - `domain/usecase/GetVaultStorageUsageUseCase`: `VaultStorageMeasurer.measureBytes()` を委譲（util は task 3 で作るので IF だけ depend）
@@ -33,8 +33,8 @@
   - _Boundary: ObserveVaultMetadataUseCase, GetVaultStorageUsageUseCase, GetDeviceLockStatusUseCase, ClearVaultUseCase, ServiceLocator_
   - _Depends: 1.1, 1.2_
 
-- [ ] 3. Util 層の追加（Storage 計測 / Intent 発行 / App 情報）
-- [ ] 3.1 `VaultStorageMeasurer` / `SystemSettingsIntents` / `AppInfoProvider` を追加 (P)
+- [x] 3. Util 層の追加（Storage 計測 / Intent 発行 / App 情報）
+- [x] 3.1 `VaultStorageMeasurer` / `SystemSettingsIntents` / `AppInfoProvider` を追加 (P)
   - `util/VaultStorageMeasurer.kt`: `context.getDatabasePath("keynest.db")` + `-wal` + `-shm` の `File.length()` 合計を `Dispatchers.IO` 上で返す（design.md コード参照）
   - `util/SystemSettingsIntents.kt`: `openAutofillServiceChooser(activity): Result<Unit>` と `openSecuritySettings(activity): Result<Unit>`。既存 `AutofillEnableActivity.launchSettings` と同じ `ActivityNotFoundException` ハンドリングを共通化
   - `util/AppInfoProvider.kt`: `PackageManager.getPackageInfo(...).versionName / longVersionCode` を `AppInfo` に詰める（API 28 分岐）
@@ -42,8 +42,8 @@
   - _Requirements: 2.4, 2.6, 3.4, 3.6, 4.4, 4.5, 5.1_
   - _Boundary: VaultStorageMeasurer, SystemSettingsIntents, AppInfoProvider_
 
-- [ ] 4. UI 層: Settings 画面
-- [ ] 4.1 Settings 画面の UI state / ViewModel / Activity を実装
+- [x] 4. UI 層: Settings 画面
+- [x] 4.1 Settings 画面の UI state / ViewModel / Activity を実装
   - `ui/settings/SettingsUiState.kt`: data class（autofillStatus / lockStatus / metadata / storageBytes / appInfo）
   - `ui/settings/SettingsViewModel.kt`: 4 ソース（`observeMetadata` Flow / `getStorage` suspend / `getLockStatus` 同期 / `AutofillServiceStatus.isCurrentService` 同期）を `MutableStateFlow<Int> refreshTick` で再起動可能にして `combine` で `uiState` を構築。`refresh()` 公開
   - `ui/settings/SettingsActivity.kt`: AppBar 戻る / `repeatOnLifecycle(STARTED)` で uiState collect / `onResume → viewModel.refresh()` / 「Android 設定で確認」「Android のセキュリティ設定を開く」「OSS ライセンス一覧」「Danger Zone を開く」の 4 アクションを配線（Intent 失敗時は Snackbar）
@@ -57,8 +57,8 @@
   - _Boundary: SettingsActivity, SettingsViewModel, CredentialListActivity_
   - _Depends: 2.1, 3.1_
 
-- [ ] 5. UI 層: Danger Zone 画面
-- [ ] 5.1 Danger Zone 画面の状態機械 / ViewModel / Activity を実装
+- [x] 5. UI 層: Danger Zone 画面
+- [x] 5.1 Danger Zone 画面の状態機械 / ViewModel / Activity を実装
   - `ui/danger/DangerZoneUiState.kt`: sealed 6 値（Idle / Authenticating / Confirming / Clearing / Cleared / Failed(reason)）
   - `ui/danger/DangerZoneViewModel.kt`: 6 公開関数（`onClearRequested` / `onAuthSucceeded` / `onAuthCancelled` / `onConfirmed` / `onConfirmCancelled` / `dismissFailure`）。状態機械の不変条件：`Clearing` には `Confirming` を経由しないと到達できない（design.md「State machine」参照）
   - `ui/danger/DangerZoneActivity.kt`:
@@ -75,8 +75,8 @@
   - _Boundary: DangerZoneActivity, DangerZoneViewModel_
   - _Depends: 2.1_
 
-- [ ] 6. UI 層: OSS ライセンス画面（自前実装）
-- [ ] 6.1 OSS ライセンス Activity と assets JSON を追加 (P)
+- [x] 6. UI 層: OSS ライセンス画面（自前実装）
+- [x] 6.1 OSS ライセンス Activity と assets JSON を追加 (P)
   - `app/src/main/assets/oss_licenses.json` を新規作成し、`libs.versions.toml` の主要依存（material / androidx-* / kotlinx-coroutines / Room / Biometric / Autofill）について `name / license / url / text` を手動投入
   - `ui/oss/OssEntry.kt`: data class
   - `ui/oss/OssLicensesAdapter.kt`: `ListAdapter<OssEntry, ...>` + DiffUtil。row タップで全文 expand（`isExpanded` フラグで accordion）
@@ -89,8 +89,8 @@
   - _Requirements: 5.2, 5.3, 5.4, NFR 1.1, NFR 4.1_
   - _Boundary: OssLicensesActivity, OssLicensesAdapter_
 
-- [ ] 7. UI 結合テスト（Espresso）
-- [ ] 7.1 Settings / Danger Zone の Espresso テストを追加
+- [x] 7. UI 結合テスト（Espresso）
+- [x] 7.1 Settings / Danger Zone の Espresso テストを追加
   - `app/src/androidTest/java/.../ui/settings/SettingsActivityTest.kt`:
     - overflow 「設定」タップで `SettingsActivity` 起動（Req 1.1 / 1.2）
     - Back アイコンタップで `CredentialListActivity` 復帰（Req 1.3）

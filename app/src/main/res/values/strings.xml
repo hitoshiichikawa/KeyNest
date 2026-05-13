@@ -78,4 +78,61 @@
     <string name="action_copy_signature_a11y">Copy signing certificate SHA-256 to clipboard</string>
     <string name="message_signature_hex_copied">Signature hash copied</string>
     <string name="clipboard_label_signature_hex">KeyNest signature SHA-256</string>
+
+    <!-- Settings (Issue #10) -->
+    <string name="menu_open_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_back_a11y">Back to credential list</string>
+
+    <string name="settings_section_autofill_title">Autofill service</string>
+    <string name="settings_autofill_badge_enabled">Enabled</string>
+    <string name="settings_autofill_badge_not_enabled">Not set</string>
+    <string name="settings_autofill_badge_a11y">Autofill service status: %1$s</string>
+    <string name="settings_autofill_open_settings_action">Open Android Settings</string>
+
+    <string name="settings_section_security_title">Security</string>
+    <string name="settings_lock_status_biometric_and_device">Biometric + device credential</string>
+    <string name="settings_lock_status_device_only">Device credential only</string>
+    <string name="settings_lock_status_none">No lock screen</string>
+    <string name="settings_lock_status_update_required">Security update required</string>
+    <string name="settings_lock_open_security_settings_action">Open Android Security settings</string>
+
+    <string name="settings_section_vault_title">Vault</string>
+    <string name="settings_vault_count_label">Saved credentials</string>
+    <string name="settings_vault_count_format">%1$d</string>
+    <string name="settings_vault_latest_updated_label">Last updated</string>
+    <string name="settings_vault_latest_updated_empty">—</string>
+    <string name="settings_vault_storage_label">Storage usage</string>
+
+    <string name="settings_section_about_title">About</string>
+    <string name="settings_about_version_label">Version</string>
+    <string name="settings_about_version_format">%1$s (%2$d)</string>
+    <string name="settings_about_oss_licenses_label">Open source licenses</string>
+
+    <string name="settings_section_danger_title">Danger zone</string>
+    <string name="settings_danger_open_action">Open Vault clear screen</string>
+
+    <string name="settings_intent_unavailable">This settings screen is not available on this device.</string>
+
+    <!-- Danger Zone (Issue #10) -->
+    <string name="danger_zone_title">Danger zone</string>
+    <string name="danger_zone_description">This action removes every saved credential and the encryption key. It is permanent and cannot be undone.</string>
+    <string name="danger_zone_clear_action">Delete all credentials</string>
+    <string name="danger_zone_clear_action_a11y">Danger: delete all credentials permanently</string>
+    <string name="danger_zone_confirm_title">Delete everything?</string>
+    <string name="danger_zone_confirm_message">This permanently removes every saved credential and the encryption key. This action cannot be undone.</string>
+    <string name="danger_zone_confirm_positive">Delete permanently</string>
+    <string name="danger_zone_confirm_negative">Cancel</string>
+    <string name="danger_zone_biometric_title">Authenticate to clear vault</string>
+    <string name="danger_zone_biometric_subtitle">Re-authenticate to confirm the permanent vault deletion.</string>
+    <string name="danger_zone_clearing">Clearing vault…</string>
+    <string name="danger_zone_cleared_message">Vault cleared.</string>
+    <string name="danger_zone_failed_message">Clearing failed. Tap retry to try again.</string>
+    <string name="danger_zone_retry_action">Retry</string>
+
+    <!-- OSS licenses (Issue #10) -->
+    <string name="oss_licenses_title">Open source licenses</string>
+    <string name="oss_licenses_load_failed">Could not load OSS license list.</string>
+    <string name="oss_licenses_url_a11y">Open project URL</string>
+    <string name="oss_licenses_expand_a11y">Expand license text</string>
 </resources>

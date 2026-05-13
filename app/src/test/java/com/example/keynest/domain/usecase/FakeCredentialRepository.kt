@@ -5,6 +5,7 @@ import com.example.keynest.domain.model.CredentialId
 import com.example.keynest.domain.model.CredentialSortOrder
 import com.example.keynest.domain.model.DuplicateFailure
 import com.example.keynest.domain.model.EncryptedCredentialRecord
+import com.example.keynest.domain.model.VaultMetadata
 import com.example.keynest.domain.repository.CredentialRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,6 +92,22 @@ internal class FakeCredentialRepository : CredentialRepository {
         )
         bump()
         return Result.success(newId)
+    }
+
+    override fun observeMetadata(): Flow<VaultMetadata> =
+        // Mirror CredentialRepositoryImpl: combine count + max(updated_at)
+        // into VaultMetadata. Returns latestUpdatedAt=null on empty
+        // storage so the UI path that branches on Req 4.3 is exercised.
+        tick.asStateFlow().map {
+            VaultMetadata(
+                count = storage.size,
+                latestUpdatedAt = storage.values.maxOfOrNull { it.updatedAt },
+            )
+        }
+
+    override suspend fun clearAll() {
+        storage.clear()
+        bump()
     }
 
     /** Test-only: bypass-save (e.g. to pre-populate). */

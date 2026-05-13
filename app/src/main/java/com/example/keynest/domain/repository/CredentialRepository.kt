@@ -5,6 +5,7 @@ import com.example.keynest.domain.model.CredentialId
 import com.example.keynest.domain.model.CredentialSortOrder
 import com.example.keynest.domain.model.DuplicateFailure
 import com.example.keynest.domain.model.EncryptedCredentialRecord
+import com.example.keynest.domain.model.VaultMetadata
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -75,4 +76,26 @@ interface CredentialRepository {
      * Issue #9 Req 5.3, 5.4.
      */
     suspend fun duplicate(sourceId: CredentialId, timestamp: Long): Result<CredentialId>
+
+    /**
+     * Reactive aggregate metadata about the saved credential set. Emits a
+     * fresh [VaultMetadata] whenever credentials are inserted / updated /
+     * deleted. The returned values are aggregate-only (count, max
+     * updated_at) and never carry individual credential fields, so they
+     * are safe to expose on the Settings screen (NFR 1.2).
+     *
+     * Issue #10 Req 4.1, 4.2, 4.3, 4.5, 4.6.
+     */
+    fun observeMetadata(): Flow<VaultMetadata>
+
+    /**
+     * Removes every saved credential from persistent storage. Used by the
+     * Danger Zone "Vault clear" flow. Implementations must delete the
+     * rows atomically (single SQL DELETE) and must not decrypt or
+     * otherwise materialise any credential plaintext during the call
+     * (Issue #10 Req 7.5, 7.8, NFR 1.4).
+     *
+     * Idempotent: clearing an already-empty vault is a no-op.
+     */
+    suspend fun clearAll()
 }
