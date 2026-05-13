@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Data / Security 層の拡張（DAO 集計クエリ + Keystore alias 削除）
+- [x] 1. Data / Security 層の拡張（DAO 集計クエリ + Keystore alias 削除）
 - [x] 1.1 `CredentialDao` に集計・全削除クエリを追加 (P)
   - `observeCount(): Flow<Int>` を `@Query("SELECT COUNT(*) FROM credentials")` で実装
   - `observeLatestUpdatedAt(): Flow<Long?>` を `@Query("SELECT MAX(updated_at) FROM credentials")` で実装（空テーブルで null emit を確認）
@@ -12,7 +12,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.5, 4.6, 7.5, 7.8_
   - _Boundary: CredentialDao, CredentialRepository, CredentialRepositoryImpl_
 
-- [ ] 1.2 `KeystoreKeyProvider` に `deleteKey` / `hasKey` を追加 (P)
+- [x] 1.2 `KeystoreKeyProvider` に `deleteKey` / `hasKey` を追加 (P)
   - `open fun deleteKey()`: `KeyStore.getInstance(provider).load(null)` 後 `containsAlias` チェックして `deleteEntry`（idempotent）
   - `open fun hasKey(): Boolean`: `containsAlias` の戻り値
   - test は Robolectric の AndroidKeyStore 上で `getOrCreateKey` → `hasKey == true` → `deleteKey()` → `hasKey == false` を確認
