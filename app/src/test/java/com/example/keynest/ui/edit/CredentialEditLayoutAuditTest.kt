@@ -65,12 +65,15 @@ class CredentialEditLayoutAuditTest {
     }
 
     @Test
-    fun signatureHexValue_usesMonospaceFont() {
-        // Req 3.5: SHA-256 hex must be displayed in monospace so the
-        // 64 characters line up readably.
+    fun signatureHexValue_usesJetBrainsMonoFont() {
+        // Req 3.5 (mono presentation) is now satisfied by the bundled
+        // JetBrains Mono Regular face introduced in Issue #13 Req 2.2 (the
+        // android:fontFamily="monospace" literal was replaced with the
+        // @font/jetbrains_mono resource). The 64-character SHA-256 hex line
+        // remains visually monospaced.
         val xml = layoutFile.readText()
         val valueSection = xml.substringAfter("@+id/value_signature_hex").substringBefore("/>")
-        assertThat(valueSection).contains("android:fontFamily=\"monospace\"")
+        assertThat(valueSection).contains("android:fontFamily=\"@font/jetbrains_mono\"")
     }
 
     @Test
