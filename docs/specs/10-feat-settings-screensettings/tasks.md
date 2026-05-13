@@ -20,8 +20,8 @@
   - _Requirements: 7.5, 7.7_
   - _Boundary: KeystoreKeyProvider_
 
-- [ ] 2. Domain 層の追加（型・use-case 4 種）
-- [ ] 2.1 ドメイン型と use-case を新規追加 (P)
+- [x] 2. Domain 層の追加（型・use-case 4 種）
+- [x] 2.1 ドメイン型と use-case を新規追加 (P)
   - `domain/model/` に 5 型: `VaultMetadata` / `DeviceLockStatus`（sealed 4 値） / `AutofillStatus`（enum） / `AppInfo` / `ClearVaultFailure`（sealed）
   - `domain/usecase/ObserveVaultMetadataUseCase`: `repo.observeMetadata()` をそのまま返す
   - `domain/usecase/GetVaultStorageUsageUseCase`: `VaultStorageMeasurer.measureBytes()` を委譲（util は task 3 で作るので IF だけ depend）
