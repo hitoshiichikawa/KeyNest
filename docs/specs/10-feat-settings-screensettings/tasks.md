@@ -33,8 +33,8 @@
   - _Boundary: ObserveVaultMetadataUseCase, GetVaultStorageUsageUseCase, GetDeviceLockStatusUseCase, ClearVaultUseCase, ServiceLocator_
   - _Depends: 1.1, 1.2_
 
-- [ ] 3. Util 層の追加（Storage 計測 / Intent 発行 / App 情報）
-- [ ] 3.1 `VaultStorageMeasurer` / `SystemSettingsIntents` / `AppInfoProvider` を追加 (P)
+- [x] 3. Util 層の追加（Storage 計測 / Intent 発行 / App 情報）
+- [x] 3.1 `VaultStorageMeasurer` / `SystemSettingsIntents` / `AppInfoProvider` を追加 (P)
   - `util/VaultStorageMeasurer.kt`: `context.getDatabasePath("keynest.db")` + `-wal` + `-shm` の `File.length()` 合計を `Dispatchers.IO` 上で返す（design.md コード参照）
   - `util/SystemSettingsIntents.kt`: `openAutofillServiceChooser(activity): Result<Unit>` と `openSecuritySettings(activity): Result<Unit>`。既存 `AutofillEnableActivity.launchSettings` と同じ `ActivityNotFoundException` ハンドリングを共通化
   - `util/AppInfoProvider.kt`: `PackageManager.getPackageInfo(...).versionName / longVersionCode` を `AppInfo` に詰める（API 28 分岐）
