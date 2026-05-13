@@ -60,6 +60,39 @@ open class KeystoreKeyProvider(
         return generator.generateKey()
     }
 
+    /**
+     * Returns true when the AndroidKeyStore currently holds an entry for
+     * [keyAlias]. Used by tests / the vault-clear flow to assert that
+     * [deleteKey] really removed the entry.
+     *
+     * Issue #10 Req 7.5, 7.7.
+     *
+     * `open` so that JVM unit tests can stub the Keystore lookup; the
+     * AndroidKeyStore provider is only available under instrumented /
+     * Robolectric runs.
+     */
+    open fun hasKey(): Boolean {
+        val keyStore = KeyStore.getInstance(keystoreProvider).apply { load(null) }
+        return keyStore.containsAlias(keyAlias)
+    }
+
+    /**
+     * Removes the AndroidKeyStore entry for [keyAlias] if it exists.
+     * Idempotent / silent when the alias is already absent so that
+     * Danger Zone "vault clear" retries do not crash on the second call.
+     *
+     * Issue #10 Req 7.5, 7.7. Callers (ClearVaultUseCase) catch
+     * KeyStoreException and surface it as
+     * [com.example.keynest.domain.model.ClearVaultFailure.KeystoreAlias].
+     */
+    open fun deleteKey() {
+        val keyStore = KeyStore.getInstance(keystoreProvider).apply { load(null) }
+        if (keyStore.containsAlias(keyAlias)) {
+            keyStore.deleteEntry(keyAlias)
+        }
+        // Silent no-op when alias is absent (idempotent).
+    }
+
     companion object {
         const val DEFAULT_KEY_ALIAS = "keynest_aead_v1"
         const val ANDROID_KEYSTORE = "AndroidKeyStore"
