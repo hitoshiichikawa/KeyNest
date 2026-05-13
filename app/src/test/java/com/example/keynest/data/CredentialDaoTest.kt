@@ -231,6 +231,69 @@ class CredentialDaoTest {
         assertThat(true).isTrue()
     }
 
+    // ---- Issue #10: observeCount / observeLatestUpdatedAt / deleteAll ---
+
+    @Test
+    fun observeCount_emitsZero_onEmptyTable() = runTest {
+        // Issue #10 Req 4.1.
+        val emitted = dao.observeCount().first()
+        assertThat(emitted).isEqualTo(0)
+    }
+
+    @Test
+    fun observeCount_reflectsCurrentRowCount() = runTest {
+        // Issue #10 Req 4.1: COUNT(*) tracks inserts.
+        dao.insert(sample(packageName = "com.example.a", username = "u1"))
+        dao.insert(sample(packageName = "com.example.b", username = "u2"))
+        dao.insert(sample(packageName = "com.example.c", username = "u3"))
+
+        val emitted = dao.observeCount().first()
+
+        assertThat(emitted).isEqualTo(3)
+    }
+
+    @Test
+    fun observeLatestUpdatedAt_emitsNull_onEmptyTable() = runTest {
+        // Issue #10 Req 4.3: MAX(updated_at) over no rows is NULL, which
+        // the UI maps to a "未登録" placeholder.
+        val emitted = dao.observeLatestUpdatedAt().first()
+        assertThat(emitted).isNull()
+    }
+
+    @Test
+    fun observeLatestUpdatedAt_returnsMaxAcrossRows() = runTest {
+        // Issue #10 Req 4.2.
+        dao.insert(sample(packageName = "com.example.a", username = "u1", updatedAt = 100L))
+        dao.insert(sample(packageName = "com.example.b", username = "u2", updatedAt = 500L))
+        dao.insert(sample(packageName = "com.example.c", username = "u3", updatedAt = 300L))
+
+        val emitted = dao.observeLatestUpdatedAt().first()
+
+        assertThat(emitted).isEqualTo(500L)
+    }
+
+    @Test
+    fun deleteAll_removesEveryRow() = runTest {
+        // Issue #10 Req 7.5.
+        dao.insert(sample(packageName = "com.example.a", username = "u1"))
+        dao.insert(sample(packageName = "com.example.b", username = "u2"))
+
+        dao.deleteAll()
+
+        assertThat(dao.observeAll().first()).isEmpty()
+        assertThat(dao.observeCount().first()).isEqualTo(0)
+        assertThat(dao.observeLatestUpdatedAt().first()).isNull()
+    }
+
+    @Test
+    fun deleteAll_isIdempotent_onEmptyTable() = runTest {
+        // Issue #10 Req 7.7: clearing twice (e.g. a retry after a partial
+        // failure) must not throw.
+        dao.deleteAll()
+        dao.deleteAll()
+        assertThat(dao.observeCount().first()).isEqualTo(0)
+    }
+
     private fun sample(
         packageName: String,
         username: String,

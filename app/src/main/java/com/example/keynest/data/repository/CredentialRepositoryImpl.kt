@@ -8,8 +8,10 @@ import com.example.keynest.domain.model.CredentialSortOrder
 import com.example.keynest.domain.model.DuplicateFailure
 import com.example.keynest.domain.model.EncryptedCredentialRecord
 import com.example.keynest.domain.model.SigningHash
+import com.example.keynest.domain.model.VaultMetadata
 import com.example.keynest.domain.repository.CredentialRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /**
@@ -69,6 +71,26 @@ class CredentialRepositoryImpl(
 
     override suspend fun markUsed(id: CredentialId, timestamp: Long) {
         dao.updateLastUsedAt(id = id.value, timestamp = timestamp)
+    }
+
+    override fun observeMetadata(): Flow<VaultMetadata> =
+        // Issue #10 Req 4.1 / 4.2 / 4.3: combine COUNT and MAX(updated_at)
+        // into a single aggregate. SQLite's MAX() over an empty table
+        // returns NULL, which we propagate so the UI can render the
+        // "未登録" placeholder instead of an unsafe timestamp.
+        combine(
+            dao.observeCount(),
+            dao.observeLatestUpdatedAt(),
+        ) { count, latest ->
+            VaultMetadata(count = count, latestUpdatedAt = latest)
+        }
+
+    override suspend fun clearAll() {
+        // Issue #10 Req 7.5 / 7.8: single SQL DELETE so the operation is
+        // atomic at the SQLite transaction boundary. The DAO performs
+        // no decryption, so no credential plaintext is touched here
+        // (NFR 1.4).
+        dao.deleteAll()
     }
 
     override suspend fun duplicate(
