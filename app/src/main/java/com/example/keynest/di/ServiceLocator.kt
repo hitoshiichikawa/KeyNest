@@ -1,21 +1,28 @@
 package com.example.keynest.di
 
 import android.content.Context
+import androidx.biometric.BiometricManager
 import com.example.keynest.data.KeyNestDatabase
 import com.example.keynest.data.repository.CredentialRepositoryImpl
 import com.example.keynest.domain.repository.CredentialRepository
+import com.example.keynest.domain.usecase.ClearVaultUseCase
 import com.example.keynest.domain.usecase.DeleteCredentialUseCase
 import com.example.keynest.domain.usecase.DuplicateCredentialUseCase
+import com.example.keynest.domain.usecase.GetDeviceLockStatusUseCase
+import com.example.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import com.example.keynest.domain.usecase.ListCredentialsUseCase
 import com.example.keynest.domain.usecase.MarkCredentialUsedUseCase
 import com.example.keynest.domain.usecase.ObserveRecentlyUsedUseCase
+import com.example.keynest.domain.usecase.ObserveVaultMetadataUseCase
 import com.example.keynest.domain.usecase.ResolveAutofillCandidatesUseCase
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
 import com.example.keynest.domain.usecase.UnlockVaultUseCase
 import com.example.keynest.domain.usecase.UpdateCredentialUseCase
 import com.example.keynest.security.AesGcmCipher
 import com.example.keynest.security.KeystoreKeyProvider
+import com.example.keynest.util.AppInfoProvider
 import com.example.keynest.util.PackageSignatureResolver
+import com.example.keynest.util.VaultStorageMeasurer
 
 /**
  * Lightweight DI container. Holds the singleton graph of database,
@@ -91,6 +98,32 @@ object ServiceLocator {
 
     val duplicateCredentialUseCase: DuplicateCredentialUseCase by lazy {
         DuplicateCredentialUseCase(credentialRepository)
+    }
+
+    // ---- Issue #10 use cases / utilities --------------------------------
+
+    val vaultStorageMeasurer: VaultStorageMeasurer by lazy {
+        VaultStorageMeasurer(requireAppContext())
+    }
+
+    val appInfoProvider: AppInfoProvider by lazy {
+        AppInfoProvider(requireAppContext())
+    }
+
+    val observeVaultMetadataUseCase: ObserveVaultMetadataUseCase by lazy {
+        ObserveVaultMetadataUseCase(credentialRepository)
+    }
+
+    val getVaultStorageUsageUseCase: GetVaultStorageUsageUseCase by lazy {
+        GetVaultStorageUsageUseCase(vaultStorageMeasurer)
+    }
+
+    val getDeviceLockStatusUseCase: GetDeviceLockStatusUseCase by lazy {
+        GetDeviceLockStatusUseCase(BiometricManager.from(requireAppContext()))
+    }
+
+    val clearVaultUseCase: ClearVaultUseCase by lazy {
+        ClearVaultUseCase(credentialRepository, keystoreKeyProvider)
     }
 
     // ---- bootstrap -------------------------------------------------------
