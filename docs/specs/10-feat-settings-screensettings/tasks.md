@@ -1,0 +1,111 @@
+# Implementation Plan
+
+- [ ] 1. Data / Security 層の拡張（DAO 集計クエリ + Keystore alias 削除）
+- [ ] 1.1 `CredentialDao` に集計・全削除クエリを追加 (P)
+  - `observeCount(): Flow<Int>` を `@Query("SELECT COUNT(*) FROM credentials")` で実装
+  - `observeLatestUpdatedAt(): Flow<Long?>` を `@Query("SELECT MAX(updated_at) FROM credentials")` で実装（空テーブルで null emit を確認）
+  - `deleteAll()` を `@Query("DELETE FROM credentials")` で実装（`suspend`）
+  - `CredentialRepository` IF に `observeMetadata(): Flow<VaultMetadata>` と `suspend fun clearAll()` を追加
+  - `CredentialRepositoryImpl` で `combine(dao.observeCount(), dao.observeLatestUpdatedAt())` の合成と `dao.deleteAll()` 委譲を実装
+  - `FakeCredentialRepository`（test 用）に同 IF を実装（`storage.clear()` + `tick.bump()`）
+  - `CredentialDaoTest` に 3 query のテストを追加（insert 後の再 emit / 空テーブルの null / deleteAll で件数 0）
+  - _Requirements: 4.1, 4.2, 4.3, 4.5, 4.6, 7.5, 7.8_
+  - _Boundary: CredentialDao, CredentialRepository, CredentialRepositoryImpl_
+
+- [ ] 1.2 `KeystoreKeyProvider` に `deleteKey` / `hasKey` を追加 (P)
+  - `open fun deleteKey()`: `KeyStore.getInstance(provider).load(null)` 後 `containsAlias` チェックして `deleteEntry`（idempotent）
+  - `open fun hasKey(): Boolean`: `containsAlias` の戻り値
+  - test は Robolectric の AndroidKeyStore 上で `getOrCreateKey` → `hasKey == true` → `deleteKey()` → `hasKey == false` を確認
+  - alias 不在時の `deleteKey()` が例外を投げないこと（silent / idempotent）を確認
+  - _Requirements: 7.5, 7.7_
+  - _Boundary: KeystoreKeyProvider_
+
+- [ ] 2. Domain 層の追加（型・use-case 4 種）
+- [ ] 2.1 ドメイン型と use-case を新規追加 (P)
+  - `domain/model/` に 5 型: `VaultMetadata` / `DeviceLockStatus`（sealed 4 値） / `AutofillStatus`（enum） / `AppInfo` / `ClearVaultFailure`（sealed）
+  - `domain/usecase/ObserveVaultMetadataUseCase`: `repo.observeMetadata()` をそのまま返す
+  - `domain/usecase/GetVaultStorageUsageUseCase`: `VaultStorageMeasurer.measureBytes()` を委譲（util は task 3 で作るので IF だけ depend）
+  - `domain/usecase/GetDeviceLockStatusUseCase`: `BiometricManager.canAuthenticate(BIOMETRIC_STRONG)` と `canAuthenticate(DEVICE_CREDENTIAL)` の組合せから 4 値に正規化（design.md「判定ロジック」参照）
+  - `domain/usecase/ClearVaultUseCase`: `repo.clearAll() → keystoreKeyProvider.deleteKey()` の順、各段階で try/catch して `Result<Unit>`（失敗 cause は `ClearVaultFailure.{Storage, KeystoreAlias}`）を返す
+  - 単体テスト: `ObserveVaultMetadataUseCaseTest` / `GetDeviceLockStatusUseCaseTest`（MockK で `BiometricManager` をスタブし 4 分岐網羅） / `ClearVaultUseCaseTest`（成功 / Storage 失敗 / KeystoreAlias 失敗の 3 ケース）
+  - `ServiceLocator` に use-case と `VaultStorageMeasurer` / `AppInfoProvider` の lazy 公開を追加
+  - _Requirements: 2.1, 3.1, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 5.1, 7.5, 7.7, 7.8, NFR 1.2, NFR 1.3, NFR 1.4_
+  - _Boundary: ObserveVaultMetadataUseCase, GetVaultStorageUsageUseCase, GetDeviceLockStatusUseCase, ClearVaultUseCase, ServiceLocator_
+  - _Depends: 1.1, 1.2_
+
+- [ ] 3. Util 層の追加（Storage 計測 / Intent 発行 / App 情報）
+- [ ] 3.1 `VaultStorageMeasurer` / `SystemSettingsIntents` / `AppInfoProvider` を追加 (P)
+  - `util/VaultStorageMeasurer.kt`: `context.getDatabasePath("keynest.db")` + `-wal` + `-shm` の `File.length()` 合計を `Dispatchers.IO` 上で返す（design.md コード参照）
+  - `util/SystemSettingsIntents.kt`: `openAutofillServiceChooser(activity): Result<Unit>` と `openSecuritySettings(activity): Result<Unit>`。既存 `AutofillEnableActivity.launchSettings` と同じ `ActivityNotFoundException` ハンドリングを共通化
+  - `util/AppInfoProvider.kt`: `PackageManager.getPackageInfo(...).versionName / longVersionCode` を `AppInfo` に詰める（API 28 分岐）
+  - 単体テスト: `VaultStorageMeasurerTest`（tmp file fixture で size 集計、ファイル不在で 0）/ `SystemSettingsIntentsTest`（Robolectric `ShadowApplication.getNextStartedActivity` で Intent action と data を確認、ActivityNotFoundException で `Result.failure`）/ `AppInfoProviderTest`（Robolectric で `versionName = "0.1.0"` を確認）
+  - _Requirements: 2.4, 2.6, 3.4, 3.6, 4.4, 4.5, 5.1_
+  - _Boundary: VaultStorageMeasurer, SystemSettingsIntents, AppInfoProvider_
+
+- [ ] 4. UI 層: Settings 画面
+- [ ] 4.1 Settings 画面の UI state / ViewModel / Activity を実装
+  - `ui/settings/SettingsUiState.kt`: data class（autofillStatus / lockStatus / metadata / storageBytes / appInfo）
+  - `ui/settings/SettingsViewModel.kt`: 4 ソース（`observeMetadata` Flow / `getStorage` suspend / `getLockStatus` 同期 / `AutofillServiceStatus.isCurrentService` 同期）を `MutableStateFlow<Int> refreshTick` で再起動可能にして `combine` で `uiState` を構築。`refresh()` 公開
+  - `ui/settings/SettingsActivity.kt`: AppBar 戻る / `repeatOnLifecycle(STARTED)` で uiState collect / `onResume → viewModel.refresh()` / 「Android 設定で確認」「Android のセキュリティ設定を開く」「OSS ライセンス一覧」「Danger Zone を開く」の 4 アクションを配線（Intent 失敗時は Snackbar）
+  - `res/layout/settings_activity.xml`: AppBar + ScrollView の中に `MaterialCardView` を 5 セクション（Autofill / Security / Vault / About / Danger Zone）配置。Danger Zone セクションは `?attr/colorErrorContainer` + ボタンを `?attr/colorError`、ラベルに `android:accessibilityHeading="true"`。各タップ可能要素は `minWidth/minHeight=48dp`、`contentDescription` を strings.xml から参照
+  - `res/menu/credential_list_menu.xml` に `action_open_settings` を追加（既存 `action_open_autofill_settings` の上に配置）
+  - `CredentialListActivity.onOptionsItemSelected` に `R.id.action_open_settings → SettingsActivity.newIntent(this)` 分岐を追加
+  - `AndroidManifest.xml` に `<activity android:name=".ui.settings.SettingsActivity" android:exported="false" android:label="@string/settings_title" />`、`parentActivityName` で Up 遷移
+  - `res/values/strings.xml` に design.md「Localizable Strings」リストの Settings 系文言を追加
+  - 単体テスト: `SettingsViewModelTest`（initial emit / refresh で 4 ソース再 read / metadata 変動で uiState 再 emit / Autofill 状態切替の反映）
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 5.1, 5.2, 6.1, 6.2, 6.3, 6.4, 8.1, 8.2, 8.3, NFR 2.1, NFR 2.2, NFR 3.1, NFR 3.2, NFR 4.1, NFR 5.1_
+  - _Boundary: SettingsActivity, SettingsViewModel, CredentialListActivity_
+  - _Depends: 2.1, 3.1_
+
+- [ ] 5. UI 層: Danger Zone 画面
+- [ ] 5.1 Danger Zone 画面の状態機械 / ViewModel / Activity を実装
+  - `ui/danger/DangerZoneUiState.kt`: sealed 6 値（Idle / Authenticating / Confirming / Clearing / Cleared / Failed(reason)）
+  - `ui/danger/DangerZoneViewModel.kt`: 6 公開関数（`onClearRequested` / `onAuthSucceeded` / `onAuthCancelled` / `onConfirmed` / `onConfirmCancelled` / `dismissFailure`）。状態機械の不変条件：`Clearing` には `Confirming` を経由しないと到達できない（design.md「State machine」参照）
+  - `ui/danger/DangerZoneActivity.kt`:
+    - `viewModel.uiState` を collect し、`Authenticating` のとき `BiometricAuthenticator(this).authenticate(title=danger_zone_biometric_title, subtitle=danger_zone_biometric_subtitle)` を起動して `onAuthSucceeded` / `onAuthCancelled` に振る
+    - `Confirming` のとき `MaterialAlertDialogBuilder` で「取り消せません」確認ダイアログを 1 回だけ show、positive → `onConfirmed`、negative / dismiss → `onConfirmCancelled`
+    - `Clearing` のとき `ProgressBar` を可視化、ボタンを disable
+    - `Cleared` のとき完了 Snackbar 表示 → `finish()`（呼び出し元 `SettingsActivity` の `onResume` が走り `viewModel.refresh()` で件数 0 / storage 縮小 を反映、さらに巻き戻りで `CredentialListActivity` も `onResume` で空状態再描画 = Req 7.6）
+    - `Failed(reason)` のとき Snackbar + 再試行ボタン（`onClearRequested` を再 invoke）。SafeLogger に reason を log（class name のみ、NFR 1.2）
+  - `res/layout/danger_zone_activity.xml`: AppBar + 説明テキスト + 「Vault をすべて削除する」`MaterialButton`（`?attr/colorError`、`minHeight=48dp`） + `ProgressBar`（GONE 既定） + 再試行ボタン（GONE 既定）
+  - `AndroidManifest.xml` に `<activity android:name=".ui.danger.DangerZoneActivity" android:exported="false" android:label="@string/danger_zone_title" />`
+  - `res/values/strings.xml` に Danger Zone 系文言を追加
+  - 単体テスト: `DangerZoneViewModelTest`（状態遷移の正常系・キャンセル系・失敗系を網羅、`Clearing` から `Confirming` 経由なしでの到達不能を確認）
+  - _Requirements: 6.3, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, NFR 1.3, NFR 1.4, NFR 2.1, NFR 3.1, NFR 3.2, NFR 3.3, NFR 4.2, NFR 5.1, NFR 5.2_
+  - _Boundary: DangerZoneActivity, DangerZoneViewModel_
+  - _Depends: 2.1_
+
+- [ ] 6. UI 層: OSS ライセンス画面（自前実装）
+- [ ] 6.1 OSS ライセンス Activity と assets JSON を追加 (P)
+  - `app/src/main/assets/oss_licenses.json` を新規作成し、`libs.versions.toml` の主要依存（material / androidx-* / kotlinx-coroutines / Room / Biometric / Autofill）について `name / license / url / text` を手動投入
+  - `ui/oss/OssEntry.kt`: data class
+  - `ui/oss/OssLicensesAdapter.kt`: `ListAdapter<OssEntry, ...>` + DiffUtil。row タップで全文 expand（`isExpanded` フラグで accordion）
+  - `ui/oss/OssLicensesActivity.kt`: `Dispatchers.IO` で `assets.open("oss_licenses.json")` を `org.json.JSONArray` で parse → adapter.submitList。parse 失敗時は Snackbar + `finish()`（Settings 側は維持される、Req 5.4）。URL タップは `Intent(ACTION_VIEW, Uri.parse(url))` を try/catch
+  - `res/layout/oss_licenses_activity.xml`: AppBar + RecyclerView
+  - `res/layout/oss_licenses_item.xml`: ライブラリ名 / ライセンス名 / URL ボタン / 全文 TextView（GONE 既定）
+  - `AndroidManifest.xml` に `<activity android:name=".ui.oss.OssLicensesActivity" android:exported="false" android:label="@string/oss_licenses_title" />`
+  - `res/values/strings.xml` に OSS 系文言を追加
+  - 単体テスト: `OssLicensesParserTest`（JSON parse のスキーマ validation、不正 JSON で例外）
+  - _Requirements: 5.2, 5.3, 5.4, NFR 1.1, NFR 4.1_
+  - _Boundary: OssLicensesActivity, OssLicensesAdapter_
+
+- [ ] 7. UI 結合テスト（Espresso）
+- [ ] 7.1 Settings / Danger Zone の Espresso テストを追加
+  - `app/src/androidTest/java/.../ui/settings/SettingsActivityTest.kt`:
+    - overflow 「設定」タップで `SettingsActivity` 起動（Req 1.1 / 1.2）
+    - Back アイコンタップで `CredentialListActivity` 復帰（Req 1.3）
+    - Autofill 未有効化状態で「未設定」バッジ、有効化（`AutofillServiceStatus` を test double で stub）で「有効」バッジ（Req 2.1）
+    - 「Android 設定で確認」タップで `Intents.intended(hasAction(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE))`（Req 2.4）
+    - `SystemSettingsIntents` を test double で `Result.failure` 強制 → Snackbar 表示（Req 2.6）
+    - Danger Zone ボタンタップで `DangerZoneActivity` 起動（Req 6.3）
+  - `app/src/androidTest/java/.../ui/danger/DangerZoneActivityTest.kt`:
+    - 「Vault をすべて削除する」タップ → BiometricPrompt 表示（`BiometricAuthenticator` を test double） → 認証成功 → 確認ダイアログ → OK → ProgressBar → 完了 Snackbar → finish（Req 7.2 / 7.4 / 7.5 / 7.6）
+    - 認証キャンセルで Idle 復帰、DAO で件数不変（Req 7.3）
+    - DB 削除後に `dao.observeCount()` が 0 emit（Req 7.5 / 7.9）
+  - fixture は in-memory Room（既存 `CredentialDaoTest` パターン流用）と stub `KeystoreKeyProvider`（`open` 既存設計を活用）を `ServiceLocator` の test override 経由で注入
+  - _Requirements: 1.1, 1.2, 1.3, 2.1, 2.4, 2.6, 6.3, 7.2, 7.3, 7.4, 7.5, 7.6, 7.9_
+  - _Depends: 4.1, 5.1_
+
+- [ ]* 7.2 性能テスト fixture を追加（deferrable）
+  - 500 件規模の Credential を Fake repo に投入し、`SettingsViewModelPerformanceTest` で `uiState` の初回 emit までの所要時間が JVM 上 50ms 以内（実機 500ms 中央値の代替指標）を満たすことを確認
+  - _Requirements: NFR 2.2_
