@@ -42,8 +42,8 @@
   - _Requirements: 2.4, 2.6, 3.4, 3.6, 4.4, 4.5, 5.1_
   - _Boundary: VaultStorageMeasurer, SystemSettingsIntents, AppInfoProvider_
 
-- [ ] 4. UI 層: Settings 画面
-- [ ] 4.1 Settings 画面の UI state / ViewModel / Activity を実装
+- [x] 4. UI 層: Settings 画面
+- [x] 4.1 Settings 画面の UI state / ViewModel / Activity を実装
   - `ui/settings/SettingsUiState.kt`: data class（autofillStatus / lockStatus / metadata / storageBytes / appInfo）
   - `ui/settings/SettingsViewModel.kt`: 4 ソース（`observeMetadata` Flow / `getStorage` suspend / `getLockStatus` 同期 / `AutofillServiceStatus.isCurrentService` 同期）を `MutableStateFlow<Int> refreshTick` で再起動可能にして `combine` で `uiState` を構築。`refresh()` 公開
   - `ui/settings/SettingsActivity.kt`: AppBar 戻る / `repeatOnLifecycle(STARTED)` で uiState collect / `onResume → viewModel.refresh()` / 「Android 設定で確認」「Android のセキュリティ設定を開く」「OSS ライセンス一覧」「Danger Zone を開く」の 4 アクションを配線（Intent 失敗時は Snackbar）
@@ -57,8 +57,8 @@
   - _Boundary: SettingsActivity, SettingsViewModel, CredentialListActivity_
   - _Depends: 2.1, 3.1_
 
-- [ ] 5. UI 層: Danger Zone 画面
-- [ ] 5.1 Danger Zone 画面の状態機械 / ViewModel / Activity を実装
+- [x] 5. UI 層: Danger Zone 画面
+- [x] 5.1 Danger Zone 画面の状態機械 / ViewModel / Activity を実装
   - `ui/danger/DangerZoneUiState.kt`: sealed 6 値（Idle / Authenticating / Confirming / Clearing / Cleared / Failed(reason)）
   - `ui/danger/DangerZoneViewModel.kt`: 6 公開関数（`onClearRequested` / `onAuthSucceeded` / `onAuthCancelled` / `onConfirmed` / `onConfirmCancelled` / `dismissFailure`）。状態機械の不変条件：`Clearing` には `Confirming` を経由しないと到達できない（design.md「State machine」参照）
   - `ui/danger/DangerZoneActivity.kt`:
@@ -75,8 +75,8 @@
   - _Boundary: DangerZoneActivity, DangerZoneViewModel_
   - _Depends: 2.1_
 
-- [ ] 6. UI 層: OSS ライセンス画面（自前実装）
-- [ ] 6.1 OSS ライセンス Activity と assets JSON を追加 (P)
+- [x] 6. UI 層: OSS ライセンス画面（自前実装）
+- [x] 6.1 OSS ライセンス Activity と assets JSON を追加 (P)
   - `app/src/main/assets/oss_licenses.json` を新規作成し、`libs.versions.toml` の主要依存（material / androidx-* / kotlinx-coroutines / Room / Biometric / Autofill）について `name / license / url / text` を手動投入
   - `ui/oss/OssEntry.kt`: data class
   - `ui/oss/OssLicensesAdapter.kt`: `ListAdapter<OssEntry, ...>` + DiffUtil。row タップで全文 expand（`isExpanded` フラグで accordion）
