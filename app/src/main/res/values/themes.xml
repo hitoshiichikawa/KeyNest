@@ -1,5 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!--
+        Issue #13 Req 1.2: Apply bundled Manrope to Material TextAppearance
+        text styles so headlines and body text use the typeface specified
+        by PR #7 / design/spec.md without requiring per-view overrides.
+
+        Each TextAppearance below inherits all properties (text size, color,
+        spacing, etc.) from its Material parent and only overrides
+        fontFamily so the existing visual rhythm is preserved.
+
+        Req 1.4 / Req 2.5: when the resource fails to load, the framework
+        falls back to the system default typeface automatically because
+        fontFamily is the only delta.
+    -->
+    <style name="TextAppearance.KeyNest.Headline1"
+        parent="TextAppearance.MaterialComponents.Headline1">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline2"
+        parent="TextAppearance.MaterialComponents.Headline2">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline3"
+        parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline4"
+        parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline5"
+        parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline6"
+        parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Subtitle1"
+        parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Subtitle2"
+        parent="TextAppearance.MaterialComponents.Subtitle2">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Body1"
+        parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Body2"
+        parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Button"
+        parent="TextAppearance.MaterialComponents.Button">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Caption"
+        parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Overline"
+        parent="TextAppearance.MaterialComponents.Overline">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
     <style name="Theme.KeyNest" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/keynest_primary</item>
         <item name="colorPrimaryVariant">@color/keynest_primary_variant</item>
@@ -11,6 +103,34 @@
             windowBackground to white caused white-on-white text in dark mode.
         -->
         <item name="android:windowBackground">?attr/colorSurface</item>
+
+        <!--
+            Issue #13 Req 1.2: route every Material TextAppearance slot to the
+            Manrope-variant override so headlines, body, buttons and captions
+            consistently render with the bundled typeface.
+        -->
+        <item name="textAppearanceHeadline1">@style/TextAppearance.KeyNest.Headline1</item>
+        <item name="textAppearanceHeadline2">@style/TextAppearance.KeyNest.Headline2</item>
+        <item name="textAppearanceHeadline3">@style/TextAppearance.KeyNest.Headline3</item>
+        <item name="textAppearanceHeadline4">@style/TextAppearance.KeyNest.Headline4</item>
+        <item name="textAppearanceHeadline5">@style/TextAppearance.KeyNest.Headline5</item>
+        <item name="textAppearanceHeadline6">@style/TextAppearance.KeyNest.Headline6</item>
+        <item name="textAppearanceSubtitle1">@style/TextAppearance.KeyNest.Subtitle1</item>
+        <item name="textAppearanceSubtitle2">@style/TextAppearance.KeyNest.Subtitle2</item>
+        <item name="textAppearanceBody1">@style/TextAppearance.KeyNest.Body1</item>
+        <item name="textAppearanceBody2">@style/TextAppearance.KeyNest.Body2</item>
+        <item name="textAppearanceButton">@style/TextAppearance.KeyNest.Button</item>
+        <item name="textAppearanceCaption">@style/TextAppearance.KeyNest.Caption</item>
+        <item name="textAppearanceOverline">@style/TextAppearance.KeyNest.Overline</item>
+
+        <!--
+            Issue #13 Req 1.2: also override android: namespace fontFamily so
+            views that don't go through Material TextAppearance (raw TextView
+            without textAppearance attribute, EditText hints, etc.) still pick
+            up Manrope.
+        -->
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="Theme.KeyNest.Translucent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
