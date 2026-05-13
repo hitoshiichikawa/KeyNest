@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Issue #13 Req 2.1: JetBrains Mono font-family bundled as APK resources
+    (no Downloadable Fonts API, no INTERNET permission).
+
+    Bundled weights:
+      - 400 Regular   (jetbrains_mono_regular.ttf)
+
+    design/tokens.css references weights 500 / 700 for mono. Only 400 is
+    bundled in this Issue to keep the APK size delta within NFR 1.1
+    (+3 MB). Weight 400 is used as the closest match at runtime.
+-->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/jetbrains_mono_regular"
+        app:fontStyle="normal"
+        app:fontWeight="400"
+        app:font="@font/jetbrains_mono_regular" />
+
+</font-family>
