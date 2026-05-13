@@ -50,7 +50,6 @@ class CredentialListActivity : AppCompatActivity() {
     private lateinit var adapter: CredentialListAdapter
     private lateinit var recentAdapter: RecentlyUsedCarouselAdapter
 
-    private var searchTextWatcher: TextWatcher? = null
     /**
      * Local state mirror: track whether we already published the chip
      * state from a UiState collect so onCheckedStateChange does not loop.
@@ -133,15 +132,13 @@ class CredentialListActivity : AppCompatActivity() {
 
     private fun setUpSearch() {
         // Req 1.2: incremental search via addTextChangedListener.
-        val watcher = object : TextWatcher {
+        binding.inputSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
             override fun afterTextChanged(s: Editable?) {
                 viewModel.onQueryChanged(s?.toString().orEmpty())
             }
-        }
-        binding.inputSearch.addTextChangedListener(watcher)
-        searchTextWatcher = watcher
+        })
     }
 
     private fun setUpFilters() {
