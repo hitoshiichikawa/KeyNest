@@ -6,20 +6,25 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.keynest.data.dao.CredentialDao
 import com.example.keynest.data.entity.CredentialEntity
+import com.example.keynest.data.migration.Migration_1_2
 
 /**
  * Room database holding all KeyNest persistent state.
  *
- * Requirements: 1.1
+ * Requirements: 1.1 (MVP); Issue #9 Req 3.1, 3.2, 3.4 (schema v2 adds
+ * `last_used_at`).
  *
- * Migration policy: version 1 is the starting schema; any future schema
- * change MUST ship with an explicit Migration. `fallbackToDestructiveMigration`
- * is NOT enabled because losing credentials silently would be a worse UX
- * than a startup crash that prompts re-installation.
+ * Migration policy: any schema change MUST ship with an explicit Migration.
+ * `fallbackToDestructiveMigration` is NOT enabled because losing credentials
+ * silently would be a worse UX than a startup crash that prompts
+ * re-installation.
+ *
+ * Schema history:
+ *   v1 -> v2 ([Migration_1_2]): adds `last_used_at INTEGER NULL`.
  */
 @Database(
     entities = [CredentialEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class KeyNestDatabase : RoomDatabase() {
@@ -34,7 +39,9 @@ abstract class KeyNestDatabase : RoomDatabase() {
                 context.applicationContext,
                 KeyNestDatabase::class.java,
                 DB_NAME,
-            ).build()
+            )
+                .addMigrations(Migration_1_2)
+                .build()
         }
     }
 }

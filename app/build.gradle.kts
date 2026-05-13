@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Issue #9 Req 3.1 / Task 1.2: Room schema export location.
+// Required by MigrationTestHelper so it can load
+// app/schemas/com.example.keynest.data.KeyNestDatabase/<version>.json and
+// verify v1 -> v2 migrations apply cleanly.
+ksp {
+    arg("room.schemaLocation", "${projectDir}/schemas")
+}
+
 android {
     namespace = "com.example.keynest"
     compileSdk = 34

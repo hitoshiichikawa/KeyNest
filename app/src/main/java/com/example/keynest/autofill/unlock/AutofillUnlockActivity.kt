@@ -19,6 +19,8 @@ import com.example.keynest.autofill.builder.FillResponseBuilder
 import com.example.keynest.di.ServiceLocator
 import com.example.keynest.domain.model.CredentialId
 import com.example.keynest.util.SafeLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -111,6 +113,28 @@ class AutofillUnlockActivity : AppCompatActivity() {
                                 "passIdPresent=${passwordAutofillId != null}, " +
                                 "fwResultPresent=${intent?.hasExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT) == true})",
                         )
+                        // Issue #9 Req 3.2 / NFR 2.2: stamp lastUsedAt for
+                        // the carousel feed AFTER the dataset is committed
+                        // to setResult but BEFORE plain.close(). The launch
+                        // is NonCancellable so finish() triggering Activity
+                        // teardown does not cancel the update mid-write.
+                        // We deliberately do NOT await it so the autofill
+                        // response timing (MVP NFR 2.1 = 300ms median for
+                        // onFillRequest, equivalent ceiling here) is not
+                        // affected.
+                        launch(Dispatchers.IO + NonCancellable) {
+                            ServiceLocator.markCredentialUsedUseCase(CredentialId(credentialId))
+                                .onFailure { ex ->
+                                    // NFR 1.2 / NFR 1.3: log the failure
+                                    // class only, not the credentialId
+                                    // payload or any plaintext.
+                                    SafeLogger.warn(
+                                        tag = TAG,
+                                        message = "markUsed failed",
+                                        throwable = ex,
+                                    )
+                                }
+                        }
                     } finally {
                         // Req 5.5: zero-fill the CharArray before finishing.
                         plain.close()

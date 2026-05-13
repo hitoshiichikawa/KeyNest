@@ -27,6 +27,13 @@ data class Credential(
     val signatureCapturedAt: Long?,
     val createdAt: Long,
     val updatedAt: Long,
+    /**
+     * Wall-clock time (epoch millis) of the most recent autofill consumption
+     * of this credential. Null means the credential has never been used via
+     * autofill -- such rows are excluded from the "recently used" carousel
+     * (Issue #9 Req 3.3 / 3.4).
+     */
+    val lastUsedAt: Long? = null,
 ) {
     init {
         // Invariant: if there's no hash, there is no capture timestamp either.
@@ -52,6 +59,8 @@ data class EncryptedCredentialRecord(
     val signatureCapturedAt: Long?,
     val createdAt: Long,
     val updatedAt: Long,
+    /** See [Credential.lastUsedAt]. Null = never used. */
+    val lastUsedAt: Long? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -65,7 +74,8 @@ data class EncryptedCredentialRecord(
             signatureSha256 == other.signatureSha256 &&
             signatureCapturedAt == other.signatureCapturedAt &&
             createdAt == other.createdAt &&
-            updatedAt == other.updatedAt
+            updatedAt == other.updatedAt &&
+            lastUsedAt == other.lastUsedAt
     }
 
     override fun hashCode(): Int {
@@ -79,6 +89,7 @@ data class EncryptedCredentialRecord(
         result = 31 * result + (signatureCapturedAt?.hashCode() ?: 0)
         result = 31 * result + createdAt.hashCode()
         result = 31 * result + updatedAt.hashCode()
+        result = 31 * result + (lastUsedAt?.hashCode() ?: 0)
         return result
     }
 
@@ -87,5 +98,5 @@ data class EncryptedCredentialRecord(
         "EncryptedCredentialRecord(id=$id, packageName=$packageName, username=$username, label=$label, " +
             "ciphertext=<${passwordCiphertext.size}B>, iv=<${passwordIv.size}B>, " +
             "signatureSha256=$signatureSha256, signatureCapturedAt=$signatureCapturedAt, " +
-            "createdAt=$createdAt, updatedAt=$updatedAt)"
+            "createdAt=$createdAt, updatedAt=$updatedAt, lastUsedAt=$lastUsedAt)"
 }
