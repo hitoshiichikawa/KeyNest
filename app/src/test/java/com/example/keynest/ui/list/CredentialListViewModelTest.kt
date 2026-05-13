@@ -12,8 +12,12 @@ import com.example.keynest.domain.usecase.ObserveRecentlyUsedUseCase
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -146,161 +150,225 @@ class CredentialListViewModelTest {
     fun uiState_initialDefault_isUpdatedAtDescNoneEmptyQuery() = runTest(testDispatcher) {
         // Req 4.2 (default sort) + Req 2.2 (None filter) + Req 1.3 (query
         // starts blank).
-        val (vm, _) = newViewModel()
-        val state = vm.uiState.value
-        assertThat(state.query).isEqualTo("")
-        assertThat(state.filter).isEqualTo(CredentialFilter.None)
-        assertThat(state.sort).isEqualTo(CredentialSortOrder.UpdatedAtDesc)
+        val (vm, _, job) = newViewModelWithCollector()
+        try {
+            advanceUntilIdle()
+            val state = vm.uiState.value
+            assertThat(state.query).isEqualTo("")
+            assertThat(state.filter).isEqualTo(CredentialFilter.None)
+            assertThat(state.sort).isEqualTo(CredentialSortOrder.UpdatedAtDesc)
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun uiState_search_narrowsMainList() = runTest(testDispatcher) {
         // Req 1.1, 1.2, 1.5 (in-memory match, no IO).
-        val (vm, repo) = newViewModel()
-        repo.put(blankRecord("alice", "Apple"))
-        repo.put(blankRecord("bob", "Banana"))
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            repo.put(blankRecord("alice", "Apple"))
+            repo.put(blankRecord("bob", "Banana"))
 
-        vm.onQueryChanged("ban")
-        advanceUntilIdle()
+            vm.onQueryChanged("ban")
+            advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assertThat(state.mainList.map { it.username }).containsExactly("bob")
+            val state = vm.uiState.value
+            assertThat(state.mainList.map { it.username }).containsExactly("bob")
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun uiState_emptySearch_setsNoMatch() = runTest(testDispatcher) {
         // Req 1.4.
-        val (vm, repo) = newViewModel()
-        repo.put(blankRecord("alice", "Apple"))
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            repo.put(blankRecord("alice", "Apple"))
 
-        vm.onQueryChanged("does not exist")
-        advanceUntilIdle()
+            vm.onQueryChanged("does not exist")
+            advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assertThat(state.mainList).isEmpty()
-        assertThat(state.emptyKind).isEqualTo(EmptyKind.NoMatch)
+            val state = vm.uiState.value
+            assertThat(state.mainList).isEmpty()
+            assertThat(state.emptyKind).isEqualTo(EmptyKind.NoMatch)
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun uiState_clearSearch_returnsToFullList_whileFilterPreserved() = runTest(testDispatcher) {
         // Req 1.3.
-        val (vm, repo) = newViewModel()
-        repo.put(blankRecord("alice", "Apple", hasSig = true))
-        repo.put(blankRecord("bob", "Banana", hasSig = false))
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            repo.put(blankRecord("alice", "Apple", hasSig = true))
+            repo.put(blankRecord("bob", "Banana", hasSig = false))
 
-        vm.onFilterChanged(CredentialFilter.SignatureMatched)
-        vm.onQueryChanged("alice")
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.mainList.map { it.username }).containsExactly("alice")
+            vm.onFilterChanged(CredentialFilter.SignatureMatched)
+            vm.onQueryChanged("alice")
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.mainList.map { it.username }).containsExactly("alice")
 
-        // Clear query but keep filter
-        vm.onQueryChanged("")
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.filter).isEqualTo(CredentialFilter.SignatureMatched)
-        assertThat(vm.uiState.value.mainList.map { it.username }).containsExactly("alice")
+            // Clear query but keep filter
+            vm.onQueryChanged("")
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.filter).isEqualTo(CredentialFilter.SignatureMatched)
+            assertThat(vm.uiState.value.mainList.map { it.username }).containsExactly("alice")
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun uiState_filterToggleOff_returnsAllRows() = runTest(testDispatcher) {
         // Req 2.2, 2.5.
-        val (vm, repo) = newViewModel()
-        repo.put(blankRecord("alice", "Apple", hasSig = true))
-        repo.put(blankRecord("bob", "Banana", hasSig = false))
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            repo.put(blankRecord("alice", "Apple", hasSig = true))
+            repo.put(blankRecord("bob", "Banana", hasSig = false))
 
-        vm.onFilterChanged(CredentialFilter.SignatureMatched)
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.mainList).hasSize(1)
+            vm.onFilterChanged(CredentialFilter.SignatureMatched)
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.mainList).hasSize(1)
 
-        vm.onFilterChanged(CredentialFilter.None)
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.mainList).hasSize(2)
+            vm.onFilterChanged(CredentialFilter.None)
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.mainList).hasSize(2)
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
-    fun uiState_sortSwitch_reordersWithoutAffectingRecent() = runTest(testDispatcher) {
+    fun uiState_sortSwitch_reorders() = runTest(testDispatcher) {
         // Req 4.3, 4.4: filter then sort.
-        val (vm, repo) = newViewModel()
-        repo.put(blankRecord("alice", "Banana", updatedAt = 1L))
-        repo.put(blankRecord("bob", "Apple", updatedAt = 2L))
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            repo.put(blankRecord("alice", "Banana", updatedAt = 1L))
+            repo.put(blankRecord("bob", "Apple", updatedAt = 2L))
 
-        // Default (UpdatedAtDesc) -> Apple (newer) first
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.mainList.map { it.label }).containsExactly("Apple", "Banana").inOrder()
+            // Default (UpdatedAtDesc) -> bob (newer) first.
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.mainList.map { it.username })
+                .containsExactly("bob", "alice").inOrder()
 
-        vm.onSortChanged(CredentialSortOrder.LabelAsc)
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.mainList.map { it.label }).containsExactly("Apple", "Banana").inOrder()
+            // LabelAsc -> Apple < Banana, so bob (Apple) first.
+            vm.onSortChanged(CredentialSortOrder.LabelAsc)
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.mainList.map { it.label })
+                .containsExactly("Apple", "Banana").inOrder()
 
-        // PackageAsc -- pkgs are com.example.alice, com.example.bob; alice first.
-        vm.onSortChanged(CredentialSortOrder.PackageAsc)
-        advanceUntilIdle()
-        assertThat(vm.uiState.value.mainList.map { it.username }).containsExactly("alice", "bob").inOrder()
+            // PackageAsc -- alice's pkg (com.example.alice) < bob's
+            // (com.example.bob), so alice first.
+            vm.onSortChanged(CredentialSortOrder.PackageAsc)
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.mainList.map { it.username })
+                .containsExactly("alice", "bob").inOrder()
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun uiState_recentList_isIndependentOfQueryAndFilter() = runTest(testDispatcher) {
         // Req 3.6.
-        val (vm, repo) = newViewModel()
-        val aliceId = repo.save(blankRecord("alice", "Apple", hasSig = false))
-        val bobId = repo.save(blankRecord("bob", "Banana", hasSig = true))
-        // Stamp both so they appear in the carousel.
-        repo.markUsed(aliceId, timestamp = 100L)
-        repo.markUsed(bobId, timestamp = 200L)
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            val aliceId = repo.save(blankRecord("alice", "Apple", hasSig = false))
+            val bobId = repo.save(blankRecord("bob", "Banana", hasSig = true))
+            // Stamp both so they appear in the carousel.
+            repo.markUsed(aliceId, timestamp = 100L)
+            repo.markUsed(bobId, timestamp = 200L)
 
-        // Apply a narrowing filter + query -- the main list shrinks, but
-        // recent list must still show both.
-        vm.onFilterChanged(CredentialFilter.SignatureMatched)
-        vm.onQueryChanged("BAN")
-        advanceUntilIdle()
+            // Apply a narrowing filter + query -- the main list shrinks, but
+            // recent list must still show both.
+            vm.onFilterChanged(CredentialFilter.SignatureMatched)
+            vm.onQueryChanged("BAN")
+            advanceUntilIdle()
 
-        val state = vm.uiState.value
-        assertThat(state.mainList.map { it.username }).containsExactly("bob")
-        assertThat(state.recentList.map { it.username }).containsExactly("bob", "alice").inOrder()
+            val state = vm.uiState.value
+            assertThat(state.mainList.map { it.username }).containsExactly("bob")
+            assertThat(state.recentList.map { it.username }).containsExactly("bob", "alice").inOrder()
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun uiState_recentList_isEmpty_whenNoRowHasLastUsedAt() = runTest(testDispatcher) {
         // Req 3.4.
-        val (vm, repo) = newViewModel()
-        repo.put(blankRecord("alice", "Apple"))
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            repo.put(blankRecord("alice", "Apple"))
 
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        assertThat(vm.uiState.value.recentList).isEmpty()
+            assertThat(vm.uiState.value.recentList).isEmpty()
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun onDuplicate_emitsSuccess_andAddsRow() = runTest(testDispatcher) {
         // Req 5.3, 5.4.
-        val (vm, repo) = newViewModel()
-        val srcId = repo.save(blankRecord("alice", "Apple"))
-        val before = repo.snapshot().size
+        val (vm, repo, job) = newViewModelWithCollector()
+        try {
+            val srcId = repo.save(blankRecord("alice", "Apple"))
+            val before = repo.snapshot().size
 
-        vm.onDuplicate(srcId)
-        advanceUntilIdle()
+            // Subscribe to the side-channel before the action so the
+            // tryEmit value is guaranteed to be observable.
+            val outcomes = mutableListOf<CredentialListViewModel.DuplicateOutcome>()
+            val sideJob = launch { vm.duplicateResult.collect { outcomes.add(it) } }
 
-        assertThat(repo.snapshot().size).isEqualTo(before + 1)
-        val outcome = vm.duplicateResult.first()
-        assertThat(outcome).isInstanceOf(CredentialListViewModel.DuplicateOutcome.Success::class.java)
+            vm.onDuplicate(srcId)
+            advanceUntilIdle()
+
+            assertThat(repo.snapshot().size).isEqualTo(before + 1)
+            assertThat(outcomes).hasSize(1)
+            assertThat(outcomes.single())
+                .isInstanceOf(CredentialListViewModel.DuplicateOutcome.Success::class.java)
+            sideJob.cancel()
+        } finally {
+            job.cancel()
+        }
     }
 
     @Test
     fun onDuplicate_emitsFailure_whenSourceMissing() = runTest(testDispatcher) {
-        val (vm, _) = newViewModel()
+        val (vm, _, job) = newViewModelWithCollector()
+        try {
+            val outcomes = mutableListOf<CredentialListViewModel.DuplicateOutcome>()
+            val sideJob = launch { vm.duplicateResult.collect { outcomes.add(it) } }
 
-        vm.onDuplicate(CredentialId(9999L))
-        advanceUntilIdle()
+            vm.onDuplicate(CredentialId(9999L))
+            advanceUntilIdle()
 
-        val outcome = vm.duplicateResult.first()
-        assertThat(outcome).isInstanceOf(CredentialListViewModel.DuplicateOutcome.Failure::class.java)
-        val failure = outcome as CredentialListViewModel.DuplicateOutcome.Failure
-        // NFR 1.3: reason is the class name only.
-        assertThat(failure.reason).isEqualTo("NotFound")
+            assertThat(outcomes).hasSize(1)
+            val failure = outcomes.single()
+            assertThat(failure).isInstanceOf(CredentialListViewModel.DuplicateOutcome.Failure::class.java)
+            // NFR 1.3: reason is the class name only.
+            assertThat((failure as CredentialListViewModel.DuplicateOutcome.Failure).reason)
+                .isEqualTo("NotFound")
+            sideJob.cancel()
+        } finally {
+            job.cancel()
+        }
     }
 
     // ---- helpers ----
 
-    private fun newViewModel(): Pair<CredentialListViewModel, FakeCredentialRepository> {
+    /**
+     * Build a ViewModel + repository pair and start a background collector
+     * on the uiState so the WhileSubscribed-backed stateIn flow is active
+     * for the duration of the test. The returned [Job] must be cancelled
+     * by the test (callers do this in a `finally` block).
+     */
+    private fun TestScope.newViewModelWithCollector():
+        Triple<CredentialListViewModel, FakeCredentialRepository, Job> {
         val repo = FakeCredentialRepository()
         val vm = CredentialListViewModel(
             listUseCase = ListCredentialsUseCase(repo),
@@ -308,7 +376,9 @@ class CredentialListViewModelTest {
             duplicateUseCase = DuplicateCredentialUseCase(repo, now = { 42L }),
             deleteUseCase = DeleteCredentialUseCase(repo),
         )
-        return vm to repo
+        // Drain uiState so the stateIn upstream stays running.
+        val job = vm.uiState.onEach { /* keep alive */ }.launchIn(this)
+        return Triple(vm, repo, job)
     }
 
     private fun credentialFixture(
