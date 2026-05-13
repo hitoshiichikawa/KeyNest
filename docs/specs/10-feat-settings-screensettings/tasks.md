@@ -89,8 +89,8 @@
   - _Requirements: 5.2, 5.3, 5.4, NFR 1.1, NFR 4.1_
   - _Boundary: OssLicensesActivity, OssLicensesAdapter_
 
-- [ ] 7. UI 結合テスト（Espresso）
-- [ ] 7.1 Settings / Danger Zone の Espresso テストを追加
+- [x] 7. UI 結合テスト（Espresso）
+- [x] 7.1 Settings / Danger Zone の Espresso テストを追加
   - `app/src/androidTest/java/.../ui/settings/SettingsActivityTest.kt`:
     - overflow 「設定」タップで `SettingsActivity` 起動（Req 1.1 / 1.2）
     - Back アイコンタップで `CredentialListActivity` 復帰（Req 1.3）
