@@ -1,7 +1,7 @@
 # Implementation Plan
 
 - [ ] 1. Data / Security 層の拡張（DAO 集計クエリ + Keystore alias 削除）
-- [ ] 1.1 `CredentialDao` に集計・全削除クエリを追加 (P)
+- [x] 1.1 `CredentialDao` に集計・全削除クエリを追加 (P)
   - `observeCount(): Flow<Int>` を `@Query("SELECT COUNT(*) FROM credentials")` で実装
   - `observeLatestUpdatedAt(): Flow<Long?>` を `@Query("SELECT MAX(updated_at) FROM credentials")` で実装（空テーブルで null emit を確認）
   - `deleteAll()` を `@Query("DELETE FROM credentials")` で実装（`suspend`）
