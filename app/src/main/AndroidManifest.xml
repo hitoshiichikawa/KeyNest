@@ -77,6 +77,27 @@
             android:exported="false"
             android:label="@string/autofill_enable_title" />
 
+        <!-- Issue #10 Req 1.2 / 1.3 -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title"
+            android:parentActivityName=".ui.list.CredentialListActivity" />
+
+        <!-- Issue #10 Req 6.3 / 7.x -->
+        <activity
+            android:name=".ui.danger.DangerZoneActivity"
+            android:exported="false"
+            android:label="@string/danger_zone_title"
+            android:parentActivityName=".ui.settings.SettingsActivity" />
+
+        <!-- Issue #10 Req 5.3 -->
+        <activity
+            android:name=".ui.oss.OssLicensesActivity"
+            android:exported="false"
+            android:label="@string/oss_licenses_title"
+            android:parentActivityName=".ui.settings.SettingsActivity" />
+
     </application>
 
 </manifest>

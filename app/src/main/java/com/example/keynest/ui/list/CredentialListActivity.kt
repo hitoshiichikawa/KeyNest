@@ -23,6 +23,7 @@ import com.example.keynest.domain.model.Credential
 import com.example.keynest.domain.model.CredentialSortOrder
 import com.example.keynest.ui.edit.CredentialEditActivity
 import com.example.keynest.ui.enable.AutofillEnableActivity
+import com.example.keynest.ui.settings.SettingsActivity
 import com.example.keynest.util.AutofillServiceStatus
 import com.example.keynest.util.SafeLogger
 import com.google.android.material.snackbar.Snackbar
@@ -100,6 +101,13 @@ class CredentialListActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            // Issue #10 Req 1.2: "設定" entry opens the new Settings
+            // screen. The previous Autofill-only entry is preserved
+            // below so the existing nudge flow keeps working.
+            R.id.action_open_settings -> {
+                startActivity(SettingsActivity.newIntent(this))
+                true
+            }
             R.id.action_open_autofill_settings -> {
                 startActivity(AutofillEnableActivity.newIntent(this))
                 true
