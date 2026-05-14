@@ -446,3 +446,120 @@ NFR 1.3 の「Phase 1 structural pin に違反する変更なし」を満たす.
 - **Phase 2 残り画面 (`credential_edit_activity.xml` / `package_picker_bottom_sheet.xml`
   / `dataset_presentation.xml` / `autofill_enable_activity.xml` / Settings 系)** :
   mapping.md §5 の他行を 1 PR ずつ消化する.
+
+## Review Iteration 1 是正
+
+Reviewer round=1 (`review-notes.md`) が出した reject の Findings 2 件への
+是正実装. 既存 commit は温存し、追加 commit を 3 本積む形で対応した
+(`f6b0fb2` / `e9bd984` / 本 docs commit).
+
+### Finding 1 是正 — 空状態に補足文 TextView を追加 (Req 8.1 / 8.3)
+
+`empty_state_container` に Req 8.3 が要求する補足文 TextView (Body + kn_text_2)
+が欠落していた問題への対応.
+
+**追加した string キー** (`NFR 3.1` の en/ja 対称性を維持):
+
+| キー | values/strings.xml (英語) | values-ja/strings.xml (日本語) |
+|---|---|---|
+| `credential_list_empty_body` | "Welcome to KeyNest. Save your first credential to get started with secure, on-device storage." | 「KeyNest にようこそ。最初のクレデンシャルを登録して、安全な保管をはじめましょう。」 |
+
+**追加した TextView** (`credential_list_activity.xml` の `empty_state_container` 内、
+見出し `empty_view` と CTA `empty_state_cta` の間に挿入):
+
+```xml
+<TextView
+    android:id="@+id/empty_state_body"
+    style="@style/Text.KeyNest.Body"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/kn_space_3"
+    android:gravity="center"
+    android:text="@string/credential_list_empty_body"
+    android:textColor="@color/kn_text_2" />
+```
+
+属性は Reviewer の Required Action に完全準拠:
+
+- `style="@style/Text.KeyNest.Body"` — Req 8.3 が明示する Body TextAppearance
+- `android:textColor="@color/kn_text_2"` — Req 8.3 が明示する kn_text_2
+- `android:gravity="center"` — 縦中央寄せレイアウトに合わせて中央寄せ
+- `android:layout_marginTop="@dimen/kn_space_3"` (12dp) — 既存
+  `kn_space_*` トークンから選択. 見出し (TitleM) との間に視覚的なリズム
+  を作る用途には 12dp が JSX `ScreenListEmpty` の縦余白と整合
+- `android:layout_width="match_parent"` — 中央寄せの幅基準を親に揃え、
+  CTA / footer と縦並びでセンタリングを成立させる
+
+**`renderEmptyView()` の visibility 制御変更点**:
+
+`CredentialListActivity.kt` の `renderEmptyView()` を、新規 top-level 関数
+`applyEmptyStateVisibility(binding, emptyKind)` (`EmptyStateRenderer.kt`) に
+delegate する形に refactor. 行列は:
+
+| emptyKind | container | hero | headline | **body** | CTA | footer |
+|---|---|---|---|---|---|---|
+| `Initial` | VISIBLE | VISIBLE | VISIBLE + `credential_list_empty` | **VISIBLE** | VISIBLE | VISIBLE |
+| `NoMatch` | VISIBLE | GONE | VISIBLE + `credential_list_empty_no_match` | **GONE** | GONE | GONE |
+| `null`   | GONE   | —    | — | — | — | — |
+
+抽出した `applyEmptyStateVisibility()` は package-internal な top-level
+関数なので、Activity を Robolectric で立ち上げずに binding を直接 inflate
+して unit test 可能.
+
+### Finding 2 是正 — empty state visibility 切替の Robolectric 単体テストを追加
+
+**追加したテストクラス**: `app/src/test/java/com/example/keynest/ui/list/CredentialListEmptyStateTest.kt`
+
+`StrengthBarTest` と同パターン (`@RunWith(AndroidJUnit4)` + `@Config(sdk = [33])`).
+`CredentialListActivityBinding` を `Theme.KeyNest` でラップした
+`ContextThemeWrapper` から直接 inflate し、`applyEmptyStateVisibility()` を
+順次呼び出して View visibility / 表示テキストを assert する.
+
+| テストメソッド | 検証観点 (対応 AC) |
+|---|---|
+| `applyEmptyStateVisibility_initial_showsHeroHeadlineBodyCtaAndFooter` | Req 8.1: 5 要素 (`empty_state_container` / `empty_state_hero` / `empty_view` / `empty_state_body` / `empty_state_cta` / `empty_state_footer`) すべて VISIBLE、headline テキスト = `credential_list_empty` |
+| `applyEmptyStateVisibility_initial_bodyTextResolvesEmptyBodyString` | Req 8.3: 追加した body TextView の text が `credential_list_empty_body` を解決する |
+| `applyEmptyStateVisibility_noMatch_hidesHeroBodyCtaAndFooter` | Req 8.5: `empty_state_container` / `empty_view` のみ VISIBLE、hero / body / CTA / footer は GONE、headline テキスト = `credential_list_empty_no_match` |
+| `applyEmptyStateVisibility_null_hidesTheEntireContainer` | Req 8 boundary: `emptyKind == null` で container 全体が GONE (事前に Initial で VISIBLE にしてから null を投入する defensive pattern) |
+| `applyEmptyStateVisibility_initialThenNoMatch_flipsBodyAndCtaAndFooterToGone` | 状態遷移 (Initial → NoMatch) で前状態の VISIBLE が確実に GONE に切り替わることを defensive に検証 |
+
+加えて `CredentialListLayoutTokensTest` に
+`activityLayout_emptyStateContainsBodyCopyWithKnText2` を追加し、layout XML
+レベルで `@+id/empty_state_body` が `Text.KeyNest.Body` + `kn_text_2` +
+`credential_list_empty_body` を同一要素上に持つことを正規表現マッチで pin.
+
+### Iteration 1 後のビルド・テスト結果
+
+```
+$ JAVA_HOME=$HOME/sdks/jdk-17 ANDROID_HOME=$HOME/sdks/android-sdk \
+    ./gradlew :app:assembleDebug :app:testDebugUnitTest
+
+> Task :app:assembleDebug
+BUILD SUCCESSFUL
+
+> Task :app:testDebugUnitTest
+311 tests completed, 5 failed
+  - PackageSignatureResolverTest 4 件 (NPE @ Signature mock)  ← Phase 1 pre-existing
+  - LockedFillResponseSecurityTest 1 件 (NPE @ Signature mock) ← Phase 1 pre-existing
+```
+
+- assembleDebug: BUILD SUCCESSFUL
+- testDebugUnitTest: 311 件 (Iteration 1 前 305 件 → 新規追加 6 件 = layout
+  tokens 1 件 + Robolectric empty state 5 件). 失敗 5 件は Phase 1
+  pre-existing と完全一致 (本 PR で新たに失敗したテストは無し)
+
+### Iteration 1 で追加された AC カバレッジ
+
+- **Req 8.1**: 補足文を含む 5 要素を `applyEmptyStateVisibility_initial_showsHeroHeadlineBodyCtaAndFooter`
+  + `CredentialListLayoutTokensTest.activityLayout_emptyStateContainsBodyCopyWithKnText2`
+  でレイアウトと visibility の両層で pin
+- **Req 8.3**: `activityLayout_emptyStateContainsBodyCopyWithKnText2`
+  (Text.KeyNest.Body + kn_text_2 を同一要素で pin) +
+  `applyEmptyStateVisibility_initial_bodyTextResolvesEmptyBodyString`
+  (text 解決を pin)
+- **Req 8.5**: `applyEmptyStateVisibility_noMatch_hidesHeroBodyCtaAndFooter`
+  + `applyEmptyStateVisibility_initialThenNoMatch_flipsBodyAndCtaAndFooterToGone`
+  で hero / body / CTA / footer の visibility 切替を直接検証
+
+これにより、Reviewer round=1 で指摘された AC 未カバー (Req 8.3 補足文 欠落) と
+missing test (Req 8.1 / 8.5 visibility 切替) は両方とも解消された.
