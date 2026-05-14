@@ -10,7 +10,7 @@
     announce the destructive section explicitly.
   - A multi-line description that spells out the consequences.
   - The single "Delete all credentials" MaterialButton (?attr/colorError
-    background tint, minHeight=48dp -- NFR 3.2). This is the only
+    background tint, minHeight=48dp; see NFR 3.2). This is the only
     destructive trigger anywhere on the screen (Req 7.1).
   - A retry button shown only after a failure (initially GONE).
   - A progress indicator shown while the use case runs (initially GONE).

@@ -13,86 +13,101 @@
         Req 1.4 / Req 2.5: when the resource fails to load, the framework
         falls back to the system default typeface automatically because
         fontFamily is the only delta.
+
+        Issue #24: Migrated the parent style of each TextAppearance.KeyNest.*
+        entry from Material 2 (TextAppearance.MaterialComponents.*) to
+        Material 3 (TextAppearance.Material3.*) so the M3 widgets and M3
+        textAppearance attributes used in credential_list_activity.xml /
+        settings_activity.xml / danger_zone_activity.xml /
+        oss_licenses_item.xml can be resolved by Theme.KeyNest without
+        raising "IllegalArgumentException: This component requires that
+        you specify a valid TextAppearance attribute".
+
+        The TextAppearance.KeyNest.* style names themselves are kept on
+        the legacy M2 type-scale names (Headline1, Body1, etc.) per
+        Issue #24 Out of Scope; only their parents move to the M3
+        equivalents according to the Material Design type-scale
+        correspondence (Req 2.5).
     -->
     <style name="TextAppearance.KeyNest.Headline1"
-        parent="TextAppearance.MaterialComponents.Headline1">
+        parent="TextAppearance.Material3.DisplayLarge">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Headline2"
-        parent="TextAppearance.MaterialComponents.Headline2">
+        parent="TextAppearance.Material3.DisplayMedium">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Headline3"
-        parent="TextAppearance.MaterialComponents.Headline3">
+        parent="TextAppearance.Material3.DisplaySmall">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Headline4"
-        parent="TextAppearance.MaterialComponents.Headline4">
+        parent="TextAppearance.Material3.HeadlineLarge">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Headline5"
-        parent="TextAppearance.MaterialComponents.Headline5">
+        parent="TextAppearance.Material3.HeadlineMedium">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Headline6"
-        parent="TextAppearance.MaterialComponents.Headline6">
+        parent="TextAppearance.Material3.HeadlineSmall">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Subtitle1"
-        parent="TextAppearance.MaterialComponents.Subtitle1">
+        parent="TextAppearance.Material3.TitleMedium">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Subtitle2"
-        parent="TextAppearance.MaterialComponents.Subtitle2">
+        parent="TextAppearance.Material3.TitleSmall">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Body1"
-        parent="TextAppearance.MaterialComponents.Body1">
+        parent="TextAppearance.Material3.BodyLarge">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Body2"
-        parent="TextAppearance.MaterialComponents.Body2">
+        parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Button"
-        parent="TextAppearance.MaterialComponents.Button">
+        parent="TextAppearance.Material3.LabelLarge">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Caption"
-        parent="TextAppearance.MaterialComponents.Caption">
+        parent="TextAppearance.Material3.BodySmall">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
     <style name="TextAppearance.KeyNest.Overline"
-        parent="TextAppearance.MaterialComponents.Overline">
+        parent="TextAppearance.Material3.LabelSmall">
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
-    <style name="Theme.KeyNest" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.KeyNest" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/keynest_primary</item>
         <item name="colorPrimaryVariant">@color/keynest_primary_variant</item>
         <item name="colorOnPrimary">@android:color/white</item>
@@ -105,34 +120,54 @@
         <item name="android:windowBackground">?attr/colorSurface</item>
 
         <!--
-            Issue #13 Req 1.2: route every Material TextAppearance slot to the
-            Manrope-variant override so headlines, body, buttons and captions
-            consistently render with the bundled typeface.
+            Issue #13 Req 1.2 / Issue #24 Req 2.2: route every Material 3
+            TextAppearance slot to the Manrope-variant override so headlines,
+            body, buttons and captions consistently render with the bundled
+            typeface. The attribute names below are the Material 3 type-scale
+            slot names (Display* / Headline* / Title* / Body* / Label*) and
+            replace the Material 2 slot names (Headline1..6 / Subtitle1..2 /
+            Body1..2 / Button / Caption / Overline) that used to live here
+            before the Issue #24 migration. Mapping follows the Material
+            Design public type-scale correspondence (Req 2.5).
         -->
-        <item name="textAppearanceHeadline1">@style/TextAppearance.KeyNest.Headline1</item>
-        <item name="textAppearanceHeadline2">@style/TextAppearance.KeyNest.Headline2</item>
-        <item name="textAppearanceHeadline3">@style/TextAppearance.KeyNest.Headline3</item>
-        <item name="textAppearanceHeadline4">@style/TextAppearance.KeyNest.Headline4</item>
-        <item name="textAppearanceHeadline5">@style/TextAppearance.KeyNest.Headline5</item>
-        <item name="textAppearanceHeadline6">@style/TextAppearance.KeyNest.Headline6</item>
-        <item name="textAppearanceSubtitle1">@style/TextAppearance.KeyNest.Subtitle1</item>
-        <item name="textAppearanceSubtitle2">@style/TextAppearance.KeyNest.Subtitle2</item>
-        <item name="textAppearanceBody1">@style/TextAppearance.KeyNest.Body1</item>
-        <item name="textAppearanceBody2">@style/TextAppearance.KeyNest.Body2</item>
-        <item name="textAppearanceButton">@style/TextAppearance.KeyNest.Button</item>
-        <item name="textAppearanceCaption">@style/TextAppearance.KeyNest.Caption</item>
-        <item name="textAppearanceOverline">@style/TextAppearance.KeyNest.Overline</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.KeyNest.Headline1</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.KeyNest.Headline2</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.KeyNest.Headline3</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.KeyNest.Headline4</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.KeyNest.Headline5</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.KeyNest.Headline6</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.KeyNest.Subtitle1</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.KeyNest.Subtitle2</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.KeyNest.Body1</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.KeyNest.Body2</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.KeyNest.Button</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.KeyNest.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.KeyNest.Overline</item>
 
         <!--
             Issue #13 Req 1.2: also override android: namespace fontFamily so
             views that don't go through Material TextAppearance (raw TextView
             without textAppearance attribute, EditText hints, etc.) still pick
-            up Manrope.
+            up Manrope. This also covers credential_edit_activity.xml which
+            still references legacy M2 textAppearance attribute names
+            (textAppearanceSubtitle1 / textAppearanceBody1 / etc.). Those
+            views fall through to the M3 parent theme's legacy aliases for
+            sizing/spacing but pick up Manrope via this theme-level
+            android:fontFamily override.
         -->
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
     </style>
 
+    <!--
+        Issue #24 Out of Scope: Theme.KeyNest.Translucent parent is left on
+        Theme.MaterialComponents.DayNight.NoActionBar because (a) it is only
+        used by AutofillUnlockActivity which displays a BiometricPrompt on
+        top of an otherwise transparent window and never inflates any of
+        the M3 widgets that triggered the crash on Theme.KeyNest, and
+        (b) Req 3.5 only mandates that its transparent-launch behaviour be
+        preserved across this fix.
+    -->
     <style name="Theme.KeyNest.Translucent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
