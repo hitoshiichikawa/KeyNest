@@ -16,15 +16,21 @@ import org.junit.Test
  * Robolectric Activity.
  *
  * Mapped AC coverage:
- * - Req 1.2: every Material TextAppearance.* slot is overridden by
- *   TextAppearance.KeyNest.* pointing at @font/manrope, and the Theme
- *   overrides android:fontFamily so non-Material TextViews also pick up
- *   Manrope.
- * - Req 2.2: the two existing monospace TextViews in
+ * - Req 1.2 (Issue #13): every Material TextAppearance.* slot is
+ *   overridden by TextAppearance.KeyNest.* pointing at @font/manrope,
+ *   and the Theme overrides android:fontFamily so non-Material TextViews
+ *   also pick up Manrope. After Issue #24 the slot attribute names have
+ *   moved from M2 (textAppearanceBody1, etc.) to M3 (textAppearanceBodyLarge,
+ *   etc.) but the wiring to TextAppearance.KeyNest.* (with @font/manrope)
+ *   is preserved.
+ * - Req 2.2 (Issue #13): the two existing monospace TextViews in
  *   credential_edit_activity.xml use @font/jetbrains_mono.
- * - Req 3.1 / 3.2 (NFR 1.5 inheritance): the theme references the
- *   bundled @font resource, not androidx.core.provider.FontsContractCompat
+ * - Req 3.1 / 3.2 (Issue #13, NFR 1.5 inheritance): the theme references
+ *   the bundled @font resource, not androidx.core.provider.FontsContractCompat
  *   nor the Google Fonts provider.
+ * - Req 2.3 / 2.4 (Issue #24): the 13 TextAppearance.KeyNest.* styles
+ *   inherit from TextAppearance.Material3.* (not the M2 .MaterialComponents
+ *   variants) while keeping the @font/manrope override intact.
  */
 class FontTypefaceWiringTest {
 
@@ -33,13 +39,14 @@ class FontTypefaceWiringTest {
     private val manifestFile: File = File("src/main/AndroidManifest.xml")
 
     @Test
-    fun keyNestTheme_overridesTextAppearanceBody1_withManropeVariant() {
+    fun keyNestTheme_overridesTextAppearanceBodyLarge_withManropeVariant() {
         val themes = themesFile.readText()
-        // The theme must route textAppearanceBody1 through the Manrope variant
-        // so any TextView using textAppearance="?attr/textAppearanceBody1"
-        // resolves to the bundled Manrope face.
+        // After Issue #24 the M3 slot name `textAppearanceBodyLarge` is
+        // what M3 widgets (and the 4 migrated layouts) look up. It must
+        // still route through the Manrope-bearing TextAppearance.KeyNest.Body1
+        // so the typeface override survives the M2 -> M3 migration.
         assertThat(themes).contains(
-            "<item name=\"textAppearanceBody1\">@style/TextAppearance.KeyNest.Body1</item>"
+            "<item name=\"textAppearanceBodyLarge\">@style/TextAppearance.KeyNest.Body1</item>"
         )
         // The variant itself must reference @font/manrope.
         val body1Block = themes.substringAfter("\"TextAppearance.KeyNest.Body1\"")
@@ -48,26 +55,30 @@ class FontTypefaceWiringTest {
     }
 
     @Test
-    fun keyNestTheme_overridesTextAppearanceBody2_withManropeVariant() {
+    fun keyNestTheme_overridesTextAppearanceBodyMedium_withManropeVariant() {
         val themes = themesFile.readText()
         assertThat(themes).contains(
-            "<item name=\"textAppearanceBody2\">@style/TextAppearance.KeyNest.Body2</item>"
+            "<item name=\"textAppearanceBodyMedium\">@style/TextAppearance.KeyNest.Body2</item>"
         )
     }
 
     @Test
-    fun keyNestTheme_overridesTextAppearanceHeadline6_withManropeVariant() {
+    fun keyNestTheme_overridesTextAppearanceHeadlineSmall_withManropeVariant() {
         val themes = themesFile.readText()
+        // M2 textAppearanceHeadline6 -> M3 textAppearanceHeadlineSmall per
+        // the Material Design type-scale correspondence (Issue #24 Req 2.5).
         assertThat(themes).contains(
-            "<item name=\"textAppearanceHeadline6\">@style/TextAppearance.KeyNest.Headline6</item>"
+            "<item name=\"textAppearanceHeadlineSmall\">@style/TextAppearance.KeyNest.Headline6</item>"
         )
     }
 
     @Test
-    fun keyNestTheme_overridesTextAppearanceCaption_withManropeVariant() {
+    fun keyNestTheme_overridesTextAppearanceBodySmall_withManropeVariant() {
         val themes = themesFile.readText()
+        // M2 textAppearanceCaption -> M3 textAppearanceBodySmall per the
+        // Material Design type-scale correspondence (Issue #24 Req 2.5).
         assertThat(themes).contains(
-            "<item name=\"textAppearanceCaption\">@style/TextAppearance.KeyNest.Caption</item>"
+            "<item name=\"textAppearanceBodySmall\">@style/TextAppearance.KeyNest.Caption</item>"
         )
     }
 
@@ -77,6 +88,9 @@ class FontTypefaceWiringTest {
         // do not flow through Material TextAppearance.* and instead pick
         // up android:fontFamily directly. The theme must therefore override
         // this attribute at the theme level as well.
+        // credential_edit_activity.xml additionally relies on this for the
+        // remaining legacy M2 textAppearance attribute references it still
+        // contains (textAppearanceSubtitle1 / textAppearanceBody1 / etc.).
         val themes = themesFile.readText()
         val themeBlock = themes.substringAfter("\"Theme.KeyNest\"")
             .substringBefore("</style>")
