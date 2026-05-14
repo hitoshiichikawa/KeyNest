@@ -4,6 +4,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.keynest.R
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
@@ -102,17 +103,22 @@ class BundledFontResourcesTest {
         // produce non-empty bytes.
         assertThat(resId).isNotEqualTo(0)
         val bytes = context.resources.openRawResource(resId).use { it.readBytes() }
-        assertThat(bytes.size).named("size of R.font.$name").isGreaterThan(0)
+        // Issue #24: migrated from deprecated `.named("…")` (removed in
+        // Truth 1.4) to `assertWithMessage("…")`. Same diagnostic text,
+        // same isGreaterThan(0) assertion -- no relaxation of intent.
+        assertWithMessage("size of R.font.$name").that(bytes.size).isGreaterThan(0)
     }
 
     private fun assertRawAssetIsNonEmpty(resId: Int, name: String) {
         assertThat(resId).isNotEqualTo(0)
         val bytes = context.resources.openRawResource(resId).use { it.readBytes() }
-        assertThat(bytes.size).named("size of R.raw.$name").isGreaterThan(0)
+        // Issue #24: same migration as above.
+        assertWithMessage("size of R.raw.$name").that(bytes.size).isGreaterThan(0)
     }
 
     private fun assertResourceIsBundled(resId: Int, type: String, name: String) {
-        assertThat(resId).named("R.$type.$name resource id").isNotEqualTo(0)
+        // Issue #24: same migration as above.
+        assertWithMessage("R.$type.$name resource id").that(resId).isNotEqualTo(0)
         val resolvedName = context.resources.getResourceEntryName(resId)
         assertThat(resolvedName).isEqualTo(name)
     }

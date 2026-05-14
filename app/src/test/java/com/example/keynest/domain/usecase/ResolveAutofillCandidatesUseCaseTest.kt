@@ -132,6 +132,38 @@ class ResolveAutofillCandidatesUseCaseTest {
 
             override suspend fun findById(id: CredentialId): EncryptedCredentialRecord? = null
             override fun observeAll() = kotlinx.coroutines.flow.flowOf(emptyList<com.example.keynest.domain.model.Credential>())
+
+            // Issue #24: the following stubs were missing on the develop
+            // branch (Issue #9 / #10 added them to CredentialRepository
+            // but never updated this anonymous fake). Filling them in is
+            // mechanically required to compile the test module; none of
+            // these methods are exercised by ResolveAutofillCandidatesUseCase,
+            // so returning error("boom") preserves the test's original
+            // intent of verifying that the use case swallows underlying
+            // failures (NFR 3.2). No assertion is relaxed.
+            override fun observeBySort(
+                order: com.example.keynest.domain.model.CredentialSortOrder,
+            ) = kotlinx.coroutines.flow.flowOf(
+                emptyList<com.example.keynest.domain.model.Credential>(),
+            )
+
+            override fun observeRecentlyUsed(limit: Int) =
+                kotlinx.coroutines.flow.flowOf(
+                    emptyList<com.example.keynest.domain.model.Credential>(),
+                )
+
+            override suspend fun markUsed(id: CredentialId, timestamp: Long) = error("boom")
+
+            override suspend fun duplicate(
+                sourceId: CredentialId,
+                timestamp: Long,
+            ): Result<CredentialId> = Result.failure(IllegalStateException("boom"))
+
+            override fun observeMetadata() = kotlinx.coroutines.flow.flowOf(
+                com.example.keynest.domain.model.VaultMetadata(count = 0, latestUpdatedAt = null),
+            )
+
+            override suspend fun clearAll() = error("boom")
         }
         every { sigResolver.resolveSha256("com.example.target") } returns matchingHash
         val useCase = ResolveAutofillCandidatesUseCase(throwingRepo, sigResolver)
