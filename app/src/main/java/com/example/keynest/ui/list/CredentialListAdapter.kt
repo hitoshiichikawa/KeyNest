@@ -3,6 +3,7 @@ package com.example.keynest.ui.list
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -46,10 +47,49 @@ class CredentialListAdapter(
             onLongClick: (Credential) -> Unit,
             onOverflow: (Credential, View) -> Unit,
         ) {
+            val ctx = binding.root.context
+
             binding.textLabel.text = item.label
-            // Subtitle: username @ packageName. Username is not sensitive at
-            // rest (it's also what we surface in the Autofill dataset chip).
-            binding.textSubtitle.text = "${item.username} @ ${item.packageName}"
+            // Issue #29: username and package name are now rendered on
+            // separate lines per design/screens-1.jsx CredCard (Req 5.6 /
+            // 5.7). Username is not sensitive at rest (it is what we
+            // already surface in the Autofill dataset chip; NFR 1.3 still
+            // applies — we do NOT bind the decrypted password).
+            binding.textSubtitle.text = item.username
+            binding.textPackage.text = item.packageName
+
+            // Issue #29 Req 7.x: signature chip. We use a single
+            // LinearLayout chip view and swap background + tint + label by
+            // the signature presence.
+            val hasSignature = item.signatureSha256 != null
+            if (hasSignature) {
+                binding.chipSignature.setBackgroundResource(
+                    R.drawable.kn_signature_chip_bg_success,
+                )
+                val color = ContextCompat.getColor(ctx, R.color.kn_success)
+                binding.textSignature.setText(R.string.signature_match)
+                binding.textSignature.setTextColor(color)
+                binding.iconSignature.setImageResource(R.drawable.ic_shield_fill_16)
+                binding.iconSignature.imageTintList =
+                    android.content.res.ColorStateList.valueOf(color)
+            } else {
+                binding.chipSignature.setBackgroundResource(
+                    R.drawable.kn_signature_chip_bg_warning,
+                )
+                val color = ContextCompat.getColor(ctx, R.color.kn_warning)
+                binding.textSignature.setText(R.string.signature_missing)
+                binding.textSignature.setTextColor(color)
+                binding.iconSignature.setImageResource(R.drawable.ic_shield_outline_16)
+                binding.iconSignature.imageTintList =
+                    android.content.res.ColorStateList.valueOf(color)
+            }
+
+            // Issue #29 Req 6.5: the Credential domain model does not
+            // carry a strength value. We pass null so the StrengthBar
+            // stays GONE; once a strength field is added (separate
+            // Issue), the adapter only needs to compute the enum here.
+            binding.strengthBar.setStrength(null)
+
             binding.root.setOnClickListener { onClick(item) }
             binding.root.setOnLongClickListener {
                 onLongClick(item)
@@ -57,7 +97,7 @@ class CredentialListAdapter(
             }
             // Localise the overflow button's content description per row
             // so TalkBack reads "More actions for <label>" (NFR 3.1).
-            binding.btnOverflow.contentDescription = binding.root.context.getString(
+            binding.btnOverflow.contentDescription = ctx.getString(
                 R.string.credential_list_row_overflow_a11y,
                 item.label,
             )
