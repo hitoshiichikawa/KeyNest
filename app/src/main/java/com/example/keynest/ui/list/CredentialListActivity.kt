@@ -78,6 +78,7 @@ class CredentialListActivity : AppCompatActivity() {
         setUpFilters()
         setUpSort()
         setUpFab()
+        setUpEmptyStateCta()
 
         observeUiState()
         observeDuplicateResult()
@@ -173,6 +174,18 @@ class CredentialListActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Issue #29 Req 8.4: the EmptyKind.Initial CTA opens the same edit
+     * activity as the FAB. The two affordances cannot be visible at the
+     * same logical moment (vault non-empty → CTA hidden), so this is a
+     * convenience entry rather than a duplicate flow.
+     */
+    private fun setUpEmptyStateCta() {
+        binding.emptyStateCta.setOnClickListener {
+            startActivity(CredentialEditActivity.newIntent(this))
+        }
+    }
+
     // ---- ui state collection -----------------------------------------------
 
     private fun observeUiState() {
@@ -235,14 +248,43 @@ class CredentialListActivity : AppCompatActivity() {
     }
 
     private fun renderEmptyView(state: CredentialListUiState) {
-        binding.emptyView.visibility = if (state.emptyKind != null) View.VISIBLE else View.GONE
-        binding.emptyView.setText(
-            when (state.emptyKind) {
-                EmptyKind.Initial -> R.string.credential_list_empty
-                EmptyKind.NoMatch -> R.string.credential_list_empty_no_match
-                null -> R.string.credential_list_empty
+        // Issue #29 Req 8.x: the empty state is now rendered inside a
+        // dedicated container that holds the hero illustration, headline
+        // (existing empty_view TextView), primary CTA and security note.
+        // The whole container is GONE when there is no empty state; the
+        // existing empty_view TextView is kept inside as the headline.
+        //
+        // EmptyKind.Initial → show hero + CTA + headline + footer.
+        // EmptyKind.NoMatch → show only the headline TextView (Req 8.5).
+        // null              → hide the entire container.
+        val container = binding.emptyStateContainer
+        val hero = binding.emptyStateHero
+        val cta = binding.emptyStateCta
+        val footer = binding.emptyStateFooter
+        val headline = binding.emptyView
+
+        when (state.emptyKind) {
+            EmptyKind.Initial -> {
+                container.visibility = View.VISIBLE
+                hero.visibility = View.VISIBLE
+                cta.visibility = View.VISIBLE
+                footer.visibility = View.VISIBLE
+                headline.visibility = View.VISIBLE
+                headline.setText(R.string.credential_list_empty)
             }
-        )
+            EmptyKind.NoMatch -> {
+                // Req 8.5: NoMatch shows only the headline message.
+                container.visibility = View.VISIBLE
+                hero.visibility = View.GONE
+                cta.visibility = View.GONE
+                footer.visibility = View.GONE
+                headline.visibility = View.VISIBLE
+                headline.setText(R.string.credential_list_empty_no_match)
+            }
+            null -> {
+                container.visibility = View.GONE
+            }
+        }
     }
 
     /**
