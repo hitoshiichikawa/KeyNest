@@ -255,44 +255,11 @@ class CredentialListActivity : AppCompatActivity() {
         // is no empty state; the existing empty_view TextView is kept
         // inside as the headline.
         //
-        // EmptyKind.Initial → show hero + headline + body + CTA + footer
-        //                     (Req 8.1's five elements).
-        // EmptyKind.NoMatch → show only the headline TextView (Req 8.5).
-        // null              → hide the entire container.
-        val container = binding.emptyStateContainer
-        val hero = binding.emptyStateHero
-        val body = binding.emptyStateBody
-        val cta = binding.emptyStateCta
-        val footer = binding.emptyStateFooter
-        val headline = binding.emptyView
-
-        when (state.emptyKind) {
-            EmptyKind.Initial -> {
-                container.visibility = View.VISIBLE
-                hero.visibility = View.VISIBLE
-                headline.visibility = View.VISIBLE
-                // Req 8.1 / 8.3: body copy is part of the Initial empty
-                // state's required elements.
-                body.visibility = View.VISIBLE
-                cta.visibility = View.VISIBLE
-                footer.visibility = View.VISIBLE
-                headline.setText(R.string.credential_list_empty)
-            }
-            EmptyKind.NoMatch -> {
-                // Req 8.5: NoMatch shows only the headline message; hide
-                // the hero / body copy / CTA / footer.
-                container.visibility = View.VISIBLE
-                hero.visibility = View.GONE
-                body.visibility = View.GONE
-                cta.visibility = View.GONE
-                footer.visibility = View.GONE
-                headline.visibility = View.VISIBLE
-                headline.setText(R.string.credential_list_empty_no_match)
-            }
-            null -> {
-                container.visibility = View.GONE
-            }
-        }
+        // Visibility / headline-text logic lives in
+        // [applyEmptyStateVisibility] (same package) so the matrix can be
+        // unit-tested directly against a binding without spinning up the
+        // whole Activity (which would also pull in ServiceLocator / Room).
+        applyEmptyStateVisibility(binding, state.emptyKind)
     }
 
     /**

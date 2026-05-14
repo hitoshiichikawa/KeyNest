@@ -243,6 +243,41 @@ class CredentialListLayoutTokensTest {
         assertThat(xml).contains("@string/credential_list_empty_security_note")
     }
 
+    // ---- Req 8.1 / 8.3: supplemental body copy uses Body + kn_text_2 -------
+
+    @Test
+    fun activityLayout_emptyStateContainsBodyCopyWithKnText2() {
+        // Req 8.1 (補足文 as one of the five required elements) /
+        // Req 8.3 (補足文テキスト = Text.KeyNest.Body + kn_text_2).
+        //
+        // We pin the body TextView declaration by checking:
+        //  - the dedicated id `@+id/empty_state_body`
+        //  - its style is `Text.KeyNest.Body` (NOT BodyS — the AC requires
+        //    Body specifically), declared on the same TextView
+        //  - its textColor resolves `@color/kn_text_2`
+        //  - it references the new `credential_list_empty_body` string
+        val xml = activityLayout.readText()
+        assertThat(xml).contains("@+id/empty_state_body")
+        assertThat(xml).contains("@string/credential_list_empty_body")
+        // The body TextView block must combine Text.KeyNest.Body and
+        // @color/kn_text_2 on the same element. We assert both tokens are
+        // present in the empty_state_body declaration by matching the
+        // surrounding block.
+        val bodyBlockRegex = Regex(
+            pattern = "<TextView[^>]*?@\\+id/empty_state_body[\\s\\S]*?/>",
+        )
+        val match = bodyBlockRegex.find(xml)
+        assertWithMessage("empty_state_body declaration must exist in the activity layout")
+            .that(match).isNotNull()
+        val block = match!!.value
+        assertWithMessage(
+            "empty_state_body must use @style/Text.KeyNest.Body (Req 8.3)",
+        ).that(block).contains("style=\"@style/Text.KeyNest.Body\"")
+        assertWithMessage(
+            "empty_state_body must use textColor=@color/kn_text_2 (Req 8.3)",
+        ).that(block).contains("android:textColor=\"@color/kn_text_2\"")
+    }
+
     // ---- Req 8 boundary: the headline TextView keeps its id ----------------
 
     @Test
