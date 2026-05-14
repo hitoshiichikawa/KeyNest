@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KeyNest — Spacing & radii.
+  Source: design/tokens.css. Layouts MUST reference these dimens
+  rather than typing dp values inline.
+  Place at: app/src/main/res/values/dimens.xml (new file)
+-->
+<resources>
+
+    <!-- ── Radii ──────────────────────────────────────── -->
+    <dimen name="kn_r_xs">8dp</dimen>
+    <dimen name="kn_r_sm">12dp</dimen>
+    <dimen name="kn_r_md">16dp</dimen>
+    <dimen name="kn_r_lg">20dp</dimen>
+    <dimen name="kn_r_xl">28dp</dimen>
+    <dimen name="kn_r_pill">999dp</dimen>
+
+    <!-- Per-component, named (use these in layouts) -->
+    <dimen name="kn_r_input">14dp</dimen>
+    <dimen name="kn_r_card">18dp</dimen>
+    <dimen name="kn_r_chip">999dp</dimen>
+    <dimen name="kn_r_sheet">28dp</dimen>
+    <dimen name="kn_r_icon_tile">12dp</dimen>
+
+    <!-- ── Spacing (4-pt grid) ────────────────────────── -->
+    <dimen name="kn_space_1">4dp</dimen>
+    <dimen name="kn_space_2">8dp</dimen>
+    <dimen name="kn_space_3">12dp</dimen>
+    <dimen name="kn_space_4">16dp</dimen>
+    <dimen name="kn_space_5">20dp</dimen>
+    <dimen name="kn_space_6">24dp</dimen>
+    <dimen name="kn_space_8">32dp</dimen>
+    <dimen name="kn_space_10">40dp</dimen>
+    <dimen name="kn_space_12">48dp</dimen>
+    <dimen name="kn_space_16">64dp</dimen>
+
+    <!-- ── Component dimensions ───────────────────────── -->
+    <dimen name="kn_screen_padding_h">20dp</dimen>
+    <dimen name="kn_list_padding_h">16dp</dimen>
+    <dimen name="kn_card_padding">14dp</dimen>
+    <dimen name="kn_card_padding_lg">18dp</dimen>
+    <dimen name="kn_section_gap">24dp</dimen>
+
+    <dimen name="kn_icon_tile_sm">32dp</dimen>
+    <dimen name="kn_icon_tile_md">40dp</dimen>
+    <dimen name="kn_icon_tile_lg">44dp</dimen>
+    <dimen name="kn_icon_tile_xl">48dp</dimen>
+
+    <dimen name="kn_iconbtn_size">40dp</dimen>
+    <dimen name="kn_iconbtn_touch">44dp</dimen>     <!-- min tap target -->
+
+    <dimen name="kn_input_height">52dp</dimen>
+    <dimen name="kn_button_height">52dp</dimen>
+    <dimen name="kn_chip_height">32dp</dimen>
+
+    <!-- Bottom sheet grab handle -->
+    <dimen name="kn_handle_w">36dp</dimen>
+    <dimen name="kn_handle_h">4dp</dimen>
+
+    <!-- Strength bar segments -->
+    <dimen name="kn_strength_seg_w">14dp</dimen>
+    <dimen name="kn_strength_seg_h">4dp</dimen>
+    <dimen name="kn_strength_seg_gap">2dp</dimen>
+
+    <!-- ── Elevation ──────────────────────────────────── -->
+    <dimen name="kn_elev_1">1dp</dimen>
+    <dimen name="kn_elev_2">3dp</dimen>
+    <dimen name="kn_elev_3">8dp</dimen>
+
+</resources>

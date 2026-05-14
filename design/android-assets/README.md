@@ -1,45 +1,91 @@
-# KeyNest — App icon assets (Icon A: Shelter)
+# KeyNest — Android handoff assets
 
-`Claude Code` で組み込む際の手順。すべて Vector Drawable なので PNG 書き出し不要。
+`Claude Code` で実装するときに必要な「設計 → リソース」の橋渡しを 1 箇所にまとめたフォルダ。
 
-## 1. 配置
+## なぜこれが必要か
+
+`design/tokens.css` と `design/screens/*.jsx` は **設計フォーマット** であって、
+Android リソースに自動変換されない。マッピングが無いまま実装すると、各実装者が
+都度トークンを発明するので、結果として Material3 デフォルト + primary 色だけの
+画面になりがち。
+
+このフォルダは **Phase 1 (foundation)** の成果物。一度コピーすれば、以後の画面
+実装は `?attr/colorSurface` や `@style/Widget.KeyNest.Card` を貼るだけでデザイン
+が効くようになる。
+
+## 何が入っているか
 
 ```
-app/src/main/res/
-├── drawable/
-│   ├── ic_launcher_background.xml   ← cream 単色
-│   ├── ic_launcher_foreground.xml   ← シェルター + 鍵穴 + 小枝
-│   └── ic_launcher_monochrome.xml   ← Android 13+ Themed Icons 用
-└── mipmap-anydpi-v26/
-    ├── ic_launcher.xml              ← Adaptive Icon マニフェスト
-    └── ic_launcher_round.xml        ← 同上 (内容は同じ)
+android-assets/
+├── README.md                   ← このファイル
+├── mapping.md                  ← Token → Android resource マッピング (必読)
+│
+├── res/
+│   ├── drawable/
+│   │   ├── ic_launcher_background.xml
+│   │   ├── ic_launcher_foreground.xml
+│   │   └── ic_launcher_monochrome.xml
+│   ├── mipmap-anydpi-v26/
+│   │   └── ic_launcher.xml
+│   ├── font/
+│   │   ├── manrope_family.xml
+│   │   ├── manrope_regular.xml
+│   │   ├── manrope_semibold.xml
+│   │   ├── manrope_bold.xml
+│   │   ├── manrope_extrabold.xml
+│   │   └── jetbrains_mono.xml
+│   ├── values/
+│   │   ├── colors.xml          ← 全パレット + light セマンティック
+│   │   ├── dimens.xml          ← radii / spacing / 各種サイズ
+│   │   ├── themes.xml          ← Material3 attr → kn_* マッピング
+│   │   └── type.xml            ← Text.KeyNest.* TextAppearance
+│   ├── values-night/
+│   │   └── colors.xml          ← dark の semantic 上書きのみ
+│   └── values-ja/
+│       └── strings.xml         ← 日本語訳 (spec.md §9)
+│
+├── kotlin/
+│   └── KeyNestTheme.kt         ← Compose 用 (任意・将来用)
+│
+├── icon-a.svg                  ← Play Store / README 用
+└── preview.html                ← アイコンのサイズ・並び確認
 ```
 
-> `mipmap-mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi/` の PNG は **削除して構わない**
-> （API 26 未満をサポートする場合のみ Asset Studio で再生成）。
+## 取り込み手順 (Claude Code 想定)
 
-## 2. AndroidManifest.xml
+### Phase 1 — Foundation を入れる (1 PR)
 
-既存設定で OK。念のため:
+1. `android-assets/res/values/colors.xml` で **既存** `app/src/main/res/values/colors.xml` を置換
+2. `android-assets/res/values/{dimens,themes,type}.xml` を `app/src/main/res/values/` にコピー (themes.xml は置換)
+3. `android-assets/res/values-night/colors.xml` を `app/src/main/res/values-night/colors.xml` にコピー (新規ディレクトリ)
+4. `android-assets/res/values-ja/strings.xml` を `app/src/main/res/values-ja/strings.xml` にコピー (新規)
+5. `android-assets/res/font/*` を `app/src/main/res/font/` にコピー (新規)
+6. `android-assets/res/drawable/ic_launcher_*.xml` を `app/src/main/res/drawable/` にコピー
+7. `android-assets/res/mipmap-anydpi-v26/ic_launcher.xml` を `app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` に配置。**round 版** も同じ内容で `ic_launcher_round.xml` として置く
+8. 旧 `app/src/main/res/mipmap-*/ic_launcher*.png` (もし残っていれば) を削除
+9. `app/src/main/res/values/themes.xml` の `<application android:theme="@style/Theme.KeyNest">` を Manifest で確認
+10. ビルド確認 → アプリ起動して既存画面が「色が変わっただけ」で動くことを確認
 
-```xml
-<application
-    android:icon="@mipmap/ic_launcher"
-    android:roundIcon="@mipmap/ic_launcher_round"
-    ...>
-```
+> ✅ ここまでで **既存画面に手を入れずに** ベース色 / フォント / 角丸 が
+> デザイントークンに沿った状態になります。
+> 個別画面の作り込みは Phase 2 へ。
 
-## 3. デザイン仕様
+### Phase 2 — 画面別の対応 (各画面 1 PR)
 
-| 項目 | 値 |
-|---|---|
-| 背景色 | `#F4EBDC` (cream) |
-| ルーフ | `#2A7BF5` → `#0F4AA8` 線形グラデ |
-| 鍵穴・小枝 | `#F4EBDC` / `#9B7A4A` |
-| 安全ゾーン | 中心 (54,54)・半径 36 dp に重要要素を配置済み |
-| 拡大時の見え方 | `preview.html` で確認 |
+`mapping.md` §5 の対応表に従って 1 画面ずつ JSX → Android XML に書き起こす。
+各 Issue / PR は `mapping.md` §8 のテンプレに沿って起票するとぶれない。
 
-## 4. プレビュー
+優先順 (推奨):
+1. `CredentialListActivity` (カード型 + 検索 + フィルター chip)
+2. `CredentialEditActivity` (ターゲットカード + 強度バー)
+3. `AutofillEnableActivity` (ヒーロー + 3 ステップ)
+4. `PackagePickerBottomSheet` (セクション分割 + 検索)
+5. Settings (新規)
+6. `AutofillUnlockActivity` の UI (Biometric prompt の前後)
+7. `dataset_presentation.xml` (Autofill dropdown のブランディング)
 
-`android-assets/preview.html` を開くと、Squircle / Circle / 48dp サイズ
-そしてホーム画面風グリッドで他アプリと並べた状態を確認できます。
+## デザイン参照
+
+- `design/KeyNest Design.html` を開くと全画面 + Light/Dark + アイコン候補を一覧可能
+- `design/spec.md` がタイポ / 色 / 余白 / アクセシビリティの仕様書
+- `design/screens/*.jsx` が各画面の実装ヒント (React で書かれているが値は読める)

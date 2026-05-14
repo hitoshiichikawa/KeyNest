@@ -15,102 +15,128 @@ function IconShell({ size = 192, radius = 0.224, children, bg }) {
   );
 }
 
-// A — Selected direction: cream "shelter" silhouette, blue roof + key dot
+// All silhouettes now fill ~85% of the 200x200 canvas so they read
+// strongly at 48dp on a home screen. Adaptive-icon safe zone (66%) is
+// respected by keeping the strongest forms inside x=24..176 / y=20..180.
+
+// A — Selected direction: cream "shelter" + bold blue roof + keyhole
 function IconA({ size }) {
   return (
     <IconShell size={size} bg="#F4EBDC">
       <defs>
         <linearGradient id="iconA-roof" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#2A7BF5"/>
-          <stop offset="1" stopColor="#1457C9"/>
+          <stop offset="1" stopColor="#0F4AA8"/>
         </linearGradient>
       </defs>
-      {/* nest base (tan) */}
-      <path d="M40 130 Q100 60 160 130 L160 152 Q100 132 40 152 Z" fill="#D9C3A0"/>
-      {/* roof / shelter */}
-      <path d="M52 128 Q100 72 148 128 Z" fill="url(#iconA-roof)"/>
-      {/* keyhole */}
-      <circle cx="100" cy="108" r="8.5" fill="#F4EBDC"/>
-      <rect x="96.5" y="111" width="7" height="14" rx="2.5" fill="#F4EBDC"/>
-      {/* twig accent */}
-      <path d="M60 142 L86 138 M118 138 L142 142" stroke="#9B7A4A" strokeWidth="2.2" strokeLinecap="round"/>
+      {/* tan nest base */}
+      <path d="M18 158 Q100 132 182 158 L182 184 Q100 168 18 184 Z" fill="#D9C3A0"/>
+      {/* shelter / roof */}
+      <path d="M22 156 Q100 22 178 156 Z" fill="url(#iconA-roof)"/>
+      {/* big keyhole, centered */}
+      <circle cx="100" cy="98" r="18" fill="#F4EBDC"/>
+      <path d="M91 110 L88 148 L112 148 L109 110 Z" fill="#F4EBDC"/>
+      {/* twig accents */}
+      <path d="M30 174 L72 168 M128 168 L170 174" stroke="#9B7A4A" strokeWidth="4" strokeLinecap="round"/>
     </IconShell>
   );
 }
 
-// B — Filled blue, monogram-key
+// B — Filled blue, oversized "K" key
 function IconB({ size }) {
   return (
     <IconShell size={size} bg="#1F6FEB">
-      {/* paper nest light */}
-      <path d="M50 132 Q100 80 150 132 Z" fill="#F4EBDC" opacity=".95"/>
-      {/* "K" notch as a key bit */}
-      <path d="M100 105 L100 130 M100 117 L113 105 M100 117 L113 130"
-        stroke="#1F6FEB" strokeWidth="6.5" strokeLinecap="round" fill="none"/>
-      {/* key bow */}
-      <circle cx="85" cy="117" r="6.5" fill="none" stroke="#1F6FEB" strokeWidth="4"/>
+      <defs>
+        <linearGradient id="iconB-bg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2E80F8"/>
+          <stop offset="1" stopColor="#0F4AA8"/>
+        </linearGradient>
+      </defs>
+      <rect width="200" height="200" fill="url(#iconB-bg)"/>
+      {/* paper-nest shelter under the K */}
+      <path d="M24 168 Q100 122 176 168 Z" fill="#F4EBDC" opacity=".95"/>
+      {/* big K-shaped key */}
+      <g stroke="#F4EBDC" strokeLinecap="round" fill="none">
+        <circle cx="60" cy="100" r="22" strokeWidth="14"/>
+        <path d="M82 100 L168 100" strokeWidth="20"/>
+        <path d="M138 100 L138 132" strokeWidth="14"/>
+        <path d="M158 100 L158 122" strokeWidth="14"/>
+      </g>
+      <circle cx="60" cy="100" r="6" fill="#1F6FEB"/>
     </IconShell>
   );
 }
 
-// C — Dark mode-first: deep navy with cream peak + glow
+// C — Dark mode-first: navy + cream peak
 function IconC({ size }) {
   return (
     <IconShell size={size} bg="#0B1220">
       <defs>
-        <radialGradient id="iconC-glow" cx=".5" cy=".75" r=".6">
+        <radialGradient id="iconC-glow" cx=".5" cy=".7" r=".55">
           <stop offset="0" stopColor="#1F6FEB" stopOpacity=".55"/>
           <stop offset="1" stopColor="#1F6FEB" stopOpacity="0"/>
         </radialGradient>
       </defs>
-      <rect x="0" y="0" width="200" height="200" fill="url(#iconC-glow)"/>
-      <path d="M50 130 Q100 70 150 130 L150 144 Q100 128 50 144 Z" fill="#F4EBDC"/>
-      <circle cx="100" cy="113" r="7.5" fill="#0B1220"/>
-      <rect x="96.5" y="116" width="7" height="13" rx="2.4" fill="#0B1220"/>
+      <rect width="200" height="200" fill="url(#iconC-glow)"/>
+      {/* tan band */}
+      <path d="M16 168 Q100 144 184 168 L184 188 Q100 174 16 188 Z" fill="#D9C3A0" opacity=".55"/>
+      {/* shelter */}
+      <path d="M20 164 Q100 18 180 164 L180 184 Q100 170 20 184 Z" fill="#F4EBDC"/>
+      {/* keyhole */}
+      <circle cx="100" cy="106" r="16" fill="#0B1220"/>
+      <path d="M92 116 L88 154 L112 154 L108 116 Z" fill="#0B1220"/>
     </IconShell>
   );
 }
 
-// D — Outlined "draft" style — soft cream, blue line work
+// D — Outlined / linework — soft cream + thick blue
 function IconD({ size }) {
   return (
     <IconShell size={size} bg="#F4EBDC">
-      <g fill="none" stroke="#1457C9" strokeWidth="5" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M45 138 Q100 70 155 138 L155 154 Q100 134 45 154 Z"/>
-        <circle cx="100" cy="112" r="9"/>
-        <path d="M100 121 L100 134"/>
+      <g fill="none" stroke="#0F4AA8" strokeWidth="10" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M20 160 Q100 22 180 160 L180 184 Q100 162 20 184 Z"/>
+        <circle cx="100" cy="100" r="14"/>
+        <path d="M100 116 L100 152" strokeWidth="14"/>
       </g>
     </IconShell>
   );
 }
 
-// E — Two-tone shelter with gradient key
+// E — Two-tone layered shelter with bold gradient key
 function IconE({ size }) {
   return (
     <IconShell size={size} bg="#EFE4D0">
       <defs>
         <linearGradient id="iconE-key" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#5E4FE0"/>
+          <stop offset="0" stopColor="#6366F1"/>
           <stop offset="1" stopColor="#1F6FEB"/>
         </linearGradient>
       </defs>
-      <path d="M50 134 Q100 72 150 134 Z" fill="#1F6FEB"/>
-      <path d="M58 134 Q100 88 142 134 Z" fill="#D9C3A0"/>
-      <circle cx="100" cy="115" r="9" fill="url(#iconE-key)"/>
-      <rect x="96.5" y="118" width="7" height="16" rx="2.5" fill="url(#iconE-key)"/>
+      {/* outer blue roof */}
+      <path d="M16 160 Q100 18 184 160 Z" fill="#1F6FEB"/>
+      {/* inner cream roof */}
+      <path d="M40 160 Q100 60 160 160 Z" fill="#EFE4D0"/>
+      {/* big key */}
+      <circle cx="100" cy="108" r="20" fill="url(#iconE-key)"/>
+      <circle cx="100" cy="108" r="7" fill="#EFE4D0"/>
+      <path d="M92 124 L88 168 L112 168 L108 124 Z" fill="url(#iconE-key)"/>
+      <rect x="108" y="152" width="14" height="8" rx="2" fill="url(#iconE-key)"/>
     </IconShell>
   );
 }
 
-// F — Modern wordmark / abstract — minimal "K + roof"
+// F — Geometric wordmark — bold K + nest swoop
 function IconF({ size }) {
   return (
     <IconShell size={size} bg="#F4EBDC">
-      <path d="M70 60 L70 145" stroke="#0F4AA8" strokeWidth="14" strokeLinecap="round"/>
-      <path d="M70 102 L130 60" stroke="#1F6FEB" strokeWidth="14" strokeLinecap="round"/>
-      <path d="M70 102 L132 145" stroke="#1F6FEB" strokeWidth="14" strokeLinecap="round"/>
-      {/* nest swoop */}
-      <path d="M44 156 Q100 140 156 156" stroke="#9B7A4A" strokeWidth="6" fill="none" strokeLinecap="round"/>
+      {/* nest underline */}
+      <path d="M22 172 Q100 144 178 172" stroke="#9B7A4A" strokeWidth="10" fill="none" strokeLinecap="round"/>
+      {/* K */}
+      <path d="M50 28 L50 158" stroke="#0F4AA8" strokeWidth="26" strokeLinecap="round"/>
+      <path d="M50 96 L142 30" stroke="#1F6FEB" strokeWidth="26" strokeLinecap="round"/>
+      <path d="M50 96 L150 158" stroke="#1F6FEB" strokeWidth="26" strokeLinecap="round"/>
+      {/* key bow at top of the stem */}
+      <circle cx="50" cy="42" r="14" fill="#F4EBDC"/>
     </IconShell>
   );
 }
