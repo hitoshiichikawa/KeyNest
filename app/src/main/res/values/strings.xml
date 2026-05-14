@@ -37,6 +37,11 @@
     <string name="strength_medium">Medium</string>
     <string name="strength_weak">Weak</string>
 
+    <!-- Empty state body copy (Req 8.1 / 8.3, Issue #29). Shown between
+         the headline and the primary CTA on the Initial empty state with
+         Text.KeyNest.Body + kn_text_2. -->
+    <string name="credential_list_empty_body">Welcome to KeyNest. Save your first credential to get started with secure, on-device storage.</string>
+
     <!-- Empty state hero CTA secondary label (Req 8.4 / Issue #29). The
          "クレデンシャルを登録" CTA reuses action_add_credential, this is the
          security footer note shown beneath it. -->

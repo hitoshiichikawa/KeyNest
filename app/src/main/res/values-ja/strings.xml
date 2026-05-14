@@ -58,6 +58,10 @@
     <string name="strength_medium">中</string>
     <string name="strength_weak">弱</string>
 
+    <!-- Empty state body copy (Issue #29 Req 8.1 / 8.3). Shown between the
+         headline and the primary CTA on the Initial empty state. -->
+    <string name="credential_list_empty_body">KeyNest にようこそ。最初のクレデンシャルを登録して、安全な保管をはじめましょう。</string>
+
     <!-- Empty state security note (Issue #29 Req 8 footer). -->
     <string name="credential_list_empty_security_note">AES-GCM · 端末ローカルのみ</string>
 </resources>
