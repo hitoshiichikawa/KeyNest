@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #29 Req 7.1: signature-captured chip background.
+
+  Pill-shaped (r999) chip with `kn_success_soft` fill. JSX `ScreenEdit`
+  reference: padding 3x8, font 10/700, gap 4. We size it through layout
+  (paddingHorizontal=kn_space_2, paddingVertical=kn_space_1 ish) so this
+  drawable is just shape+fill.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_success_soft" />
+    <corners android:radius="@dimen/kn_r_pill" />
+</shape>

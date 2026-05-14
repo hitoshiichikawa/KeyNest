@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #29 Req 5.8 / Req 9.1: per-row overflow icon.
+
+  Replaces `@android:drawable/ic_menu_more` (system default) with a
+  vector drawable that aligns with the JSX `Icons.more` (vertical 3-dot)
+  and respects the `kn_text_3` tint via android:tint on the ImageButton.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/kn_text_3">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,8a2,2 0 1,1 0,-4 2,2 0 0,1 0,4zm0,6a2,2 0 1,1 0,-4 2,2 0 0,1 0,4zm0,6a2,2 0 1,1 0,-4 2,2 0 0,1 0,4z" />
+</vector>
