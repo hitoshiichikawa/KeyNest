@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Themed icon (Android 13+ Material You).
+  Single-color silhouette — system tints it to the user's wallpaper palette.
+  Drop into: app/src/main/res/drawable/ic_launcher_monochrome.xml
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108"
+    android:tint="?attr/colorControlNormal">
+
+    <!-- Roof silhouette (the only mark; keyhole reverses out) -->
+    <path
+        android:pathData="M11.88,84.24 Q54,11.88 96.12,84.24 L96.12,93.6 Q54,79.92 11.88,93.6 Z M54,52.92 m-9.72,0 a9.72,9.72 0 1,0 19.44,0 a9.72,9.72 0 1,0 -19.44,0 Z M49.14,59.4 L47.52,79.92 L60.48,79.92 L58.86,59.4 Z"
+        android:fillType="evenOdd"
+        android:fillColor="#FFFFFFFF"/>
+</vector>
