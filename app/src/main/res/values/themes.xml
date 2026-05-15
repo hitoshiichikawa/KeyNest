@@ -299,15 +299,15 @@
         the CredentialEdit screen in edit mode (削除).
 
         Visual contract (JSX `ScreenEdit` の削除ボタン):
-          - background: 透過 (`background: 'transparent'`)
-          - border: 1dp `var(--border)` outline → strokeColor=@color/kn_border
-          - radius: 14dp (`borderRadius: 14`) → @dimen/kn_r_input
-          - text color: `var(--kn-danger)` → @color/kn_danger
+          - background: 透過 (background transparent)
+          - border: 1dp CSS var border outline → strokeColor=@color/kn_border
+          - radius: 14dp (borderRadius 14) → @dimen/kn_r_input
+          - text color: CSS var kn danger → @color/kn_danger
           - height: 52dp (@dimen/kn_button_height)
           - text appearance: LabelL (15sp / weight 700)
 
         OutlinedButton 親を採用したのは:
-          (a) `strokeColor` / `strokeWidth` / `cornerRadius` の M3 attribute
+          (a) strokeColor / strokeWidth / cornerRadius の M3 attribute
               が直接効くため layout 側で属性を増やさない
           (b) ripple / state list の最低限の挙動 (押下時のフィードバック) を
               ベースのまま受け取れるため. 押下時の色変化は kn_danger 同系で
