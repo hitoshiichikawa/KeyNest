@@ -107,6 +107,22 @@
     <!-- Package picker -->
     <string name="package_picker_title">Pick an installed app</string>
 
+    <!-- Package picker: Issue #32 design alignment (drag handle / title +
+         subtitle / search bar / sections / manual-entry fallback). The
+         Japanese translations already exist in values-ja/strings.xml from
+         the design import; the English defaults below mirror the JSX
+         `ScreenPicker` copy with neutral English wording. -->
+    <string name="package_picker_subtitle">Signing info is captured too</string>
+    <string name="package_picker_search_hint">Filter by app name or package</string>
+    <string name="package_picker_section_used">Frequently used</string>
+    <string name="package_picker_section_all">All apps</string>
+    <string name="package_picker_manual">Not listed → Enter package name manually</string>
+    <string name="package_picker_close_a11y">Close package picker</string>
+    <string name="package_picker_no_results">No matching apps</string>
+    <string name="package_picker_manual_input_title">Enter package name</string>
+    <string name="package_picker_manual_input_hint">com.example.app</string>
+    <string name="package_picker_manual_input_invalid">Invalid package name format</string>
+
     <!-- Advanced details section (Issue #14) -->
     <string name="advanced_section_title">Advanced details</string>
     <string name="advanced_section_header_a11y">Advanced details, double tap to expand or collapse</string>

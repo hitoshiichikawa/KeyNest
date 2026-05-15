@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 4.2 / 4.3: search bar container background for
+  PackagePickerBottomSheet.
+
+  JSX `ScreenPicker` reference (screens-2.jsx L36):
+    padding 11px 14px, background=surface-2, borderRadius=12, color=text-3.
+
+  Fill: @color/kn_surface_2 (semantic token). Issue DoD #3 mentions
+  `kn_ink_50` literally, but `kn_surface_2` resolves to `kn_ink_50` in
+  the light palette and to `kn_ink_800` in values-night/colors.xml —
+  the semantic route is required so dark mode contrast (Req 10.4 ≥ 3:1
+  for non-text) is preserved without inflating a second drawable. The
+  requirements (Req 4.2) explicitly permit either token; we chose the
+  semantic alias.
+
+  Corners: kn_r_sm (12dp) per JSX borderRadius=12 (Req 4.3).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_surface_2" />
+    <corners android:radius="@dimen/kn_r_sm" />
+</shape>

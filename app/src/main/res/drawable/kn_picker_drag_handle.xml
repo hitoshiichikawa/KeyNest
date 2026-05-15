@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 2.x: drag handle for PackagePickerBottomSheet.
+
+  JSX `ScreenPicker` reference (screens-2.jsx L27):
+    width=36, height=4, borderRadius=2, background=border-strong, margin 0 auto 14px.
+
+  We map borderRadius=2 → kn_r_pill (999dp / clamps to half-min-dimension) so
+  the handle looks like a pill at 36x4dp, matching the JSX visual rather than
+  the literal 2dp radius (which would render almost-square corners on a 4dp
+  tall element). Fill = kn_ink_200 per the Issue DoD #1 spec; the JSX
+  border-strong value resolves to the same neutral ink token in the design
+  palette (mapping.md §0).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_ink_200" />
+    <corners android:radius="@dimen/kn_r_pill" />
+</shape>
