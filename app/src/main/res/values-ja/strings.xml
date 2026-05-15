@@ -117,4 +117,13 @@
     <string name="settings_danger_delete_all_label">すべて削除</string>
     <string name="settings_danger_delete_all_sub">復元できません</string>
     <string name="settings_danger_delete_all_a11y_label">すべて削除、Danger zone を開く</string>
+
+    <!-- Autofill dataset presentation (Issue #34 / Phase 2 #6).
+         「KEYNEST」eyebrow はブランド名としてラテン大文字固定 (NFR 2.2). 末尾
+         「+ 新しいクレデンシャル」は JSX `ScreenDataset` フッター行 (screens-2.jsx
+         L142-145) に対応する作成導線。autofill_dataset_brand_mark_a11y /
+         autofill_dataset_row_lock_a11y は TalkBack の補助ラベル。 -->
+    <string name="autofill_dataset_create_new">+ 新しいクレデンシャル</string>
+    <string name="autofill_dataset_brand_mark_a11y">KeyNest</string>
+    <string name="autofill_dataset_row_lock_a11y">ロック中、生体認証が必要</string>
 </resources>

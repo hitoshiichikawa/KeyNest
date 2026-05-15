@@ -216,4 +216,15 @@
     <string name="oss_licenses_load_failed">Could not load OSS license list.</string>
     <string name="oss_licenses_url_a11y">Open project URL</string>
     <string name="oss_licenses_expand_a11y">Expand license text</string>
+
+    <!-- Autofill dataset presentation (Issue #34 / Phase 2 #6).
+         The popup RemoteViews surface adds a KEYNEST eyebrow header + a
+         trailing "create new credential" row. Brand mark is rendered as a
+         silhouette; eyebrow is the brand wordmark (locale-invariant per
+         NFR 2.2). a11y-only labels for the decorative header icons keep
+         TalkBack focused on the actionable row text. -->
+    <string name="autofill_dataset_brand_eyebrow" translatable="false">KEYNEST</string>
+    <string name="autofill_dataset_create_new">+ New credential</string>
+    <string name="autofill_dataset_brand_mark_a11y">KeyNest</string>
+    <string name="autofill_dataset_row_lock_a11y">Locked, biometric authentication required</string>
 </resources>
