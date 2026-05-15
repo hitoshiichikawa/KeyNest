@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 7.7: About グループ「KeyNest」行の leading アイコン
+  (`<KNMark size={20}/>` 相当).
+
+  JSX `KNMark` (shared.jsx L83-94):
+    - 40x40 viewport
+    - shielded peak / nest swoop (path)
+    - key bow (circle) + key shaft (rect) + key teeth (rect)
+
+  本 vector は KNMark の 24dp 単色版 (シルエットのみ). SettingRow の
+  アイコンタイル背景上で kn_primary tint を当てると brand mark として
+  認識できる. Filled silhouette のため fillColor は @android:color/white に
+  し、consumer 側 (`app:tint`) で @color/kn_primary を当てる.
+
+  視覚: 盾型 shield silhouette ベース. JSX の中央 key bow + shaft + teeth
+  は 24dp サイズだと潰れて読めなくなるため省略し、shield outline のみで
+  KeyNest brand を表現する (ic_launcher_monochrome.xml の roof silhouette
+  と同方針).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M20,5 L33,14 C33,27 27,33 20,35 C13,33 7,27 7,14 Z" />
+</vector>

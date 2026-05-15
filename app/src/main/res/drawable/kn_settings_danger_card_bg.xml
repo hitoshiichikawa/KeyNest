@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 9.1 / 9.2: DangerZoneActivity 内 destructive カード背景.
+
+  Issue #10 では `?attr/colorErrorContainer` を MaterialCardView の
+  `app:cardBackgroundColor` に直接バインドしていたが、Phase 2 #33 で kn_*
+  セマンティックトークン (@color/kn_danger_soft) に置換する.
+
+  fill: @color/kn_danger_soft (light: #FEE2E2 / dark: rgba(239,68,68,.12))
+  corners: @dimen/kn_r_md (16dp) per Req 9.2.
+
+  DangerZoneActivity 内の hero カードは MaterialCardView ではなく素の
+  LinearLayout に対して `android:background` で参照する想定. これにより
+  既存の MaterialCardView コンテナを残しつつ `app:cardBackgroundColor` の
+  Material attribute 直参照を撤去できる.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_danger_soft" />
+    <corners android:radius="@dimen/kn_r_md" />
+</shape>

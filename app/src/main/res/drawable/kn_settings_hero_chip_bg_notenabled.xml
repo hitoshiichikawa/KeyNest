@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 2.7: Autofill status chip background (NotEnabled state).
+
+  Req 2.7 で hero 背景は kn_warning_soft, accent は kn_warning と規定. チップ
+  は accent をベタ塗りにせず軽いトーンにしたいので kn_warning の不透明度 20%
+  (#33F59E0B) を採用. これにより hero 全体が warning_soft トーンで沈み、チップ
+  だけがやや強い warning に見える階層が成立する.
+
+  文字色は @color/kn_warning (#F59E0B) 想定. kn_warning は値が同じ light/dark
+  共通 hex なので、ダーク背景時は warning_soft が rgba(245,158,11,.12) になり
+  kn_warning text on warning_soft 4.5:1 を維持できる token 構成 (Req 11.5).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#33F59E0B" />
+    <corners android:radius="@dimen/kn_r_pill" />
+</shape>

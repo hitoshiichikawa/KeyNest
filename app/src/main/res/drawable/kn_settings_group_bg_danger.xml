@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 8.3 / 8.4: Danger zone SettingGroup の destructive 派生背景.
+
+  Req 8.3 で標準 SettingGroup の kn_surface 背景を @color/kn_danger_soft に
+  置換するため、独立した drawable を用意する.
+    fill: @color/kn_danger_soft (light: #FEE2E2 / dark: rgba(239,68,68,.12))
+    border: 不要 (Req 8 には border 指定なし; danger_soft の濃淡だけで区切る)
+    corners: @dimen/kn_r_md (16dp) per Req 8.4.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_danger_soft" />
+    <corners android:radius="@dimen/kn_r_md" />
+</shape>

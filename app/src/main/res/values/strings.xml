@@ -176,6 +176,25 @@
 
     <string name="settings_intent_unavailable">This settings screen is not available on this device.</string>
 
+    <!-- Settings: Issue #33 design alignment (JSX ScreenSettings).
+         The keys below back the Autofill hero copy, the SettingRow labels
+         that the JSX mock spells out, and the Danger zone "delete all" row.
+         All new keys must be added to both en + ja string tables per NFR 3.1
+         / 3.4. -->
+    <string name="settings_autofill_hero_title">Autofill service</string>
+    <string name="settings_autofill_hero_description_enabled">KeyNest is acting as Android\'s password Autofill service.</string>
+    <string name="settings_autofill_hero_description_not_enabled">KeyNest is not yet set as the Android Autofill service.</string>
+    <string name="settings_autofill_hero_cta">Confirm in Android Settings</string>
+    <string name="settings_lock_status_label">Unlock method</string>
+    <string name="settings_lock_status_a11y_label">Unlock method, opens Android security settings</string>
+    <string name="settings_about_keynest_label">KeyNest</string>
+    <string name="settings_about_privacy_label">Privacy</string>
+    <string name="settings_about_privacy_sub">No network egress — Keystore protected</string>
+    <string name="settings_about_oss_licenses_a11y_label">Open source licenses, opens license list</string>
+    <string name="settings_danger_delete_all_label">Delete all</string>
+    <string name="settings_danger_delete_all_sub">Cannot be undone</string>
+    <string name="settings_danger_delete_all_a11y_label">Delete all credentials, opens danger zone</string>
+
     <!-- Danger Zone (Issue #10) -->
     <string name="danger_zone_title">Danger zone</string>
     <string name="danger_zone_description">This action removes every saved credential and the encryption key. It is permanent and cannot be undone.</string>

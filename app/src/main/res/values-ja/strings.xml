@@ -99,4 +99,22 @@
 
     <!-- Empty state security note (Issue #29 Req 8 footer). -->
     <string name="credential_list_empty_security_note">AES-GCM · 端末ローカルのみ</string>
+
+    <!-- Settings: Issue #33 design alignment (JSX ScreenSettings の hero /
+         SettingRow / Danger zone). Issue #10 で導入された既存 settings_*
+         キーの ja 翻訳追加は本 Issue では Out of Scope (Open Question 参照).
+         本 Issue で新規追加するキーのみ翻訳する (NFR 3.1 / 3.4). -->
+    <string name="settings_autofill_hero_title">Autofill サービス</string>
+    <string name="settings_autofill_hero_description_enabled">KeyNest が Android のパスワード Autofill として動作しています。</string>
+    <string name="settings_autofill_hero_description_not_enabled">KeyNest はまだ Android の Autofill サービスとして設定されていません。</string>
+    <string name="settings_autofill_hero_cta">Android 設定で確認</string>
+    <string name="settings_lock_status_label">ロック解除方法</string>
+    <string name="settings_lock_status_a11y_label">ロック解除方法、Android セキュリティ設定を開く</string>
+    <string name="settings_about_keynest_label">KeyNest</string>
+    <string name="settings_about_privacy_label">プライバシー</string>
+    <string name="settings_about_privacy_sub">ネットワーク送信なし · Keystore 保護</string>
+    <string name="settings_about_oss_licenses_a11y_label">OSS ライセンス、ライセンス一覧を開く</string>
+    <string name="settings_danger_delete_all_label">すべて削除</string>
+    <string name="settings_danger_delete_all_sub">復元できません</string>
+    <string name="settings_danger_delete_all_a11y_label">すべて削除、Danger zone を開く</string>
 </resources>

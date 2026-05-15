@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 4.17: SettingRow 行間の 1dp 区切り線.
+
+  JSX `SettingRow` reference (screens-2.jsx L311):
+    borderBottom: '1px solid var(--border)'.
+
+  最終行の下端は描画しない (Req 4.17). レイアウト側で `android:divider` /
+  `android:showDividers="middle"` を使うか、各 row 内で
+  `android:background="@drawable/kn_settings_row_divider"` を切るかは layout 側
+  で選ぶ. 本 drawable は `<layer-list>` ではなく `<shape>` の rectangle で 1dp
+  の薄いラインを描く. （実装は LinearLayout の `divider` 属性で使う前提.）
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <size android:height="1dp" />
+    <solid android:color="@color/kn_border" />
+</shape>
