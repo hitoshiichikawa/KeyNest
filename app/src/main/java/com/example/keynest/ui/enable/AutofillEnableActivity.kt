@@ -18,15 +18,22 @@ import com.google.android.material.snackbar.Snackbar
  * Guidance screen that nudges the user to enable KeyNest as the device's
  * Autofill service.
  *
- * Requirements: 6.1, 6.2, 6.3
+ * Requirements: 6.1, 6.2, 6.3 (Issue #12); aligned to the JSX
+ * `ScreenOnboarding` mock by Issue #31.
  *
- * Behaviour:
- * - onResume re-checks [AutofillManager.hasEnabledAutofillServices] so the
- *   "already enabled" message appears immediately after the user returns
+ * Behaviour (unchanged across Issue #31 redesign):
+ * - onResume re-checks [AutofillServiceStatus.isCurrentService] so the
+ *   "already enabled" state appears immediately after the user returns
  *   from the Settings activity.
  * - The "Enable" button launches Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE
  *   with the `package:` URI of this app, which is the documented way to
- *   pre-select KeyNest in the Settings picker.
+ *   pre-select KeyNest in the Settings picker (and falls back to a Snackbar
+ *   on pre-O devices or when the Settings activity is unavailable).
+ *
+ * New behaviour (Issue #31):
+ * - The "later" sub-action button finishes this Activity and returns to
+ *   the caller (typically [com.example.keynest.ui.list.CredentialListActivity]).
+ *   Persistence ("don't show again") is intentionally Out of Scope for #31.
  */
 class AutofillEnableActivity : AppCompatActivity() {
 
@@ -37,6 +44,7 @@ class AutofillEnableActivity : AppCompatActivity() {
         binding = AutofillEnableActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.btnEnable.setOnClickListener { launchSettings() }
+        binding.btnLater.setOnClickListener { finish() }
     }
 
     override fun onResume() {
@@ -44,10 +52,18 @@ class AutofillEnableActivity : AppCompatActivity() {
         renderState()
     }
 
+    /**
+     * Visibility groups follow Issue #31 Req 7.x:
+     * - When the user has already chosen KeyNest as their Autofill provider
+     *   we hide the action area (primary + later) and show the "already
+     *   enabled" container instead.
+     * - Otherwise we show the action area and hide the "already enabled"
+     *   container.
+     */
     private fun renderState() {
         val enabled = isAutofillServiceEnabled()
-        binding.btnEnable.visibility = if (enabled) View.GONE else View.VISIBLE
-        binding.textAlreadyEnabled.visibility = if (enabled) View.VISIBLE else View.GONE
+        binding.groupActions.visibility = if (enabled) View.GONE else View.VISIBLE
+        binding.groupAlreadyEnabled.visibility = if (enabled) View.VISIBLE else View.GONE
     }
 
     private fun launchSettings() {
