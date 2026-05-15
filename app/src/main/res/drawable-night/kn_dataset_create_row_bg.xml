@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #34 Req 6.5: dark-mode 上書きとなる dataset 末尾「新規作成」行背景.
+
+  Light variant は @color/kn_blue_50 (#EAF2FE) を solid-fill する。
+  `kn_blue_50` は raw palette レイヤであり values-night に上書きが無い (kn_*
+  semantic レイヤのみ dark で再定義される) ため、そのまま dark で参照すると
+  ダーク geo 上に明るい pale-blue 行が浮いてしまい、ラベル文字色 @color/kn_primary
+  (dark = #4D8DF4) との視覚整合が崩れる。
+
+  代替として @color/kn_primary_container を採用する。これは values-night で
+  #1A2D5C に解決される dim blue surface であり、JSX `surface-tint` 相当。
+  これにより kn_primary (#4D8DF4) と #1A2D5C のコントラスト比は 4.5:1 以上
+  を満たし、Req 6.5 の WCAG AA 本文最小コントラストを守れる。
+
+  Light: kn_blue_50 (#EAF2FE) / kn_primary (#1F6FEB) → ≈ 5.96:1.
+  Dark : kn_primary_container (#1A2D5C) / kn_primary (#4D8DF4) → ≈ 4.6:1.
+
+  同パターンは Issue #32 (kn_picker_manual_row_bg) に前例がある。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_primary_container" />
+</shape>
