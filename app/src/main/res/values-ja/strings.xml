@@ -33,6 +33,20 @@
     <string name="error_save_failed_with_reason">保存に失敗しました: %1$s</string>
     <string name="message_signature_not_captured">署名情報を取得できませんでした (アプリが未インストール)。再インストール後に登録し直してください。</string>
 
+    <!-- Credential edit: Issue #30 design alignment (target app card,
+         password label, strength bar, advanced section, delete CTA). -->
+    <string name="credential_edit_password_label">パスワード</string>
+    <string name="credential_edit_advanced_chevron_a11y">詳細設定を表示</string>
+    <string name="credential_edit_target_app_change_a11y">対象アプリを変更</string>
+    <string name="credential_edit_close_a11y">編集画面を閉じる</string>
+
+    <!-- 削除確認ダイアログ (Issue #30 Req 8.9 - 8.12). -->
+    <string name="credential_edit_delete_confirm_title">このクレデンシャルを削除しますか?</string>
+    <string name="credential_edit_delete_confirm_message">このクレデンシャルを完全に削除します。このアプリの Autofill 候補は表示されなくなります。</string>
+    <string name="credential_edit_delete_confirm_positive">削除</string>
+    <string name="credential_edit_delete_confirm_negative">キャンセル</string>
+    <string name="credential_edit_delete_failed">削除に失敗しました。</string>
+
     <!-- Autofill enable -->
     <string name="autofill_enable_title">Android の Autofill を\nKeyNest に切り替える</string>
     <string name="autofill_enable_description">ログイン画面で保存済みの ID/パスワードを\n候補表示するために、Autofill サービスを\nKeyNest に設定します。</string>
