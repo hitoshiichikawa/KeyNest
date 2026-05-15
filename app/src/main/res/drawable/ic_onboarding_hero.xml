@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #31: ScreenOnboarding hero illustration.
+
+  Source of truth: design/screens/screens-1.jsx > OnboardingIllustration
+  (`<svg width="220" height="180" viewBox="0 0 220 180" ...>`).
+
+  Visual elements (mirroring the JSX):
+  * radial glow circle behind the shelter (kn_blue_500 @ ~18% alpha center
+    fading to transparent at radius 90).
+  * shelter roof/base path with a vertical linear gradient from #2A7BF5
+    (kn_blue_500 vicinity) to kn_blue_600.
+  * white keyhole (circle + rect) in the centre of the shelter.
+  * two incoming credential chip outlines (top-left = kn_blue_500 dot,
+    bottom-right = kn_success dot) with kn_blue_100 stroke + kn_white fill
+    + kn_ink_300 secondary bar.
+  * two dashed arrows connecting the chips to the shelter (kn_blue_500).
+
+  Color palette (Req 3.3): kn_blue_500 / kn_blue_600 / kn_success /
+  kn_white / kn_ink_300 (and kn_blue_100 as the chip stroke,
+  approximating JSX `#D0E0FC`). All references are kn_* tokens so
+  values-night/colors.xml can override (Req 3.5).
+
+  Note: Android vector drawables can use `<aapt:attr name="...">` to
+  embed a `<gradient>` element. We use linear + radial gradients to
+  reproduce the JSX `ob-roof` (linear) and `ob-glow` (radial) defs.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="220dp"
+    android:height="180dp"
+    android:viewportWidth="220"
+    android:viewportHeight="180">
+
+    <!-- ob-glow: radial gradient behind the shelter.
+         JSX: r=90, center (110,90), kn_blue_500 @ 18% -> transparent. -->
+    <path android:pathData="M 20 0 h 180 a 90 90 0 0 1 0 180 h -180 a 90 90 0 0 1 0 -180 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="110"
+                android:centerY="90"
+                android:gradientRadius="90"
+                android:startColor="#2E1F6FEB"
+                android:endColor="#001F6FEB" />
+        </aapt:attr>
+    </path>
+
+    <!-- ob-roof: shelter shape with vertical linear gradient
+         (top=#2A7BF5 ≈ kn_blue_500, bottom=kn_blue_600 #1457C9).
+         JSX path: M60 120 Q110 50 160 120 L160 138 Q110 124 60 138 Z. -->
+    <path android:pathData="M60,120 Q110,50 160,120 L160,138 Q110,124 60,138 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="110"
+                android:startY="50"
+                android:endX="110"
+                android:endY="138"
+                android:startColor="@color/kn_blue_500"
+                android:endColor="@color/kn_blue_600" />
+        </aapt:attr>
+    </path>
+
+    <!-- keyhole dot (white). -->
+    <path
+        android:pathData="M110,89 m -9,0 a 9,9 0 1,0 18,0 a 9,9 0 1,0 -18,0 Z"
+        android:fillColor="@color/kn_white" />
+    <!-- keyhole stem (white). -->
+    <path
+        android:pathData="M106.5,100 h 7 a 2.5,2.5 0 0 1 2.5,2.5 v 9 a 2.5,2.5 0 0 1 -2.5,2.5 h -7 a 2.5,2.5 0 0 1 -2.5,-2.5 v -9 a 2.5,2.5 0 0 1 2.5,-2.5 Z"
+        android:fillColor="@color/kn_white" />
+
+    <!-- Top-left credential chip (kn_blue_500 dot).
+         JSX <g transform="translate(20 30)">: rect 60x20 r=10. -->
+    <path
+        android:pathData="M30,30 h 40 a 10,10 0 0 1 0,20 h -40 a 10,10 0 0 1 0,-20 Z"
+        android:fillColor="@color/kn_white"
+        android:strokeColor="@color/kn_blue_100"
+        android:strokeWidth="1.5" />
+    <path
+        android:pathData="M31,40 m -4,0 a 4,4 0 1,0 8,0 a 4,4 0 1,0 -8,0 Z"
+        android:fillColor="@color/kn_blue_500" />
+    <path
+        android:pathData="M40,36 h 32 a 1.5,1.5 0 0 1 0,3 h -32 a 1.5,1.5 0 0 1 0,-3 Z"
+        android:fillColor="@color/kn_blue_500"
+        android:fillAlpha="0.7" />
+    <path
+        android:pathData="M40,42 h 22 a 1.5,1.5 0 0 1 0,3 h -22 a 1.5,1.5 0 0 1 0,-3 Z"
+        android:fillColor="@color/kn_ink_300" />
+
+    <!-- Bottom-right credential chip (kn_success dot).
+         JSX <g transform="translate(155 145)">: rect 60x20 r=10. -->
+    <path
+        android:pathData="M165,145 h 40 a 10,10 0 0 1 0,20 h -40 a 10,10 0 0 1 0,-20 Z"
+        android:fillColor="@color/kn_white"
+        android:strokeColor="@color/kn_blue_100"
+        android:strokeWidth="1.5" />
+    <path
+        android:pathData="M166,155 m -4,0 a 4,4 0 1,0 8,0 a 4,4 0 1,0 -8,0 Z"
+        android:fillColor="@color/kn_success" />
+    <path
+        android:pathData="M175,151 h 32 a 1.5,1.5 0 0 1 0,3 h -32 a 1.5,1.5 0 0 1 0,-3 Z"
+        android:fillColor="@color/kn_success"
+        android:fillAlpha="0.7" />
+    <path
+        android:pathData="M175,157 h 22 a 1.5,1.5 0 0 1 0,3 h -22 a 1.5,1.5 0 0 1 0,-3 Z"
+        android:fillColor="@color/kn_ink_300" />
+
+    <!-- Dashed arrow from top-left chip toward the shelter. JSX:
+         M84 50 Q100 65 96 86 (stroke #1F6FEB, dasharray 3 3).
+         Android vector drawables don't directly support strokeDasharray,
+         so we draw the curve as ~6 short segments of length ≈ 3 with
+         3-unit gaps. -->
+    <path
+        android:pathData="M84,50 L86.4,52.5 M88.8,55 L91.2,57.5 M93.6,60 L95.4,63 M96.2,66.5 L96.8,70 M97.0,73.5 L96.8,77 M96.6,80.5 L96,86"
+        android:strokeColor="@color/kn_blue_500"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- Dashed arrow from bottom-right chip toward the shelter. JSX:
+         M154 148 Q140 138 138 122 (stroke #1F6FEB, dasharray 3 3). -->
+    <path
+        android:pathData="M154,148 L151.6,146 M149.2,144 L146.8,142 M144.4,140 L142.4,138.5 M140.8,136 L139.8,133 M139.2,130 L138.6,127 M138.2,124 L138,122"
+        android:strokeColor="@color/kn_blue_500"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+</vector>

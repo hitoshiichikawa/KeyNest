@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #31 Req 2.3 / 2.5: progress dot segment for "current or past"
+  steps. 4dp tall pill fill in kn_primary. The radius (4dp) makes the
+  segment a full pill regardless of width (current = wider, past =
+  narrower). values-night/colors.xml overrides kn_primary so dark mode
+  uses the lifted blue automatically.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_primary" />
+    <corners android:radius="@dimen/kn_space_1" />
+</shape>
