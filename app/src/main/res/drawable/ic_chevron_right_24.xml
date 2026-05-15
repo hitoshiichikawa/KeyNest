@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 4.10 / 4.12: SettingRow 右端の chevron.
+
+  JSX `Icons.chevron` (shared.jsx L76) `m9 6 6 6-6 6` (右向き chevron) を
+  24dp 規格で再現. tint は consumer 側で @color/kn_text_3 を指定する.
+
+  Material Symbols "chevron_right" 24dp と等価.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9.29,6.71c-0.39,0.39 -0.39,1.02 0,1.41L13.17,12l-3.88,3.88c-0.39,0.39 -0.39,1.02 0,1.41c0.39,0.39 1.02,0.39 1.41,0l4.59,-4.59c0.39,-0.39 0.39,-1.02 0,-1.41L10.7,6.7C10.32,6.32 9.68,6.32 9.29,6.71z" />
+</vector>

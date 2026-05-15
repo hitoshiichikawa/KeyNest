@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 2.12: Autofill status hero CTA button background (NotEnabled).
+
+  Req 2.7 で NotEnabled の hero は @color/kn_warning_soft の上に置かれる. その
+  上の CTA は warning_soft とのコントラストを保ちつつ accent の kn_warning に
+  寄せる必要があるため、@color/kn_warning の 12% alpha (#1FF59E0B) に
+  1dp の kn_warning 32% alpha border を組み合わせる. 文字色は @color/kn_warning.
+
+  kn_warning_soft (light: #FEF3C7 / dark: rgba(245,158,11,.12)) + kn_warning の
+  組み合わせは Phase 1 の他箇所 (e.g., kn_signature_chip_bg_warning) でも使われて
+  おり、両モードでアクセシブル.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#1FF59E0B" />
+    <stroke
+        android:width="1dp"
+        android:color="#52F59E0B" />
+    <corners android:radius="@dimen/kn_r_sm" />
+</shape>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 2.12: Autofill status hero CTA button background (Enabled).
+
+  JSX `ScreenSettings` reference (screens-2.jsx L269):
+    background: rgba(255,255,255,.18),
+    border: 1px solid rgba(255,255,255,.3),
+    borderRadius: 10.
+
+  Android shape では stroke + solid + corners をベタ XML で指定する.
+  R10dp は KeyNest dimens にちょうど 10dp トークンが無いため、最も近い
+  kn_r_sm (12dp) を採用. JSX `borderRadius: 10` との視覚差はサブピクセル
+  レベルで許容範囲. 白文字 (@color/kn_on_primary) と組み合わせて gradient
+  hero 上で軽いガラスエフェクトを再現する.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#2EFFFFFF" />
+    <stroke
+        android:width="1dp"
+        android:color="#4DFFFFFF" />
+    <corners android:radius="@dimen/kn_r_sm" />
+</shape>

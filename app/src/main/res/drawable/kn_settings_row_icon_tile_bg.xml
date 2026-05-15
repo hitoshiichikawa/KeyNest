@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 4.2 / 4.3: SettingRow の leading アイコンタイル背景.
+
+  JSX `SettingRow` reference (screens-2.jsx L312):
+    width 32, height 32, borderRadius 10,
+    background: var(surface-2),
+    color (icon tint): var(text-2). Danger 派生時は var(kn-danger).
+
+  Fill: @color/kn_surface_2 (light: kn_ink_50 / dark: kn_ink_800).
+  Corners: @dimen/kn_r_sm (12dp). KeyNest dimens には 10dp トークンが存在せず、
+  Req 4.2 の指示通り「JSX `borderRadius: 10` に最も近い KeyNest トークン」と
+  しての kn_r_sm を採用.
+
+  Danger 派生時 (Req 4.13) は当該 drawable をそのまま再利用し、アイコンの
+  tint のみを @color/kn_danger に切り替えれば視覚整合する.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_surface_2" />
+    <corners android:radius="@dimen/kn_r_sm" />
+</shape>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 2.2 / 2.4: Autofill status hero background (Enabled).
+
+  JSX `ScreenSettings` reference (screens-2.jsx L255):
+    padding 18, borderRadius 20,
+    background: linear-gradient(140deg, var(primary) 0%, var(kn-blue-700) 100%),
+    color: white.
+
+  Android `<gradient>` 角度規約は CSS とは異なる:
+    - CSS 0deg は上方向, 時計回り正
+    - Android 0deg は左→右, 反時計回り正で 45deg 刻みのみ
+  CSS 140deg (上を基準に時計回り 140 度) は「右やや下→左やや上」方向の流れ.
+  これに最も近い Android angle は 315deg (top-left → bottom-right) もしくは
+  225deg (top-right → bottom-left). JSX の見た目 (左上が明るく右下が暗い) と
+  整合させるため 315deg を採用.
+
+  Light/dark mode integrity (Req 11.1 / 11.2):
+    @color/kn_primary は values-night で kn_blue_500(#1F6FEB) -> #4D8DF4 に
+    上書きされる. グラデーション両端は両モードで kn_primary -> kn_blue_700 を
+    保つため、ダーク時は #4D8DF4 -> #0F4AA8 のサファイア寄りグラデになる.
+    白文字 / 白チップとのコントラストは light/dark とも 4.5:1 以上を保つ.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:startColor="@color/kn_primary"
+        android:endColor="@color/kn_blue_700"
+        android:type="linear" />
+    <corners android:radius="@dimen/kn_r_lg" />
+</shape>
