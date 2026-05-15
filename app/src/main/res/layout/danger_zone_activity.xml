@@ -1,31 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Danger Zone screen. Issue #10 Req 7.1, 7.2, 7.4, 7.6, 7.7, NFR 3.1,
-  3.2, 3.3.
+  3.2, 3.3 + Issue #33 Req 9 (destructive スタイルを KeyNest セマンティック
+  トークンに置換).
 
-  Layout: AppBarLayout + Toolbar (with Back nav icon) and a ScrollView
-  containing a single warning-tinted MaterialCardView. The card holds:
+  Layout: AppBarLayout + Toolbar (with Back nav icon) と ScrollView の中の
+  単一 destructive 派生カード. カードの実体は MaterialCardView ではなく素の
+  LinearLayout で、@drawable/kn_settings_danger_card_bg (kn_danger_soft +
+  kn_r_md) を背景にする.
 
-  - A heading TextView (accessibilityHeading = true) so screen readers
-    announce the destructive section explicitly.
-  - A multi-line description that spells out the consequences.
-  - The single "Delete all credentials" MaterialButton (?attr/colorError
-    background tint, minHeight=48dp; see NFR 3.2). This is the only
-    destructive trigger anywhere on the screen (Req 7.1).
-  - A retry button shown only after a failure (initially GONE).
-  - A progress indicator shown while the use case runs (initially GONE).
+  Issue #33 で置換した点:
+    - ?attr/colorErrorContainer (Material3 直参照) を kn_danger_soft に置換
+      (Req 9.1).
+    - 角丸を kn_r_md (16dp) に固定 (Req 9.2).
+    - 見出し / 説明文の色を ?attr/colorOnErrorContainer から kn_text に置換
+      (Req 9.3). 視覚的な強調が必要な箇所 (Snackbar 内テキスト) は
+      設計判断で kn_text のまま残す.
+    - btn_clear を Widget.KeyNest.Button.Destructive (Phase 1 #30 で導入済み)
+      に切替 (Req 9.4).
+    - btn_retry を Widget.KeyNest.Button.Text 相当に切替 (Req 9.5).
+    - text_section_heading に Text.KeyNest.TitleM を貼り、text_description に
+      Text.KeyNest.BodyS を貼る.
+
+  既存 View ID (btn_clear / btn_retry / group_progress / text_section_heading
+  / text_description / toolbar) は保持 (Req 9.6).
 -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="?android:attr/colorBackground">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
@@ -33,7 +45,8 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationContentDescription="@string/settings_back_a11y"
             app:navigationIcon="?attr/homeAsUpIndicator"
-            app:title="@string/danger_zone_title" />
+            app:title="@string/danger_zone_title"
+            app:titleTextAppearance="@style/Text.KeyNest.TitleS" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -46,86 +59,81 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="@dimen/kn_screen_padding_h"
+            android:paddingTop="@dimen/kn_space_3"
+            android:paddingBottom="@dimen/kn_space_6">
 
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.Material3.CardView.Outlined"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="?attr/colorErrorContainer">
+                android:background="@drawable/kn_settings_danger_card_bg"
+                android:orientation="vertical"
+                android:padding="@dimen/kn_card_padding_lg">
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/text_section_heading"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:accessibilityHeading="true"
+                    android:text="@string/settings_section_danger_title"
+                    android:textAppearance="@style/Text.KeyNest.TitleM"
+                    android:textColor="@color/kn_danger" />
 
+                <TextView
+                    android:id="@+id/text_description"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_2"
+                    android:text="@string/danger_zone_description"
+                    android:textAppearance="@style/Text.KeyNest.BodyS"
+                    android:textColor="@color/kn_text" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_clear"
+                    style="@style/Widget.KeyNest.Button.Destructive"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_4"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:contentDescription="@string/danger_zone_clear_action_a11y"
+                    android:text="@string/danger_zone_clear_action" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_retry"
+                    style="@style/Widget.KeyNest.Button.Text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_2"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:text="@string/danger_zone_retry_action"
+                    android:textColor="@color/kn_danger"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <LinearLayout
+                    android:id="@+id/group_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_3"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <ProgressBar
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        style="?android:attr/progressBarStyleSmall" />
                     <TextView
-                        android:id="@+id/text_section_heading"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:accessibilityHeading="true"
-                        android:text="@string/settings_section_danger_title"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textColor="?attr/colorOnErrorContainer" />
-
-                    <TextView
-                        android:id="@+id/text_description"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="@string/danger_zone_description"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnErrorContainer" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_clear"
-                        style="@style/Widget.Material3.Button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:minWidth="48dp"
-                        android:minHeight="48dp"
-                        android:backgroundTint="?attr/colorError"
-                        android:contentDescription="@string/danger_zone_clear_action_a11y"
-                        android:text="@string/danger_zone_clear_action"
-                        android:textColor="?attr/colorOnError" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_retry"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:minWidth="48dp"
-                        android:minHeight="48dp"
-                        android:text="@string/danger_zone_retry_action"
-                        android:visibility="gone"
-                        tools:visibility="visible" />
-
-                    <LinearLayout
-                        android:id="@+id/group_progress"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:visibility="gone"
-                        tools:visibility="visible">
-                        <ProgressBar
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            style="?android:attr/progressBarStyleSmall" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="12dp"
-                            android:text="@string/danger_zone_clearing"
-                            android:textAppearance="?attr/textAppearanceBodyMedium"
-                            android:textColor="?attr/colorOnErrorContainer" />
-                    </LinearLayout>
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:text="@string/danger_zone_clearing"
+                        android:textAppearance="@style/Text.KeyNest.BodyS"
+                        android:textColor="@color/kn_text" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
