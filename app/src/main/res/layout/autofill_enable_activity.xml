@@ -1,43 +1,395 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  Issue #31: Autofill enable onboarding screen.
+
+  Source of truth:
+  - JSX: design/screens/screens-1.jsx > ScreenOnboarding (step = 2).
+  - Token mapping: design/android-assets/mapping.md §5 (Onboarding).
+
+  Visual contract:
+  - Root background: ?android:attr/colorBackground -> kn_bg via the
+    Theme.KeyNest android:colorBackground bridge (Req 1.1). The literal
+    AC text says "?attr/colorBackground" but Theme.KeyNest binds the
+    android: namespace token; ?attr/colorBackground is not declared on
+    this M3 theme, so we use the working android: alias just like
+    credential_list_activity.xml (Issue #29).
+  - Horizontal padding for the scroll content: kn_screen_padding_h (20dp)
+    (Req 1.2). The bottom action area also uses 20dp side margins
+    (Req 6.2).
+  - Progress dots: 3 segments, 4dp tall, kn_space_1 (4dp) corner radius,
+    6dp gap (kn_space_2 8dp would be too wide; we use a 6dp inline dp
+    value because @dimen/kn_space_* doesn't include 6dp). The current
+    step (= step 2 per JSX default) is 2x wider via android:layout_weight
+    (Req 2.2). 32dp bottom margin = kn_space_8 (Req 2.6).
+  - Hero: ic_onboarding_hero (220x180dp), centered, 28dp bottom margin
+    (Req 3.2 / 3.4). 28dp is not a dedicated kn_space_* token; we use
+    @dimen/kn_r_xl which == 28dp per dimens.xml.
+  - Headline: Text.KeyNest.Display + kn_text (Req 4.1..4.3). 12dp margin
+    below = kn_space_3 (Req 4.7).
+  - Description: Text.KeyNest.Body + kn_text_2 (Req 4.4..4.6). 24dp margin
+    below = kn_space_6 (Req 4.7).
+  - Steps card: Widget.KeyNest.Card root (kn_surface + kn_border + r_card)
+    with 16dp content padding (kn_space_4) and 3 step rows, each with a
+    28dp circular number chip in kn_surface_tint + Text.KeyNest.Body
+    headline + Text.KeyNest.BodyS description (Req 5.x).
+  - Bottom action area: fixed via RelativeLayout alignParentBottom. The
+    primary CTA uses Widget.KeyNest.Button.Primary (52dp height via the
+    style), the later button uses Widget.KeyNest.Button.Text with
+    height=44dp and minTouch=48dp via android:minHeight.
+  - "Already enabled" state: a rounded kn_success_soft container holding
+    a shield + checkmark icon and the existing
+    autofill_enable_already_enabled string. Replaces the bottom action
+    area position so the same 20dp side margin / 24dp bottom margin are
+    preserved (Req 7.1..7.5).
+
+  IDs preserved (Req 9.x):
+  - @+id/btn_enable: primary CTA. The activity attaches launchSettings()
+    to its OnClickListener exactly as before.
+  - @+id/text_already_enabled: the existing "already enabled" TextView
+    is preserved inside the new container so the activity's
+    binding.textAlreadyEnabled.visibility path keeps compiling.
+
+  IDs added (Req 7.x / Req 9.1 boundary; public API unchanged):
+  - @+id/group_actions / @+id/group_already_enabled: visibility groups.
+  - @+id/btn_later: "later" subaction button.
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:background="?android:attr/colorBackground">
 
-    <TextView
-        android:id="@+id/text_title"
+    <!--
+      Bottom action area. Two visibility groups stacked on the same
+      anchor: only one of group_actions / group_already_enabled is
+      visible at a time (toggled by AutofillEnableActivity.renderState).
+    -->
+    <LinearLayout
+        android:id="@+id/group_actions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/autofill_enable_title"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:gravity="center" />
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="@dimen/kn_screen_padding_h"
+        android:layout_marginEnd="@dimen/kn_screen_padding_h"
+        android:layout_marginBottom="@dimen/kn_space_6"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/text_description"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_enable"
+            style="@style/Widget.KeyNest.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/kn_button_height"
+            android:text="@string/autofill_enable_action" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_later"
+            style="@style/Widget.KeyNest.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:minHeight="48dp"
+            android:text="@string/autofill_enable_action_later"
+            android:textColor="@color/kn_primary" />
+    </LinearLayout>
+
+    <!--
+      "Already enabled" container (Req 7.x). Visible while
+      AutofillServiceStatus.isCurrentService(this) returns true; the
+      shield icon + textAlreadyEnabled TextView sit on a rounded
+      kn_success_soft background.
+    -->
+    <LinearLayout
+        android:id="@+id/group_already_enabled"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:text="@string/autofill_enable_description" />
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="@dimen/kn_screen_padding_h"
+        android:layout_marginEnd="@dimen/kn_screen_padding_h"
+        android:layout_marginBottom="@dimen/kn_space_6"
+        android:background="@drawable/kn_onboarding_already_enabled_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/kn_space_4"
+        android:paddingVertical="@dimen/kn_space_3"
+        android:visibility="gone"
+        tools:visibility="visible">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_enable"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:text="@string/autofill_enable_action" />
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="@dimen/kn_space_3"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_shield_check_24"
+            app:tint="@color/kn_success" />
 
-    <TextView
-        android:id="@+id/text_already_enabled"
+        <TextView
+            android:id="@+id/text_already_enabled"
+            style="@style/Text.KeyNest.Body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/autofill_enable_already_enabled"
+            android:textColor="@color/kn_text" />
+    </LinearLayout>
+
+    <!--
+      Scrollable content above the bottom action area. ScrollView so the
+      progress dots / hero / headline / description / steps card never
+      cover or get covered by the bottom buttons on small screens.
+    -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center"
-        android:text="@string/autofill_enable_already_enabled"
-        android:textStyle="italic"
-        android:visibility="gone" />
+        android:layout_height="match_parent"
+        android:layout_above="@+id/group_actions"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingStart="@dimen/kn_screen_padding_h"
+        android:paddingTop="@dimen/kn_space_3"
+        android:paddingEnd="@dimen/kn_screen_padding_h">
 
-</LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!--
+              Progress dot row (Req 2.x). 3 segments, 4dp tall, gap = 6dp
+              (inline because kn_space_* doesn't include 6dp). The
+              current step (= 2 per JSX `step = 2` default) is 2x
+              wider via layout_weight=2. Decorative -> importantForA11y=no
+              (NFR 2.3).
+            -->
+            <LinearLayout
+                android:id="@+id/progress_dot_row"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginBottom="@dimen/kn_space_8"
+                android:importantForAccessibility="no"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/progress_dot_1"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/kn_onboarding_progress_dot_active" />
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="match_parent" />
+
+                <View
+                    android:id="@+id/progress_dot_2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="2"
+                    android:background="@drawable/kn_onboarding_progress_dot_active" />
+
+                <View
+                    android:layout_width="6dp"
+                    android:layout_height="match_parent" />
+
+                <View
+                    android:id="@+id/progress_dot_3"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@drawable/kn_onboarding_progress_dot_inactive" />
+            </LinearLayout>
+
+            <!--
+              Hero illustration. Centered horizontally; 28dp gap below.
+              Decorative -> contentDescription=null + importantForA11y=no
+              (NFR 2.2).
+            -->
+            <ImageView
+                android:id="@+id/image_hero"
+                android:layout_width="220dp"
+                android:layout_height="180dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="@dimen/kn_r_xl"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_onboarding_hero" />
+
+            <!--
+              Headline (Text.KeyNest.Display = 28sp / 800 / -0.02em).
+              textColor lives on the style (kn_text); kept here for
+              defensive pinning by the layout-tokens test.
+            -->
+            <TextView
+                android:id="@+id/text_title"
+                style="@style/Text.KeyNest.Display"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_3"
+                android:text="@string/autofill_enable_title"
+                android:textColor="@color/kn_text" />
+
+            <!--
+              Description (Text.KeyNest.Body = 14sp / 600 + kn_text_2).
+              The Body role's default textColor is already kn_text, so we
+              override to kn_text_2 (Req 4.6) inline.
+            -->
+            <TextView
+                android:id="@+id/text_description"
+                style="@style/Text.KeyNest.Body"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_6"
+                android:text="@string/autofill_enable_description"
+                android:textColor="@color/kn_text_2" />
+
+            <!--
+              Steps card (Req 5.x). Uses Widget.KeyNest.Card via
+              MaterialCardView. Inner content padding = kn_space_4 (16dp).
+              The dividers between rows are 1dp Views with kn_border
+              background; the third row omits the divider (Req 5.6).
+            -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_steps"
+                style="@style/Widget.KeyNest.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:contentPadding="@dimen/kn_space_4">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Step 1 -->
+                    <LinearLayout
+                        style="@style/Widget.KeyNest.OnboardingStepRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Widget.KeyNest.OnboardingStepChip"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:importantForAccessibility="no"
+                            android:text="1" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/kn_space_3"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/Text.KeyNest.Body"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/autofill_enable_step1_title"
+                                android:textColor="@color/kn_text" />
+
+                            <TextView
+                                style="@style/Text.KeyNest.BodyS"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/autofill_enable_step1_description"
+                                android:textColor="@color/kn_text_2" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/kn_border"
+                        android:importantForAccessibility="no" />
+
+                    <!-- Step 2 -->
+                    <LinearLayout
+                        style="@style/Widget.KeyNest.OnboardingStepRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Widget.KeyNest.OnboardingStepChip"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:importantForAccessibility="no"
+                            android:text="2" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/kn_space_3"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/Text.KeyNest.Body"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/autofill_enable_step2_title"
+                                android:textColor="@color/kn_text" />
+
+                            <TextView
+                                style="@style/Text.KeyNest.BodyS"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/autofill_enable_step2_description"
+                                android:textColor="@color/kn_text_2" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/kn_border"
+                        android:importantForAccessibility="no" />
+
+                    <!-- Step 3 (no divider below; Req 5.6) -->
+                    <LinearLayout
+                        style="@style/Widget.KeyNest.OnboardingStepRow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            style="@style/Widget.KeyNest.OnboardingStepChip"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:importantForAccessibility="no"
+                            android:text="3" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/kn_space_3"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/Text.KeyNest.Body"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/autofill_enable_step3_title"
+                                android:textColor="@color/kn_text" />
+
+                            <TextView
+                                style="@style/Text.KeyNest.BodyS"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="@string/autofill_enable_step3_description"
+                                android:textColor="@color/kn_text_2" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!--
+              Bottom inset under the steps card so it never hugs the
+              fixed action area. Equivalent to JSX `marginBottom: 24`
+              between the steps card and the bottom CTA.
+            -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/kn_space_6" />
+        </LinearLayout>
+    </ScrollView>
+</RelativeLayout>
