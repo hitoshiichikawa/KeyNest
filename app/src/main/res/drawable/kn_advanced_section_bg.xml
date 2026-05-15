@@ -5,8 +5,8 @@
   Background drawable for the collapsible "詳細設定" panel.
   - Fill: @color/kn_surface_2 (kn_ink_50 light / kn_ink_800 dark).
   - Corner radius: @dimen/kn_r_input (14dp). Matches the JSX
-    `ScreenEdit` ::: { background: 'var(--surface-2)', borderRadius: 14 }
-    fragment exactly.
+    `ScreenEdit` advanced panel: background var surface-2,
+    borderRadius 14.
   - No stroke (the section is differentiated from the main surface
     purely via the slightly elevated fill, mirroring the JSX mock).
 -->
