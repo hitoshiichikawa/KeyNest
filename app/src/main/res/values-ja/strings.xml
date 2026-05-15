@@ -40,6 +40,17 @@
     <string name="autofill_enable_already_enabled">KeyNest は既に Autofill サービスとして有効です。</string>
     <string name="autofill_enable_settings_unavailable">この端末では Autofill 設定画面を開けません。</string>
 
+    <!-- Autofill enable: Issue #31 design alignment (steps card + "later" CTA).
+         3 ステップ手順カードの見出し + 補足文 (JSX `ScreenOnboarding` の steps 配列より)
+         と、画面下部のサブアクション「あとで」ボタン. -->
+    <string name="autofill_enable_step1_title">「設定を開く」をタップ</string>
+    <string name="autofill_enable_step1_description">Android の設定画面に移動します</string>
+    <string name="autofill_enable_step2_title">「KeyNest」を選択</string>
+    <string name="autofill_enable_step2_description">パスワードとアカウントの項目で</string>
+    <string name="autofill_enable_step3_title">戻ってきたら準備完了</string>
+    <string name="autofill_enable_step3_description">クレデンシャルを登録できます</string>
+    <string name="autofill_enable_action_later">あとで</string>
+
     <!-- Autofill unlock -->
     <string name="biometric_prompt_title">クレデンシャルをアンロック</string>
     <string name="biometric_prompt_subtitle">認証後にパスワードが復号され\nログイン画面に入力されます。</string>
