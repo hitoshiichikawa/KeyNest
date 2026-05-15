@@ -294,6 +294,35 @@
         <item name="android:minHeight">44dp</item>
     </style>
 
+    <!--
+        Issue #30 Req 8.5 / 8.6 / 8.7: destructive CTA used at the bottom of
+        the CredentialEdit screen in edit mode (削除).
+
+        Visual contract (JSX `ScreenEdit` の削除ボタン):
+          - background: 透過 (`background: 'transparent'`)
+          - border: 1dp `var(--border)` outline → strokeColor=@color/kn_border
+          - radius: 14dp (`borderRadius: 14`) → @dimen/kn_r_input
+          - text color: `var(--kn-danger)` → @color/kn_danger
+          - height: 52dp (@dimen/kn_button_height)
+          - text appearance: LabelL (15sp / weight 700)
+
+        OutlinedButton 親を採用したのは:
+          (a) `strokeColor` / `strokeWidth` / `cornerRadius` の M3 attribute
+              が直接効くため layout 側で属性を増やさない
+          (b) ripple / state list の最低限の挙動 (押下時のフィードバック) を
+              ベースのまま受け取れるため. 押下時の色変化は kn_danger 同系で
+              colorPrimary を override せずとも視覚的に許容範囲.
+    -->
+    <style name="Widget.KeyNest.Button.Destructive" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textAppearance">@style/Text.KeyNest.LabelL</item>
+        <item name="android:textColor">@color/kn_danger</item>
+        <item name="android:minHeight">@dimen/kn_button_height</item>
+        <item name="cornerRadius">@dimen/kn_r_input</item>
+        <item name="strokeColor">@color/kn_border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="rippleColor">@color/kn_danger_soft</item>
+    </style>
+
     <style name="Widget.KeyNest.Card" parent="Widget.Material3.CardView.Outlined">
         <item name="cardCornerRadius">@dimen/kn_r_card</item>
         <item name="cardElevation">0dp</item>
