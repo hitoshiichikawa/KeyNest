@@ -78,6 +78,7 @@ class CredentialListActivity : AppCompatActivity() {
         setUpFilters()
         setUpSort()
         setUpFab()
+        setUpEmptyStateCta()
 
         observeUiState()
         observeDuplicateResult()
@@ -173,6 +174,18 @@ class CredentialListActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Issue #29 Req 8.4: the EmptyKind.Initial CTA opens the same edit
+     * activity as the FAB. The two affordances cannot be visible at the
+     * same logical moment (vault non-empty → CTA hidden), so this is a
+     * convenience entry rather than a duplicate flow.
+     */
+    private fun setUpEmptyStateCta() {
+        binding.emptyStateCta.setOnClickListener {
+            startActivity(CredentialEditActivity.newIntent(this))
+        }
+    }
+
     // ---- ui state collection -----------------------------------------------
 
     private fun observeUiState() {
@@ -235,14 +248,18 @@ class CredentialListActivity : AppCompatActivity() {
     }
 
     private fun renderEmptyView(state: CredentialListUiState) {
-        binding.emptyView.visibility = if (state.emptyKind != null) View.VISIBLE else View.GONE
-        binding.emptyView.setText(
-            when (state.emptyKind) {
-                EmptyKind.Initial -> R.string.credential_list_empty
-                EmptyKind.NoMatch -> R.string.credential_list_empty_no_match
-                null -> R.string.credential_list_empty
-            }
-        )
+        // Issue #29 Req 8.x: the empty state is now rendered inside a
+        // dedicated container that holds the hero illustration, headline
+        // (existing empty_view TextView), supplemental body copy, primary
+        // CTA and security note. The whole container is GONE when there
+        // is no empty state; the existing empty_view TextView is kept
+        // inside as the headline.
+        //
+        // Visibility / headline-text logic lives in
+        // [applyEmptyStateVisibility] (same package) so the matrix can be
+        // unit-tested directly against a binding without spinning up the
+        // whole Activity (which would also pull in ServiceLocator / Room).
+        applyEmptyStateVisibility(binding, state.emptyKind)
     }
 
     /**

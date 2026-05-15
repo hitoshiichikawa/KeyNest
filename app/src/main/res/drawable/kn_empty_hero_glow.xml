@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #29 Req 8.1: ScreenListEmpty hero glow.
+
+  JSX renders an absolutely-positioned circle with surface-tint background
+  and a CSS blur(8px) filter as a soft halo
+  behind the KeyNest mark. Android cannot apply CSS-style blur to a
+  drawable directly, so we approximate the same visual with an oval-shape
+  drawable filled with `kn_surface_tint`. The blur is sacrificed; the
+  shape + opacity gives the same "tint behind the hero" feel.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/kn_surface_tint" />
+</shape>

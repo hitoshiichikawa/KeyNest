@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #29 Req 2.1 / 2.3: search bar fill + corner radius.
+
+  JSX `SearchBar` is a flat surface_2 pill (not Material outlined box).
+  We do not swap the TextInputLayout style because of Req 2.5 (existing
+  IDs `layout_search` / `input_search` and the addTextChangedListener
+  wiring must not break). Instead, the layout overrides
+  `app:boxBackgroundColor` to surface_2 and uses this drawable for the
+  containing FrameLayout that wraps the search row in
+  `credential_list_activity.xml`.
+
+  Corner radius = @dimen/kn_r_input (14dp), per design tokens for input
+  elements (mapping.md §2).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_surface_2" />
+    <corners android:radius="@dimen/kn_r_input" />
+</shape>

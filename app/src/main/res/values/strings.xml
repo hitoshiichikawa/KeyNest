@@ -28,6 +28,25 @@
     <string name="message_duplicate_failed">Failed to duplicate credential</string>
     <string name="message_duplicate_success">Credential duplicated</string>
 
+    <!-- Credential list: Issue #29 design alignment (signature badge / strength bar). -->
+    <!-- These keys already exist in values-ja; add English defaults so AAPT2 keeps
+         them in the resource table (NFR 3.1). -->
+    <string name="signature_match">Signature OK</string>
+    <string name="signature_missing">Signature missing</string>
+    <string name="strength_strong">Strong</string>
+    <string name="strength_medium">Medium</string>
+    <string name="strength_weak">Weak</string>
+
+    <!-- Empty state body copy (Req 8.1 / 8.3, Issue #29). Shown between
+         the headline and the primary CTA on the Initial empty state with
+         Text.KeyNest.Body + kn_text_2. -->
+    <string name="credential_list_empty_body">Welcome to KeyNest. Save your first credential to get started with secure, on-device storage.</string>
+
+    <!-- Empty state hero CTA secondary label (Req 8.4 / Issue #29). The
+         "クレデンシャルを登録" CTA reuses action_add_credential, this is the
+         security footer note shown beneath it. -->
+    <string name="credential_list_empty_security_note">AES-GCM · device-local only</string>
+
     <!-- Credential edit -->
     <string name="credential_edit_title_new">New credential</string>
     <string name="credential_edit_title_edit">Edit credential</string>
