@@ -76,6 +76,16 @@
     <string name="package_picker_section_all">すべてのアプリ</string>
     <string name="package_picker_manual">一覧にない → パッケージ名を手動入力</string>
 
+    <!-- Package picker: Issue #32 additional keys (search hint / close a11y /
+         empty-search hint / manual-input dialog). The 5 keys above already
+         existed; the 5 below are added for Phase 2 #32. -->
+    <string name="package_picker_search_hint">アプリ名・パッケージ名で絞り込み</string>
+    <string name="package_picker_close_a11y">アプリ選択画面を閉じる</string>
+    <string name="package_picker_no_results">該当するアプリがありません</string>
+    <string name="package_picker_manual_input_title">パッケージ名を入力</string>
+    <string name="package_picker_manual_input_hint">com.example.app</string>
+    <string name="package_picker_manual_input_invalid">パッケージ名の形式が不正です</string>
+
     <!-- Misc -->
     <string name="signature_match">署名一致</string>
     <string name="signature_missing">署名なし</string>

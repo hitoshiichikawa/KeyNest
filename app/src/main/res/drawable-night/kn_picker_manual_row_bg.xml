@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 10.5: dark-mode counterpart of kn_picker_manual_row_bg.
+
+  Light variant fills with @color/kn_blue_50 (#EAF2FE) which would make the
+  row a bright pale-blue strip even in dark mode (kn_blue_50 is a raw
+  palette color and is NOT redefined in values-night). To keep the
+  manual-entry row legible on dark surfaces (Req 10.5: kn_primary text on
+  background ≥ 4.5:1), we override the fill with @color/kn_primary_container
+  which resolves to #1A2D5C in values-night — a dim blue surface that
+  matches the JSX `surface-tint` intent in dark mode.
+
+  Corners: kn_r_sm (12dp) — same as light variant.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_primary_container" />
+    <corners android:radius="@dimen/kn_r_sm" />
+</shape>

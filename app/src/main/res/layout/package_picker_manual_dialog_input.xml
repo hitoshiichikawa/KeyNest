@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 8.7 / 8.8: input field for the manual-input AlertDialog
+  launched from the PackagePickerBottomSheet manual-entry footer.
+
+  Visual: a single TextInputLayout (outlined box, kn_primary stroke) with
+  Text.KeyNest.Body input. The dialog itself supplies the title (=
+  package_picker_manual_input_title) and Cancel / OK buttons; this layout
+  only owns the input area + padding.
+-->
+<com.google.android.material.textfield.TextInputLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.KeyNest.TextField"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/kn_screen_padding_h"
+    android:layout_marginTop="@dimen/kn_space_3"
+    android:layout_marginEnd="@dimen/kn_screen_padding_h"
+    android:layout_marginBottom="@dimen/kn_space_3"
+    android:hint="@string/package_picker_manual_input_hint"
+    android:textColorHint="@color/kn_text_3">
+
+    <com.google.android.material.textfield.TextInputEditText
+        android:id="@+id/input_manual_package"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:imeOptions="actionDone"
+        android:inputType="text"
+        android:maxLines="1"
+        android:minHeight="@dimen/kn_input_height"
+        android:textAppearance="@style/Text.KeyNest.Body"
+        android:textColor="@color/kn_text" />
+</com.google.android.material.textfield.TextInputLayout>
