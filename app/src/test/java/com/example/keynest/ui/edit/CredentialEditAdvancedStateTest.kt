@@ -3,6 +3,7 @@ package com.example.keynest.ui.edit
 import com.example.keynest.domain.model.CredentialId
 import com.example.keynest.domain.model.EncryptedCredentialRecord
 import com.example.keynest.domain.model.SigningHash
+import com.example.keynest.domain.usecase.DeleteCredentialUseCase
 import com.example.keynest.domain.usecase.FakeCredentialRepository
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
 import com.example.keynest.domain.usecase.StubAesGcmCipher
@@ -220,6 +221,7 @@ class CredentialEditAdvancedStateTest {
         val cipher = StubAesGcmCipher()
         val save = SaveCredentialUseCase(repo, cipher, sigResolver)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
-        return CredentialEditViewModel(repo, save, update)
+        val delete = DeleteCredentialUseCase(repo)
+        return CredentialEditViewModel(repo, save, update, delete)
     }
 }

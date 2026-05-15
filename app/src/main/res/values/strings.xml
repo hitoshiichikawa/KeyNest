@@ -66,6 +66,21 @@
     <string name="error_save_failed_with_reason">Failed to save credential: %1$s</string>
     <string name="message_signature_not_captured">Signature unavailable (app not installed). Candidates will not appear until you reinstall and re-save.</string>
 
+    <!-- Credential edit: Issue #30 design alignment (target app card,
+         password label, strength bar, advanced section, delete CTA).
+         These keys describe screen-3 fragments not yet covered above. -->
+    <string name="credential_edit_password_label">Password</string>
+    <string name="credential_edit_advanced_chevron_a11y">Show advanced details</string>
+    <string name="credential_edit_target_app_change_a11y">Change target app</string>
+    <string name="credential_edit_close_a11y">Close credential editor</string>
+
+    <!-- Delete confirmation dialog (Issue #30 Req 8.9 - 8.12). -->
+    <string name="credential_edit_delete_confirm_title">Delete this credential?</string>
+    <string name="credential_edit_delete_confirm_message">This permanently removes the credential. Autofill candidates for this app will no longer appear.</string>
+    <string name="credential_edit_delete_confirm_positive">Delete</string>
+    <string name="credential_edit_delete_confirm_negative">Cancel</string>
+    <string name="credential_edit_delete_failed">Failed to delete credential.</string>
+
     <!-- Autofill enable -->
     <string name="autofill_enable_title">Enable Autofill service</string>
     <string name="autofill_enable_description">To suggest saved credentials, KeyNest needs to be selected as your Autofill service in Android Settings.</string>

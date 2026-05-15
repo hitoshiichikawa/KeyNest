@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.keynest.domain.model.CredentialId
 import com.example.keynest.domain.model.EncryptedCredentialRecord
 import com.example.keynest.domain.repository.CredentialRepository
+import com.example.keynest.domain.usecase.DeleteCredentialUseCase
 import com.example.keynest.domain.usecase.NewCredentialInput
 import com.example.keynest.domain.usecase.SaveCredentialUseCase
 import com.example.keynest.domain.usecase.SaveFailure
@@ -51,12 +52,20 @@ class CredentialEditViewModel(
     private val repository: CredentialRepository,
     private val saveUseCase: SaveCredentialUseCase,
     private val updateUseCase: UpdateCredentialUseCase,
+    private val deleteUseCase: DeleteCredentialUseCase,
 ) : ViewModel() {
 
     sealed class State {
         object Idle : State()
         object Saving : State()
         object Saved : State()
+        /**
+         * Issue #30 Req 8.12: signals that the delete pipeline failed.
+         * The UI surfaces this as a user-visible Snackbar and the screen
+         * is intentionally NOT closed (the navigation event is only
+         * emitted on success).
+         */
+        object DeleteFailed : State()
         data class FieldError(val field: Field, val kind: ErrorKind) : State()
         data class Error(val cause: String) : State()
     }
@@ -167,6 +176,31 @@ class CredentialEditViewModel(
         }
     }
 
+    /**
+     * Issue #30 Req 8.10 / 8.12: delete the currently-edited credential.
+     *
+     * On success the navigation event is emitted (Activity closes via
+     * finish()); on failure [State.DeleteFailed] is published so the
+     * Activity can surface a Snackbar without closing.
+     *
+     * The use case is idempotent at the repository layer — deleting a
+     * non-existent id is treated as success — so the only failure path
+     * is a true storage exception.
+     */
+    fun delete(credentialId: Long) {
+        viewModelScope.launch {
+            deleteUseCase(CredentialId(credentialId))
+                .onSuccess {
+                    SafeLogger.info(tag = TAG, message = "credential delete ok")
+                    _navigation.tryEmit(Unit)
+                }
+                .onFailure { ex ->
+                    SafeLogger.error(tag = TAG, message = "credential delete failed", throwable = ex)
+                    _state.value = State.DeleteFailed
+                }
+        }
+    }
+
     suspend fun load(credentialId: Long): EncryptedCredentialRecord? {
         val record = repository.findById(CredentialId(credentialId))
         // Issue #14: refresh the advanced-details snapshot every time a
@@ -228,11 +262,12 @@ class CredentialEditViewModel(
         private val repository: CredentialRepository,
         private val saveUseCase: SaveCredentialUseCase,
         private val updateUseCase: UpdateCredentialUseCase,
+        private val deleteUseCase: DeleteCredentialUseCase,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass == CredentialEditViewModel::class.java)
-            return CredentialEditViewModel(repository, saveUseCase, updateUseCase) as T
+            return CredentialEditViewModel(repository, saveUseCase, updateUseCase, deleteUseCase) as T
         }
     }
 

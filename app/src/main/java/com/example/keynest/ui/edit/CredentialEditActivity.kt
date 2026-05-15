@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -17,6 +18,7 @@ import com.example.keynest.databinding.CredentialEditActivityBinding
 import com.example.keynest.di.ServiceLocator
 import com.example.keynest.util.AdvancedDetailsFormatter
 import com.example.keynest.util.SafeLogger
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -54,6 +56,7 @@ class CredentialEditActivity : AppCompatActivity() {
             ServiceLocator.credentialRepository,
             ServiceLocator.saveCredentialUseCase,
             ServiceLocator.updateCredentialUseCase,
+            ServiceLocator.deleteCredentialUseCase,
         )
     }
 
@@ -67,24 +70,55 @@ class CredentialEditActivity : AppCompatActivity() {
         editingId = intent.getLongExtra(EXTRA_CREDENTIAL_ID, INVALID_ID).takeIf { it != INVALID_ID }
         title = getString(if (editingId == null) R.string.credential_edit_title_new else R.string.credential_edit_title_edit)
 
+        // Issue #30 Req 8.1 / 8.2: only render the destructive CTA in edit
+        // mode. New mode users see no delete affordance.
+        binding.btnDelete.visibility = if (editingId == null) View.GONE else View.VISIBLE
+
+        // Issue #30 Req 3.5 / 3.6: target app card label / package preview.
+        // In new mode we render the screen title as the placeholder; the
+        // package preview remains empty until the user picks one.
+        if (editingId == null) {
+            binding.tvTargetAppLabel.text = getString(R.string.credential_edit_title_new)
+            binding.tvTargetAppPackage.text = ""
+        }
+
         editingId?.let { id ->
             lifecycleScope.launch {
                 val rec = viewModel.load(id) ?: return@launch
                 binding.inputPackage.setText(rec.packageName)
                 binding.inputUsername.setText(rec.username)
                 binding.inputLabel.setText(rec.label)
+                // Issue #30 Req 3.5 / 3.6: mirror the loaded credential into
+                // the target app card display fields.
+                binding.tvTargetAppLabel.text = rec.label
+                binding.tvTargetAppPackage.text = rec.packageName
+                // Issue #30 Req 3.7 / 3.8: signature chip tint follows the
+                // loaded record's signatureSha256 nullability.
+                renderSignatureChip(hasSignature = rec.signatureSha256 != null)
                 // password intentionally left blank in edit mode - if the
                 // user wants to change it they type a new one.
                 binding.layoutPassword.hint = getString(R.string.label_password) + " (optional)"
             }
         }
 
+        // Issue #30 Req 6.6: domain has no strength field today; the bar
+        // visibility is GONE per StrengthBar's default. Calling
+        // setStrength(null) idempotently re-asserts the hidden state.
+        binding.strengthBarEdit.setStrength(null)
+
         binding.btnSave.setOnClickListener { onSaveClicked() }
         binding.btnPickInstalledApp.setOnClickListener {
             PackagePickerBottomSheet.show(supportFragmentManager) { picked ->
                 binding.inputPackage.setText(picked)
+                // Issue #30 Req 3.6: keep the target-card preview in sync
+                // with the (possibly hidden) editable package field.
+                binding.tvTargetAppPackage.text = picked
             }
         }
+
+        // Issue #30 Req 8.9: tapping the delete CTA shows a confirmation
+        // dialog; only the positive action actually invokes the use case.
+        binding.btnDelete.setOnClickListener { showDeleteConfirmation() }
 
         binding.advancedHeader.setOnClickListener { viewModel.toggleAdvancedExpanded() }
         binding.toggleCredentialId.setOnClickListener { viewModel.toggleCredentialIdVisible() }
@@ -141,6 +175,14 @@ class CredentialEditActivity : AppCompatActivity() {
                 getString(R.string.error_save_failed_with_reason, state.cause),
                 Snackbar.LENGTH_LONG,
             ).show()
+            // Issue #30 Req 8.12: delete failure surfaces as a Snackbar and
+            // the screen is intentionally NOT closed.
+            CredentialEditViewModel.State.DeleteFailed ->
+                Snackbar.make(
+                    binding.root,
+                    R.string.credential_edit_delete_failed,
+                    Snackbar.LENGTH_LONG,
+                ).show()
             // Toast is used (not Snackbar) so that the confirmation survives the
             // activity finish() triggered by the navigation collector.
             CredentialEditViewModel.State.Saved ->
@@ -231,6 +273,53 @@ class CredentialEditActivity : AppCompatActivity() {
         } else {
             getString(R.string.advanced_value_id_hidden)
         }
+    }
+
+    /**
+     * Issue #30 Req 3.7 / 3.8: swap the target-card signature chip
+     * background drawable + icon tint + label text between the success
+     * (kn_success_soft / kn_success / "署名一致") and the warning
+     * (kn_warning_soft / kn_warning / "署名なし") presentations.
+     */
+    private fun renderSignatureChip(hasSignature: Boolean) {
+        if (hasSignature) {
+            binding.chipSignatureEdit.setBackgroundResource(R.drawable.kn_signature_chip_bg_success)
+            binding.iconSignatureEdit.setColorFilter(
+                ContextCompat.getColor(this, R.color.kn_success),
+            )
+            binding.textSignatureEdit.setText(R.string.signature_match)
+            binding.textSignatureEdit.setTextColor(
+                ContextCompat.getColor(this, R.color.kn_success),
+            )
+        } else {
+            binding.chipSignatureEdit.setBackgroundResource(R.drawable.kn_signature_chip_bg_warning)
+            binding.iconSignatureEdit.setColorFilter(
+                ContextCompat.getColor(this, R.color.kn_warning),
+            )
+            binding.textSignatureEdit.setText(R.string.signature_missing)
+            binding.textSignatureEdit.setTextColor(
+                ContextCompat.getColor(this, R.color.kn_warning),
+            )
+        }
+    }
+
+    /**
+     * Issue #30 Req 8.9 / 8.10 / 8.11 / 8.12: display a Material confirmation
+     * dialog before deleting. Positive button calls the ViewModel which
+     * invokes DeleteCredentialUseCase and emits a navigation event; the
+     * existing navigation collector calls finish() on success. Negative
+     * keeps the dialog state and closes only the dialog.
+     */
+    private fun showDeleteConfirmation() {
+        val id = editingId ?: return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.credential_edit_delete_confirm_title)
+            .setMessage(R.string.credential_edit_delete_confirm_message)
+            .setPositiveButton(R.string.credential_edit_delete_confirm_positive) { _, _ ->
+                viewModel.delete(id)
+            }
+            .setNegativeButton(R.string.credential_edit_delete_confirm_negative, null)
+            .show()
     }
 
     private fun copySignatureHexToClipboard() {
