@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #31 Req 7.4: "already enabled" container background.
+  Filled with kn_success_soft and rounded with @dimen/kn_r_card (18dp).
+  values-night/colors.xml overrides kn_success_soft to a dimmer alpha
+  so the surface keeps contrast on dark backgrounds (Req 8.5).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_success_soft" />
+    <corners android:radius="@dimen/kn_r_card" />
+</shape>

@@ -360,4 +360,25 @@
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
+    <!--
+        Issue #31 Phase 2 (Onboarding) — small row / chip style helpers
+        used by autofill_enable_activity.xml. These keep the per-step
+        layout XML short and pin the JSX visual contract in one place.
+    -->
+    <style name="Widget.KeyNest.OnboardingStepRow" parent="">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="Widget.KeyNest.OnboardingStepChip" parent="">
+        <item name="android:background">@drawable/kn_onboarding_step_chip_bg</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/kn_primary</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/manrope</item>
+    </style>
+
 </resources>

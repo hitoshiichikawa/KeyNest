@@ -88,6 +88,18 @@
     <string name="autofill_enable_already_enabled">KeyNest is already set as your Autofill service.</string>
     <string name="autofill_enable_settings_unavailable">Autofill Settings screen is not available on this device.</string>
 
+    <!-- Autofill enable: Issue #31 design alignment (steps card + "later" CTA).
+         The 3-step instruction card mirrors the JSX `ScreenOnboarding` mock
+         in design/screens/screens-1.jsx; the "later" button dismisses the
+         onboarding without launching Settings. -->
+    <string name="autofill_enable_step1_title">Tap \"Open Settings\"</string>
+    <string name="autofill_enable_step1_description">You\'ll be taken to the Android Settings screen.</string>
+    <string name="autofill_enable_step2_title">Pick \"KeyNest\"</string>
+    <string name="autofill_enable_step2_description">Under Passwords and accounts.</string>
+    <string name="autofill_enable_step3_title">Come back when you\'re done</string>
+    <string name="autofill_enable_step3_description">You can then save credentials.</string>
+    <string name="autofill_enable_action_later">Not now</string>
+
     <!-- Autofill unlock -->
     <string name="biometric_prompt_title">Unlock credential</string>
     <string name="biometric_prompt_subtitle">Authenticate to fill the saved credential.</string>
