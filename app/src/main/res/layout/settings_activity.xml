@@ -132,7 +132,7 @@
                     android:textAllCaps="false"
                     android:textColor="@color/kn_on_primary"
                     app:backgroundTint="@null"
-                    app:rippleColor="#33FFFFFF" />
+                    app:rippleColor="@color/kn_hero_ripple_on_primary" />
             </LinearLayout>
 
             <!-- =================================================== -->

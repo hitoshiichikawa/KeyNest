@@ -10,10 +10,9 @@
   kn_r_md) を背景にする.
 
   Issue #33 で置換した点:
-    - ?attr/colorErrorContainer (Material3 直参照) を kn_danger_soft に置換
-      (Req 9.1).
+    - Material3 colorErrorContainer 直参照を kn_danger_soft に置換 (Req 9.1).
     - 角丸を kn_r_md (16dp) に固定 (Req 9.2).
-    - 見出し / 説明文の色を ?attr/colorOnErrorContainer から kn_text に置換
+    - 見出し / 説明文の色を Material3 colorOnErrorContainer 直参照から kn_text に置換
       (Req 9.3). 視覚的な強調が必要な箇所 (Snackbar 内テキスト) は
       設計判断で kn_text のまま残す.
     - btn_clear を Widget.KeyNest.Button.Destructive (Phase 1 #30 で導入済み)

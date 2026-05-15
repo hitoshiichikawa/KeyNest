@@ -85,4 +85,11 @@
     <color name="keynest_primary_variant">@color/kn_blue_600</color>
     <color name="keynest_secondary">@color/kn_accent_500</color>
 
+    <!-- Issue #33 Req 2.12: 半透明白 ripple color (Autofill hero CTA 用).
+         hero gradient (kn_primary to kn_blue_700) 上で白ボタンを押した時の
+         feedback ripple. Light / Dark で同一の rgba(255,255,255,0.2)
+         (= #33FFFFFF) を使う. hero gradient 自体が両モードでブルー系を
+         保つため、ripple alpha も共有でよい. -->
+    <color name="kn_hero_ripple_on_primary">#33FFFFFF</color>
+
 </resources>
