@@ -4,8 +4,8 @@
 
   JSX `SettingRow` reference (screens-2.jsx L312):
     width 32, height 32, borderRadius 10,
-    background: var(--surface-2),
-    color (icon tint): var(--text-2)  -- danger 派生時は var(--kn-danger).
+    background: var(surface-2),
+    color (icon tint): var(text-2). Danger 派生時は var(kn-danger).
 
   Fill: @color/kn_surface_2 (light: kn_ink_50 / dark: kn_ink_800).
   Corners: @dimen/kn_r_sm (12dp). KeyNest dimens には 10dp トークンが存在せず、

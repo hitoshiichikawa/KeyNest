@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.text.format.Formatter
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -22,23 +23,31 @@ import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
 /**
- * Settings screen for KeyNest. Issue #10 Req 1.x, 2.x, 3.x, 4.x, 5.x,
- * 6.x.
+ * Settings screen for KeyNest. Issue #10 Req 1.x..6.x + Issue #33
+ * (Phase 2 #5) — JSX `ScreenSettings` (design/screens/screens-2.jsx)
+ * 整合.
  *
- * Renders [SettingsViewModel.uiState] into five MaterialCardView
- * sections (Autofill / Security / Vault / About / Danger Zone). Tap
- * handlers:
+ * Renders [SettingsViewModel.uiState] into:
+ *   - Autofill ステータス hero (Issue #33 Req 2). Background drawable は
+ *     [AutofillStatus.Enabled] → `kn_settings_hero_gradient_enabled`
+ *     [AutofillStatus.NotEnabled] → `kn_settings_hero_bg_notenabled` を
+ *     [bindAutofill] が runtime で差し替える.
+ *   - セキュリティ SettingGroup (Req 5) — 「ロック解除方法」行押下で
+ *     [SystemSettingsIntents.openSecuritySettings] を発火.
+ *   - Vault SettingGroup (Req 6) — 件数 / 最終更新 / DB サイズ の 3 行.
+ *   - About SettingGroup (Req 7) — KeyNest version / OSS / Privacy.
+ *   - Danger zone SettingGroup (Req 8) — kn_danger_soft 背景 +「すべて削除」
+ *     行押下で [DangerZoneActivity] へ.
  *
- * - "Open Android Settings" -> SystemSettingsIntents
- *   .openAutofillServiceChooser (Req 2.4 / 2.6)
- * - "Open Android Security settings" -> SystemSettingsIntents
- *   .openSecuritySettings (Req 3.4 / 3.6)
- * - "Open source licenses" -> OssLicensesActivity (Req 5.2 / 5.3)
- * - "Open Vault clear screen" -> DangerZoneActivity (Req 6.2 / 6.3)
+ * Issue #10 で確立した既存 View ID (`btn_open_autofill_settings` /
+ * `btn_open_security_settings` / `btn_oss_licenses` / `btn_open_danger_zone`
+ * / `text_autofill_status` / `text_lock_status` / `text_vault_count` /
+ * `text_vault_latest_updated` / `text_vault_storage` / `text_app_version` /
+ * `toolbar`) は保持しているが、SettingRow 化に伴い `btn_open_security_settings`
+ * 等は MaterialButton ではなく LinearLayout に割り当てられている (Req 5.9 /
+ * 12.4 の制約はクリック ID 維持に限定されており widget 型は固定していない).
  *
- * onResume calls [SettingsViewModel.refresh] so the autofill / lock /
- * storage values reflect what the user did in the system Settings
- * (Req 2.5 / 3.5).
+ * onResume calls [SettingsViewModel.refresh] (Issue #10 Req 2.5 / 3.5).
  */
 class SettingsActivity : AppCompatActivity() {
 
@@ -59,22 +68,20 @@ class SettingsActivity : AppCompatActivity() {
         binding = SettingsActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-        binding.toolbar.setNavigationOnClickListener { finish() } // Req 1.3
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
-        wireButtons()
+        wireRows()
         observeUiState()
     }
 
     override fun onResume() {
         super.onResume()
-        // Req 2.5 / 3.5: refresh non-reactive sources when returning
-        // from external Settings activities.
         viewModel.refresh()
     }
 
     // ---- wiring ---------------------------------------------------------
 
-    private fun wireButtons() {
+    private fun wireRows() {
         binding.btnOpenAutofillSettings.setOnClickListener {
             SystemSettingsIntents.openAutofillServiceChooser(this).onFailure {
                 showIntentUnavailableSnackbar()
@@ -108,15 +115,68 @@ class SettingsActivity : AppCompatActivity() {
         bindAbout(state)
     }
 
+    /**
+     * Issue #33 Req 2.4..2.12: hero の背景 / チップ / CTA を [status] に応じて
+     * 切り替える. 既存の View ID `text_autofill_status` は Hero の description
+     * TextView (Req 2.5 補足文) に割り当てられているため、ステータスチップは
+     * `chip_autofill_status` 側で別途バインドする.
+     */
     private fun bindAutofill(status: AutofillStatus) {
-        val resId = when (status) {
+        val chipLabelResId = when (status) {
             AutofillStatus.Enabled -> R.string.settings_autofill_badge_enabled
             AutofillStatus.NotEnabled -> R.string.settings_autofill_badge_not_enabled
         }
-        val text = getString(resId)
-        binding.textAutofillStatus.text = text
-        binding.textAutofillStatus.contentDescription =
-            getString(R.string.settings_autofill_badge_a11y, text)
+        val chipLabel = getString(chipLabelResId)
+        binding.chipAutofillStatus.text = chipLabel
+        // NFR 2.5 composite a11y: "Autofill service status: <label>".
+        binding.chipAutofillStatus.contentDescription =
+            getString(R.string.settings_autofill_badge_a11y, chipLabel)
+
+        when (status) {
+            AutofillStatus.Enabled -> applyAutofillHeroEnabled()
+            AutofillStatus.NotEnabled -> applyAutofillHeroNotEnabled()
+        }
+    }
+
+    private fun applyAutofillHeroEnabled() {
+        // Req 2.4 / 2.6 / 2.12: gradient + white-on-blue palette.
+        binding.groupAutofillHero.background = ContextCompat.getDrawable(
+            this, R.drawable.kn_settings_hero_gradient_enabled,
+        )
+        binding.chipAutofillStatus.background = ContextCompat.getDrawable(
+            this, R.drawable.kn_settings_hero_chip_bg_enabled,
+        )
+        binding.btnOpenAutofillSettings.background = ContextCompat.getDrawable(
+            this, R.drawable.kn_settings_hero_cta_bg_enabled,
+        )
+        val onPrimary = ContextCompat.getColor(this, R.color.kn_on_primary)
+        binding.chipAutofillStatus.setTextColor(onPrimary)
+        binding.textAutofillHeroTitle.setTextColor(onPrimary)
+        binding.textAutofillStatus.setTextColor(onPrimary)
+        binding.btnOpenAutofillSettings.setTextColor(onPrimary)
+        binding.textAutofillStatus.setText(R.string.settings_autofill_hero_description_enabled)
+    }
+
+    private fun applyAutofillHeroNotEnabled() {
+        // Req 2.7: kn_warning_soft 背景 / kn_text 本文 / kn_warning accent.
+        binding.groupAutofillHero.background = ContextCompat.getDrawable(
+            this, R.drawable.kn_settings_hero_bg_notenabled,
+        )
+        binding.chipAutofillStatus.background = ContextCompat.getDrawable(
+            this, R.drawable.kn_settings_hero_chip_bg_notenabled,
+        )
+        binding.btnOpenAutofillSettings.background = ContextCompat.getDrawable(
+            this, R.drawable.kn_settings_hero_cta_bg_notenabled,
+        )
+        val onSurface = ContextCompat.getColor(this, R.color.kn_text)
+        val warning = ContextCompat.getColor(this, R.color.kn_warning)
+        binding.chipAutofillStatus.setTextColor(warning)
+        binding.textAutofillHeroTitle.setTextColor(onSurface)
+        binding.textAutofillStatus.setTextColor(
+            ContextCompat.getColor(this, R.color.kn_text_2),
+        )
+        binding.btnOpenAutofillSettings.setTextColor(warning)
+        binding.textAutofillStatus.setText(R.string.settings_autofill_hero_description_not_enabled)
     }
 
     private fun bindLockStatus(status: DeviceLockStatus) {
@@ -139,14 +199,9 @@ class SettingsActivity : AppCompatActivity() {
     ) {
         binding.textVaultCount.text =
             getString(R.string.settings_vault_count_format, metadata.count)
-        // Req 4.3: surface a placeholder when there are no rows -- the
-        // DAO's MAX(updated_at) returns null which we route to the
-        // "—" string instead of a 1970-01-01 epoch formatted timestamp.
         binding.textVaultLatestUpdated.text = metadata.latestUpdatedAt
             ?.let { AdvancedDetailsFormatter.formatTimestamp(it) }
             ?: getString(R.string.settings_vault_latest_updated_empty)
-        // Req 4.4: human-readable byte size (e.g. "48 kB") via Android
-        // Formatter. The exact output depends on the platform locale.
         binding.textVaultStorage.text = Formatter.formatShortFileSize(this, storageBytes)
     }
 

@@ -3,8 +3,8 @@
   Issue #33 Req 3.1 / 3.2 / 3.3: SettingGroup (共通コンテナ) 背景.
 
   JSX `SettingGroup` reference (screens-2.jsx L303):
-    background: var(--surface),
-    border: 1px solid var(--border),
+    background: var(surface),
+    border: 1px solid var(border),
     borderRadius: 16,
     overflow: hidden.
 

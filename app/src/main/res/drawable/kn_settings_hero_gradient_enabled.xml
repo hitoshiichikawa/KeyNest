@@ -4,7 +4,7 @@
 
   JSX `ScreenSettings` reference (screens-2.jsx L255):
     padding 18, borderRadius 20,
-    background: linear-gradient(140deg, var(--primary) 0%, var(--kn-blue-700) 100%),
+    background: linear-gradient(140deg, var(primary) 0%, var(kn-blue-700) 100%),
     color: white.
 
   Android `<gradient>` 角度規約は CSS とは異なる:

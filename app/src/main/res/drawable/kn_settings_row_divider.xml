@@ -3,7 +3,7 @@
   Issue #33 Req 4.17: SettingRow 行間の 1dp 区切り線.
 
   JSX `SettingRow` reference (screens-2.jsx L311):
-    borderBottom: '1px solid var(--border)'.
+    borderBottom: '1px solid var(border)'.
 
   最終行の下端は描画しない (Req 4.17). レイアウト側で `android:divider` /
   `android:showDividers="middle"` を使うか、各 row 内で
