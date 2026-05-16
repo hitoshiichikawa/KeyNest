@@ -82,7 +82,7 @@
   - `_Boundary: RecentlyUsedCarouselAdapter_`
   - `_Depends: 1.2, 1.3, 1.5, 3.1_`
 
-- [ ] 4. Package Picker への統合 (P)
+- [x] 4. Package Picker への統合 (P)
 - [x] 4.1 `package_picker_row_item.xml` にアイコン ImageView を追加 (P)
   - 既存 FrameLayout（44-48 行目、`kn_icon_tile_sm`）の子として `<ImageView
     android:id="@+id/icon_app" android:layout_width="match_parent"
@@ -92,7 +92,7 @@
     (Req 3.4 / NFR 3.1 / NFR 3.2)
   - `_Requirements: 1.3, 3.1, 3.2, 3.4, NFR 3.1, NFR 3.2_`
   - `_Boundary: PackagePickerBottomSheet.SectionAdapter_`
-- [ ] 4.2 `PackagePickerBottomSheet.SectionAdapter` / `RowVH` を IconLoader 経由に更新 (P)
+- [x] 4.2 `PackagePickerBottomSheet.SectionAdapter` / `RowVH` を IconLoader 経由に更新 (P)
   - `SectionAdapter` constructor に `iconLoader: IconLoader` を追加
     （既存 `onClick: (String) -> Unit` の隣）
   - `RowVH.bind()` で `iconLoader.loadInto(binding.iconApp, item.app.packageName)`
