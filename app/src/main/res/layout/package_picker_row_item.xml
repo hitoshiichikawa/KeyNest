@@ -43,7 +43,11 @@
 
     <!-- Issue #43: inner ImageView (id=icon_app) is painted by
          IconLoader.loadInto on bind. The kn_icon_tile_bg parent
-         background stays visible behind it (Req 3.1). -->
+         background stays visible behind it (Req 3.1).
+         Issue #46 Req 5.x: clipToOutline removed (the ImageView has no
+         outline provider; clipping rendered the content invisible).
+         Rounded corners come from the parent FrameLayout's
+         @drawable/kn_icon_tile_bg. -->
     <FrameLayout
         android:layout_width="@dimen/kn_icon_tile_sm"
         android:layout_height="@dimen/kn_icon_tile_sm"
@@ -54,7 +58,6 @@
             android:id="@+id/icon_app"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:clipToOutline="true"
             android:contentDescription="@null"
             android:scaleType="fitCenter" />
     </FrameLayout>
