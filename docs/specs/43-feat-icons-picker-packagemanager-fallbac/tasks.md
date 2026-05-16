@@ -62,7 +62,7 @@
   - `_Boundary: CredentialListAdapter_`
   - `_Depends: 1.2, 1.3, 1.5, 2.1_`
 
-- [ ] 3. 最近使用 carousel への統合 (P)
+- [x] 3. 最近使用 carousel への統合 (P)
 - [x] 3.1 `credential_list_recent_item.xml` にアイコン ImageView を追加 (P)
   - 既存 FrameLayout（45-50 行目、36dp 固定）の子として `<ImageView android:id="@+id/icon_app"
     android:layout_width="match_parent" android:layout_height="match_parent"
@@ -71,7 +71,7 @@
   - 親寸法 36dp と `@drawable/kn_icon_tile_bg` は不変 (Req 3.4 / NFR 3.1)
   - `_Requirements: 1.2, 3.1, 3.2, 3.4, NFR 3.1_`
   - `_Boundary: RecentlyUsedCarouselAdapter_`
-- [ ] 3.2 `RecentlyUsedCarouselAdapter` を IconLoader 経由に更新 (P)
+- [x] 3.2 `RecentlyUsedCarouselAdapter` を IconLoader 経由に更新 (P)
   - constructor に `iconLoader: IconLoader` を追加
   - `ViewHolder.bind()` 末尾で `iconLoader.loadInto(binding.iconApp, item.packageName)`
   - `onViewRecycled(holder)` を override して `iconLoader.cancel(...)`
