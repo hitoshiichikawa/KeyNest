@@ -8,7 +8,7 @@
   - `Drawable.draw(Canvas)` で `@color/kn_blue_500` の角丸 (`@dimen/kn_r_icon_tile`) 矩形 +
     白色 (`@color/kn_on_primary`) テキストを描画
   - `_Requirements: 1.4_`
-- [ ] 1.2 IconLoader 本体（cache / 非同期 / race prevention / fallback 統合）の実装
+- [x] 1.2 IconLoader 本体（cache / 非同期 / race prevention / fallback 統合）の実装
   - `app/src/main/java/com/example/keynest/util/IconLoader.kt` を新規追加
   - `LruCache<String, Drawable>(64)` を内部に保持（NFR 1.1）
   - `loadInto(ImageView, String?)` で cache hit は同期 setImageDrawable、miss は
