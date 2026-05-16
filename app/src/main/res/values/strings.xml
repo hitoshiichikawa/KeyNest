@@ -114,7 +114,8 @@
          `ScreenPicker` copy with neutral English wording. -->
     <string name="package_picker_subtitle">Signing info is captured too</string>
     <string name="package_picker_search_hint">Filter by app name or package</string>
-    <string name="package_picker_section_used">Frequently used</string>
+    <!-- Issue #48: `package_picker_section_used` removed along with the
+         "Frequently used" (業務でよく使う) SAMPLE section. -->
     <string name="package_picker_section_all">All apps</string>
     <string name="package_picker_manual">Not listed → Enter package name manually</string>
     <string name="package_picker_close_a11y">Close package picker</string>

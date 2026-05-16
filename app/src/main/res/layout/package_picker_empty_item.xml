@@ -2,10 +2,11 @@
 <!--
   Issue #32 Req 4.9: empty-state row for PackagePickerBottomSheet.
 
-  Shown when the active search filter produces zero matches across both
-  the "業務でよく使う" and "すべてのアプリ" sections. The manual-entry row
-  is always rendered separately at the sheet bottom, so the user still
-  has a fallback path in this state.
+  Shown when the active search filter produces zero matches in the
+  "すべてのアプリ" section. (Issue #48 removed the SAMPLE "業務でよく使う"
+  section, so only the All-apps list is filtered now.) The manual-entry
+  row is always rendered separately at the sheet bottom, so the user
+  still has a fallback path in this state.
 
   Visual: centered single-line message using Text.KeyNest.BodyS / kn_text_3
   to match the muted look of the section headers but with normal letter
