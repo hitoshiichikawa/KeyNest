@@ -131,7 +131,10 @@ class CredentialListActivity : AppCompatActivity() {
     }
 
     private fun setUpRecentCarousel() {
-        recentAdapter = RecentlyUsedCarouselAdapter(onItemClick = { startEdit(it) })
+        recentAdapter = RecentlyUsedCarouselAdapter(
+            onItemClick = { startEdit(it) },
+            iconLoader = ServiceLocator.iconLoader,
+        )
         binding.recentRecycler.layoutManager = LinearLayoutManager(
             this,
             LinearLayoutManager.HORIZONTAL,
