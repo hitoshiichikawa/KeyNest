@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. IconLoader / InitialLetterDrawable / 共通リソースの追加
+- [x] 1. IconLoader / InitialLetterDrawable / 共通リソースの追加
 - [x] 1.1 InitialLetterDrawable + 頭文字算出 helper の実装
   - `app/src/main/java/com/example/keynest/util/InitialLetterDrawable.kt` を新規追加
   - `companion object fun computeInitial(packageName: String): String` を提供
@@ -35,7 +35,7 @@
   - `kotlinx.coroutines.test.runTest` でディスパッチャ制御
   - (任意) `InitialLetterDrawableTest.kt` で `computeInitial` の pure helper を補強
   - `_Requirements: 4.1, 4.2, 4.3, 4.4_`
-- [ ] 1.5 ServiceLocator に iconLoader プロパティを追加
+- [x] 1.5 ServiceLocator に iconLoader プロパティを追加
   - `app/src/main/java/com/example/keynest/di/ServiceLocator.kt` を編集
   - `val iconLoader: IconLoader by lazy { IconLoader(requireAppContext().packageManager, requireAppContext().resources) }`
   - 既存 `appInfoProvider` / `vaultStorageMeasurer` 等のセクションに並べる
