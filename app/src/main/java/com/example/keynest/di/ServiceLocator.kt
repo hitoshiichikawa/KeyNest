@@ -21,6 +21,7 @@ import com.example.keynest.domain.usecase.UpdateCredentialUseCase
 import com.example.keynest.security.AesGcmCipher
 import com.example.keynest.security.KeystoreKeyProvider
 import com.example.keynest.util.AppInfoProvider
+import com.example.keynest.util.IconLoader
 import com.example.keynest.util.PackageSignatureResolver
 import com.example.keynest.util.VaultStorageMeasurer
 
@@ -108,6 +109,18 @@ object ServiceLocator {
 
     val appInfoProvider: AppInfoProvider by lazy {
         AppInfoProvider(requireAppContext())
+    }
+
+    /**
+     * Issue #43: shared icon resolver for credential list / recent
+     * carousel / package picker. Held as a process-wide singleton so the
+     * LruCache is shared across all three adapters (NFR 1.1 cap=64).
+     */
+    val iconLoader: IconLoader by lazy {
+        IconLoader(
+            pm = requireAppContext().packageManager,
+            resources = requireAppContext().resources,
+        )
     }
 
     val observeVaultMetadataUseCase: ObserveVaultMetadataUseCase by lazy {

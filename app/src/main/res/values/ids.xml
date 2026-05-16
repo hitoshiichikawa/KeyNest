@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #43: stable resource IDs referenced from code (rather than layout
+  XML). Each entry is declared once here so it can be looked up via
+  R.id.* without requiring an `@+id/...` first-use in a layout file.
+
+  IDs:
+    - icon_loader_request_tag : ImageView.setTag(int, Object) key used by
+      IconLoader to associate each in-flight resolve with the requesting
+      packageName, so async results can be ignored when the ViewHolder
+      has already been recycled to a different row (Req 2.4 race
+      prevention).
+-->
+<resources>
+    <item name="icon_loader_request_tag" type="id" />
+</resources>

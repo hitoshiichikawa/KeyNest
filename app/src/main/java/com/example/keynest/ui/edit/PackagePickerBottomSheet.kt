@@ -18,6 +18,8 @@ import com.example.keynest.databinding.PackagePickerBottomSheetBinding
 import com.example.keynest.databinding.PackagePickerRowItemBinding
 import com.example.keynest.databinding.PackagePickerSectionHeaderItemBinding
 import com.example.keynest.databinding.PackagePickerEmptyItemBinding
+import com.example.keynest.di.ServiceLocator
+import com.example.keynest.util.IconLoader
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +68,7 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val adapter = SectionAdapter(::onRowPicked)
+        val adapter = SectionAdapter(::onRowPicked, ServiceLocator.iconLoader)
         binding.recycler.layoutManager = LinearLayoutManager(requireContext())
         binding.recycler.adapter = adapter
 
@@ -203,6 +205,7 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
     /** Adapter that renders the 3 ListItem variants. */
     private class SectionAdapter(
         private val onClick: (String) -> Unit,
+        private val iconLoader: IconLoader,
     ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         private val items = mutableListOf<ListItem>()
@@ -237,8 +240,22 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             when (val item = items[position]) {
                 is ListItem.Header -> (holder as HeaderVH).bind(item)
-                is ListItem.Row -> (holder as RowVH).bind(item, onClick)
+                is ListItem.Row -> (holder as RowVH).bind(item, onClick, iconLoader)
                 ListItem.Empty -> Unit
+            }
+        }
+
+        /**
+         * Issue #43 Req 2.4: only RowVH renders an icon; HeaderVH /
+         * EmptyVH have no icon ImageView so we no-op for those types.
+         * Cancelling on recycle prevents a late `getApplicationIcon`
+         * result from painting onto a row that has since been rebound
+         * (or recycled to a Header / Empty slot).
+         */
+        override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+            super.onViewRecycled(holder)
+            if (holder is RowVH) {
+                iconLoader.cancel(holder.iconAppView)
             }
         }
 
@@ -255,10 +272,17 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
         private class RowVH(
             private val binding: PackagePickerRowItemBinding,
         ) : RecyclerView.ViewHolder(binding.root) {
-            fun bind(item: ListItem.Row, onClick: (String) -> Unit) {
+
+            /** Exposed for [onViewRecycled] race-prevention. */
+            val iconAppView get() = binding.iconApp
+
+            fun bind(item: ListItem.Row, onClick: (String) -> Unit, iconLoader: IconLoader) {
                 binding.textAppLabel.text = item.app.label
                 binding.textAppPackage.text = item.app.packageName
                 binding.root.setOnClickListener { onClick(item.app.packageName) }
+
+                // Issue #43 Req 1.3: paint the real app icon (or fallback).
+                iconLoader.loadInto(binding.iconApp, item.app.packageName)
             }
         }
 

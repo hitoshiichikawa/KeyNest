@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.keynest.databinding.CredentialListRecentItemBinding
 import com.example.keynest.domain.model.Credential
+import com.example.keynest.util.IconLoader
 
 /**
  * Horizontal carousel adapter for the "Recently used" section. Issue #9
@@ -23,6 +24,7 @@ import com.example.keynest.domain.model.Credential
  */
 class RecentlyUsedCarouselAdapter(
     private val onItemClick: (Credential) -> Unit,
+    private val iconLoader: IconLoader,
 ) : ListAdapter<Credential, RecentlyUsedCarouselAdapter.ViewHolder>(DIFF) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -35,13 +37,27 @@ class RecentlyUsedCarouselAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), onItemClick)
+        holder.bind(getItem(position), onItemClick, iconLoader)
+    }
+
+    /**
+     * Issue #43 Req 2.4: invalidate any in-flight IconLoader request on
+     * recycle so a late PackageManager result is not painted onto the
+     * rebound card.
+     */
+    override fun onViewRecycled(holder: ViewHolder) {
+        super.onViewRecycled(holder)
+        iconLoader.cancel(holder.iconAppView)
     }
 
     class ViewHolder(
         private val binding: CredentialListRecentItemBinding,
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: Credential, onClick: (Credential) -> Unit) {
+
+        /** Exposed for [onViewRecycled] race-prevention. */
+        internal val iconAppView get() = binding.iconApp
+
+        fun bind(item: Credential, onClick: (Credential) -> Unit, iconLoader: IconLoader) {
             binding.textRecentLabel.text = item.label
             // Subtitle: username only -- the package name would push the
             // text outside the 160dp card width.
@@ -52,6 +68,10 @@ class RecentlyUsedCarouselAdapter(
                 item.label,
             )
             binding.cardRecent.setOnClickListener { onClick(item) }
+
+            // Issue #43 Req 1.2: paint the real app icon (or fallback)
+            // onto the carousel card's icon tile.
+            iconLoader.loadInto(binding.iconApp, item.packageName)
         }
     }
 

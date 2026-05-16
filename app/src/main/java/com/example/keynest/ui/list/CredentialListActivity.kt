@@ -124,13 +124,17 @@ class CredentialListActivity : AppCompatActivity() {
             onItemClick = { startEdit(it) },
             onItemLongClick = { promptDelete(it) },
             onOverflowClick = { credential, anchor -> showRowOverflowMenu(credential, anchor) },
+            iconLoader = ServiceLocator.iconLoader,
         )
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
     }
 
     private fun setUpRecentCarousel() {
-        recentAdapter = RecentlyUsedCarouselAdapter(onItemClick = { startEdit(it) })
+        recentAdapter = RecentlyUsedCarouselAdapter(
+            onItemClick = { startEdit(it) },
+            iconLoader = ServiceLocator.iconLoader,
+        )
         binding.recentRecycler.layoutManager = LinearLayoutManager(
             this,
             LinearLayoutManager.HORIZONTAL,

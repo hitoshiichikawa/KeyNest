@@ -41,11 +41,23 @@
     android:paddingHorizontal="@dimen/kn_space_3"
     android:paddingVertical="@dimen/kn_space_3">
 
+    <!-- Issue #43: inner ImageView (id=icon_app) is painted by
+         IconLoader.loadInto on bind. The kn_icon_tile_bg parent
+         background stays visible behind it (Req 3.1). -->
     <FrameLayout
         android:layout_width="@dimen/kn_icon_tile_sm"
         android:layout_height="@dimen/kn_icon_tile_sm"
         android:layout_marginEnd="@dimen/kn_space_3"
-        android:background="@drawable/kn_icon_tile_bg" />
+        android:background="@drawable/kn_icon_tile_bg">
+
+        <ImageView
+            android:id="@+id/icon_app"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToOutline="true"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
