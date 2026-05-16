@@ -63,7 +63,7 @@
   - `_Depends: 1.2, 1.3, 1.5, 2.1_`
 
 - [ ] 3. 最近使用 carousel への統合 (P)
-- [ ] 3.1 `credential_list_recent_item.xml` にアイコン ImageView を追加 (P)
+- [x] 3.1 `credential_list_recent_item.xml` にアイコン ImageView を追加 (P)
   - 既存 FrameLayout（45-50 行目、36dp 固定）の子として `<ImageView android:id="@+id/icon_app"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:scaleType="fitCenter" android:clipToOutline="true"
