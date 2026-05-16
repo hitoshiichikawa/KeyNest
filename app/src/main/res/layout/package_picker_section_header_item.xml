@@ -2,8 +2,9 @@
 <!--
   Issue #32 Req 5.x / 6.x: section header item for PackagePickerBottomSheet.
 
-  Used for both the "業務でよく使う" and "すべてのアプリ" sections (the adapter
-  swaps in the appropriate string at bind time).
+  Issue #48: the "業務でよく使う" SAMPLE section was removed, so this layout
+  now backs only the "すべてのアプリ" header. The adapter still binds the
+  string at runtime to keep the binding path flexible.
 
   JSX `ScreenPicker` reference (screens-2.jsx L45 / L49):
     font 700 11px var(kn-font-ui), color text-3, letterSpacing 0.08em,
@@ -19,8 +20,7 @@
     as a heading.
 
   IDs:
-  - @+id/text_section_header: bound to package_picker_section_used or
-    package_picker_section_all.
+  - @+id/text_section_header: bound to package_picker_section_all.
 -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -34,4 +34,4 @@
     android:paddingEnd="@dimen/kn_space_3"
     android:paddingBottom="@dimen/kn_space_2"
     android:textColor="@color/kn_text_3"
-    tools:text="業務でよく使う" />
+    tools:text="すべてのアプリ" />

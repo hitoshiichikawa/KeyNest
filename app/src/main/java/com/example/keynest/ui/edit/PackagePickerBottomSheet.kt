@@ -29,20 +29,18 @@ import kotlinx.coroutines.withContext
 /**
  * Bottom sheet that lets the user pick an installed app's package name.
  *
- * Requirements (Issue #32 — Phase 2 #4):
+ * Requirements (Issue #32 — Phase 2 #4, refined by Issue #48):
  *   * The visual contract follows the JSX `ScreenPicker` mock in
  *     design/screens/screens-2.jsx (drag handle / title + subtitle /
- *     search bar / "業務でよく使う" + "すべてのアプリ" sections /
- *     icon-tile row / "手動入力" fallback).
+ *     search bar / "すべてのアプリ" section / icon-tile row / "手動入力"
+ *     fallback). Issue #48 removed the JSX-only "業務でよく使う" SAMPLE
+ *     section because the recommendation algorithm is not implementable
+ *     on Android, and hard-coded SAMPLE rows do not reflect actual usage.
  *   * The existing public entry point [show] keeps its signature
- *     `(FragmentManager, (String) -> Unit) -> Unit` (Req 9.1).
+ *     `(FragmentManager, (String) -> Unit) -> Unit` (NFR 2.1 / 2.2).
  *   * Installed-app listing still goes through [loadInstalledApps]
  *     (PackageManager.getInstalledApplications(0)) on Dispatchers.IO
- *     (Req 9.3).
- *
- * The "業務でよく使う" section currently shows a SAMPLE fixed list
- * ([SAMPLE_FREQUENTLY_USED]) per the Issue spec; the推奨判定 algorithm
- * is Out of Scope (see requirements.md > Out of Scope).
+ *     (Req 3.3).
  */
 class PackagePickerBottomSheet : BottomSheetDialogFragment() {
 
@@ -84,9 +82,12 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
             }
         })
 
-        // Render SAMPLE-only state first so the section header is visible
-        // before the installed list resolves (Req 6.6: existing async load
-        // behaviour preserved; we just stop showing a fully empty sheet).
+        // Pre-render with an empty list so the adapter is wired up before
+        // the async installed-app load resolves (Req 3.3: existing async
+        // load behaviour preserved). With Issue #48 removing the SAMPLE
+        // "業務でよく使う" section, this seed renders no items until the
+        // installed list arrives — matching the new "All apps only"
+        // contract (Req 3.1 / 3.2).
         adapter.submitItems(buildItems(emptyList(), currentQuery))
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -176,22 +177,18 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
      * Compose the list of section headers + rows for the given full list
      * and current filter query.
      *
-     * Layout order (Req 5.1 / 6.1):
-     *   1. "業務でよく使う" header   (only when non-empty after filter)
-     *   2. SAMPLE rows
-     *   3. "すべてのアプリ" header   (always, unless filter empties both)
-     *   4. installed-app rows (or 0 rows if loading not finished)
-     *   5. Empty placeholder (Req 4.9) — shown when both lists are empty
-     *      under the active filter.
+     * Layout order (Issue #48 Req 3.1 / 3.2 / 3.4):
+     *   1. "すべてのアプリ" header   (when at least one installed row passes the filter)
+     *   2. installed-app rows (filtered by query; 0 rows while async load is pending)
+     *   3. Empty placeholder (Req 3.4) — shown when an active filter excludes
+     *      every installed row.
+     *
+     * Note: the "業務でよく使う" SAMPLE section was removed in Issue #48
+     * (hard-coded sample data did not reflect actual installed state).
      */
     internal fun buildItems(installed: List<AppItem>, query: String): List<ListItem> {
-        val filteredFrequent = SAMPLE_FREQUENTLY_USED.filter { matchesQuery(it, query) }
         val filteredAll = installed.filter { matchesQuery(it, query) }
         val out = mutableListOf<ListItem>()
-        if (filteredFrequent.isNotEmpty()) {
-            out += ListItem.Header(R.string.package_picker_section_used)
-            filteredFrequent.forEach { out += ListItem.Row(it) }
-        }
         if (filteredAll.isNotEmpty()) {
             out += ListItem.Header(R.string.package_picker_section_all)
             filteredAll.forEach { out += ListItem.Row(it) }
@@ -301,22 +298,12 @@ class PackagePickerBottomSheet : BottomSheetDialogFragment() {
         private const val TAG = "PackagePickerBottomSheet"
 
         /**
-         * SAMPLE "業務でよく使う" data set, mirrored from the JSX
-         * `ScreenPicker.installed[].used=true` entries. The recommendation
-         * algorithm (端末利用履歴 / 業務アプリ辞書 / signature 判定) is
-         * Out of Scope per requirements.md > Out of Scope.
-         *
-         * Pinned to JUST these 3 entries — see PackagePickerSampleAppsTest.
-         */
-        val SAMPLE_FREQUENTLY_USED: List<AppItem> = listOf(
-            AppItem(packageName = "com.salesforce.chatter", label = "Salesforce Mobile"),
-            AppItem(packageName = "com.workday.workdroidapp", label = "Workday"),
-            AppItem(packageName = "com.cybozu.kintone", label = "Kintone"),
-        )
-
-        /**
          * Case-insensitive substring filter over both the label and the
-         * package name (Req 4.7). A blank query matches every row (Req 4.8).
+         * package name (Req 3.5). A blank query matches every row.
+         *
+         * Issue #48: this helper used to back both the SAMPLE
+         * "業務でよく使う" rows and the "All apps" rows; with the SAMPLE
+         * section gone, it filters the installed-app list only.
          */
         fun matchesQuery(app: AppItem, query: String): Boolean {
             if (query.isBlank()) return true

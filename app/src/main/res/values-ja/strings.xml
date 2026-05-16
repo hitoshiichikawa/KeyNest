@@ -72,7 +72,8 @@
     <!-- Package picker -->
     <string name="package_picker_title">アプリを選択</string>
     <string name="package_picker_subtitle">署名情報も同時に取得します</string>
-    <string name="package_picker_section_used">業務でよく使う</string>
+    <!-- Issue #48: `package_picker_section_used` (業務でよく使う) を削除。
+         該当セクションそのものを撤去したため string も不要になった。 -->
     <string name="package_picker_section_all">すべてのアプリ</string>
     <string name="package_picker_manual">一覧にない → パッケージ名を手動入力</string>
 
