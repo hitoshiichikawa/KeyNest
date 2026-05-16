@@ -41,7 +41,7 @@
   - 既存 `appInfoProvider` / `vaultStorageMeasurer` 等のセクションに並べる
   - `_Requirements: NFR 3.3_`
 
-- [ ] 2. クレデンシャル一覧本体への統合 (P)
+- [x] 2. クレデンシャル一覧本体への統合 (P)
 - [x] 2.1 `credential_list_item.xml` にアイコン ImageView を追加 (P)
   - 既存 `<FrameLayout android:background="@drawable/kn_icon_tile_bg" .../>`（58-61 行目）
     の子として `<ImageView android:id="@+id/icon_app" android:layout_width="match_parent"
@@ -51,7 +51,7 @@
   - `@drawable/kn_icon_tile_bg` を残す (Req 3.1 / NFR 3.1)
   - `_Requirements: 1.1, 3.1, 3.2, 3.3, NFR 3.1, NFR 3.2_`
   - `_Boundary: CredentialListAdapter_`
-- [ ] 2.2 `CredentialListAdapter` を IconLoader 経由のバインドに更新 (P)
+- [x] 2.2 `CredentialListAdapter` を IconLoader 経由のバインドに更新 (P)
   - constructor に `iconLoader: IconLoader` を追加（既存 3 callback の末尾）
   - `ViewHolder.bind()` 末尾で `iconLoader.loadInto(binding.iconApp, item.packageName)` を呼ぶ
   - `onViewRecycled(holder)` を override して `iconLoader.cancel(holder.binding.iconApp)`
