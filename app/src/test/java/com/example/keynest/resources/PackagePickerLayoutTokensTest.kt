@@ -280,19 +280,20 @@ class PackagePickerLayoutTokensTest {
     }
 
     @Test
-    fun stringsResource_containsBothSectionHeaderKeys() {
-        // Req 5.4 / 6.3.
+    fun stringsResource_containsAllAppsSectionHeaderKey() {
+        // Issue #48 Req 2.1 / 2.2 / 2.3 / NFR 3.1: `package_picker_section_used`
+        // is removed from both locales (it backed the deleted "業務でよく使う"
+        // section). `package_picker_section_all` must remain in both locales.
         val en = stringsEn.readText()
         val ja = stringsJa.readText()
-        listOf(
-            "package_picker_section_used",
-            "package_picker_section_all",
-        ).forEach { key ->
-            assertWithMessage("values/strings.xml must declare $key (Req 5.4 / 6.3 / NFR 3.1)")
-                .that(en).contains("name=\"$key\"")
-            assertWithMessage("values-ja/strings.xml must declare $key (Req 5.4 / 6.3 / NFR 3.1)")
-                .that(ja).contains("name=\"$key\"")
-        }
+        assertWithMessage("values/strings.xml must declare package_picker_section_all (Req 2.3)")
+            .that(en).contains("name=\"package_picker_section_all\"")
+        assertWithMessage("values-ja/strings.xml must declare package_picker_section_all (Req 2.3)")
+            .that(ja).contains("name=\"package_picker_section_all\"")
+        assertWithMessage("values/strings.xml must NOT declare package_picker_section_used (Req 2.1)")
+            .that(en).doesNotContain("name=\"package_picker_section_used\"")
+        assertWithMessage("values-ja/strings.xml must NOT declare package_picker_section_used (Req 2.2)")
+            .that(ja).doesNotContain("name=\"package_picker_section_used\"")
     }
 
     // ---- Req 7.x: row layout ----------------------------------------------
@@ -375,10 +376,12 @@ class PackagePickerLayoutTokensTest {
     @Test
     fun stringsResource_containsManualEntryAndSearchAndA11yKeysInBothLocales() {
         // Req 4.5 / 8.6 / 3.8: new keys must exist in both en + ja.
+        // Issue #48 Req 2.1 / 2.2: `package_picker_section_used` is removed
+        // along with the "業務でよく使う" section, so it is no longer asserted
+        // here. `package_picker_section_all` remains (Req 2.3).
         val newKeys = listOf(
             "package_picker_subtitle",
             "package_picker_search_hint",
-            "package_picker_section_used",
             "package_picker_section_all",
             "package_picker_manual",
             "package_picker_close_a11y",
