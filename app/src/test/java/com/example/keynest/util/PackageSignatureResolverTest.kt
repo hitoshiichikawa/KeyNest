@@ -19,6 +19,15 @@ import java.security.MessageDigest
  * PackageManager is a pure interface from the resolver's perspective so it is
  * mocked with mockk - no Robolectric runtime required, just a plain JVM
  * JUnit4 test.
+ *
+ * NOTE on [Signature] mocking (Issue #56):
+ * Under Plain JVM unit tests, `android.content.pm.Signature` is supplied by
+ * the android.jar stub which contains no real implementation - in particular
+ * `Signature.toByteArray()` returns null instead of the certificate DER. We
+ * therefore build each [Signature] through mockk so that `toByteArray()`
+ * deterministically returns the test's signer bytes. The product code under
+ * test still computes the canonical SHA-256 over those bytes itself; the mock
+ * only replaces the inaccessible-on-JVM accessor. See [signatureOf].
  */
 class PackageSignatureResolverTest {
 
@@ -30,8 +39,8 @@ class PackageSignatureResolverTest {
         val signerBytes = "MOCK_CERT_DER".toByteArray()
         val signingInfo = mockk<SigningInfo>(relaxed = true)
         every { signingInfo.hasMultipleSigners() } returns false
-        every { signingInfo.signingCertificateHistory } returns arrayOf(Signature(signerBytes))
-        every { signingInfo.apkContentsSigners } returns arrayOf(Signature(signerBytes))
+        every { signingInfo.signingCertificateHistory } returns arrayOf(signatureOf(signerBytes))
+        every { signingInfo.apkContentsSigners } returns arrayOf(signatureOf(signerBytes))
 
         val info = PackageInfo().apply { this.signingInfo = signingInfo }
         val pm = mockk<PackageManager> {
@@ -52,11 +61,13 @@ class PackageSignatureResolverTest {
     @Test
     fun resolveSha256_api28_multipleSigners_isOrderIndependent() {
         // Arrange: two different signers, presented in two different orders
-        val a = Signature("CERT_A".toByteArray())
-        val b = Signature("CERT_B".toByteArray())
+        val a = signatureOf("CERT_A".toByteArray())
+        val b = signatureOf("CERT_B".toByteArray())
+        val aPrime = signatureOf("CERT_A".toByteArray())
+        val bPrime = signatureOf("CERT_B".toByteArray())
 
         val pm1 = pmWithSigningInfoMultiSigners(arrayOf(a, b))
-        val pm2 = pmWithSigningInfoMultiSigners(arrayOf(b, a))
+        val pm2 = pmWithSigningInfoMultiSigners(arrayOf(bPrime, aPrime))
 
         // Act
         val h1 = PackageSignatureResolver(pm1, Build.VERSION_CODES.P).resolveSha256("pkg")
@@ -88,7 +99,7 @@ class PackageSignatureResolverTest {
     @Suppress("DEPRECATION")
     fun resolveSha256_api26_singleSigner_returnsHash() {
         // Arrange
-        val signer = Signature("MOCK_CERT_DER".toByteArray())
+        val signer = signatureOf("MOCK_CERT_DER".toByteArray())
         val info = PackageInfo().apply { signatures = arrayOf(signer) }
         val pm = mockk<PackageManager> {
             every { getPackageInfo("com.example.target", PackageManager.GET_SIGNATURES) } returns info
@@ -131,8 +142,8 @@ class PackageSignatureResolverTest {
     fun resolveSha256_isReRunnable_pickingUpUpdatedSignerEachTime() {
         // Arrange: PackageManager will return a different signer on the 2nd call,
         // simulating an app update with a rotated signing certificate.
-        val initial = Signature("INITIAL_CERT".toByteArray())
-        val rotated = Signature("ROTATED_CERT".toByteArray())
+        val initial = signatureOf("INITIAL_CERT".toByteArray())
+        val rotated = signatureOf("ROTATED_CERT".toByteArray())
 
         val infoInitial = PackageInfo().apply {
             signingInfo = mockk(relaxed = true) {
@@ -164,6 +175,23 @@ class PackageSignatureResolverTest {
     }
 
     // --- helpers ----------------------------------------------------------
+
+    /**
+     * Builds a [Signature] mock whose `toByteArray()` returns [bytes].
+     *
+     * Required because the android.jar stub used by Plain JVM unit tests does
+     * not implement [Signature.toByteArray] (returns null), which would NPE
+     * the SHA-256 path in [PackageSignatureResolver]. The mock is intentionally
+     * minimal: we only stub the accessor the resolver actually calls so the
+     * hashing logic under test is exercised end-to-end against real input
+     * bytes (see Issue #56 / Req 4.1 - solution chosen to avoid extra runtime
+     * dependencies).
+     */
+    private fun signatureOf(bytes: ByteArray): Signature {
+        return mockk<Signature>(relaxed = true) {
+            every { toByteArray() } returns bytes
+        }
+    }
 
     private fun pmWithSigningInfoMultiSigners(signers: Array<Signature>): PackageManager {
         val signingInfo = mockk<SigningInfo>(relaxed = true) {
