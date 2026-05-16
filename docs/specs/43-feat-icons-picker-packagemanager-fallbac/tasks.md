@@ -24,7 +24,7 @@
   - AndroidManifest の `<queries>` を変更しない (NFR 2.3)
   - minSdk=26 のため API 26 未満分岐は実装しない (NFR 2.2)
   - `_Requirements: 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, NFR 1.1, NFR 1.2, NFR 1.3, NFR 2.1, NFR 2.2, NFR 2.3, NFR 4.1, NFR 4.2_`
-- [ ] 1.3 IconLoader request tag ID リソースを追加
+- [x] 1.3 IconLoader request tag ID リソースを追加
   - `app/src/main/res/values/ids.xml` を新規追加し
     `<item name="icon_loader_request_tag" type="id"/>` を宣言
   - `_Requirements: 2.4_`
