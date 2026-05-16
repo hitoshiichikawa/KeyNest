@@ -28,7 +28,7 @@
   - `app/src/main/res/values/ids.xml` を新規追加し
     `<item name="icon_loader_request_tag" type="id"/>` を宣言
   - `_Requirements: 2.4_`
-- [ ] 1.4 IconLoader 単体テスト 4 ケースを追加
+- [x] 1.4 IconLoader 単体テスト 4 ケースを追加
   - `app/src/test/java/com/example/keynest/util/IconLoaderTest.kt` を新規追加
   - 成功 / NameNotFoundException fallback / cache hit / 空・null 入力の 4 ケース
   - mockk で `PackageManager` を stub、`PackageSignatureResolverTest.kt` のパターンに準拠
