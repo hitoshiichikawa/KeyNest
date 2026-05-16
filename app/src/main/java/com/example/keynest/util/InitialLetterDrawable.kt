@@ -36,13 +36,29 @@ import android.graphics.drawable.Drawable
  *     so the adapter side only has to call `ImageView.setImageDrawable`
  *     for either branch (Req 1.1 / 1.4 unified surface).
  *
- * Requirements: 1.4, 3.1, 3.2, NFR 2.1
+ * Intrinsic size (Issue #46 Req 3.x):
+ *   - [getIntrinsicWidth] / [getIntrinsicHeight] return [intrinsicSizePx]
+ *     (a positive px integer) so that `ImageView.scaleType=fitCenter` can
+ *     compute a non-empty target rect. With the previous default `-1`
+ *     return, `fitCenter` collapsed the drawing area to 0×0 and the row
+ *     showed only the parent's `@drawable/kn_icon_tile_bg` tile with no
+ *     letter on top (Req 3.1 / 3.2).
+ *   - The actual rendered size is dictated by the [ImageView]'s
+ *     measured bounds (via `Drawable.setBounds`), not by [intrinsicSizePx].
+ *     The intrinsic value only needs to be positive and aspect-correct so
+ *     `fitCenter` produces a square bounds matching the host tile. The
+ *     45% short-edge letter ratio (Issue #43 Req 3.x) is preserved
+ *     because the [draw] path keeps using `bounds.width()/.height()` for
+ *     glyph sizing (Req 3.3).
+ *
+ * Requirements: 1.4, 3.1, 3.2, 3.3, NFR 2.1
  */
 internal class InitialLetterDrawable(
     private val letter: String,
     private val tileColor: Int,
     private val textColor: Int,
     private val cornerRadiusPx: Float,
+    private val intrinsicSizePx: Int = DEFAULT_INTRINSIC_SIZE_PX,
 ) : Drawable() {
 
     private val tilePaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -106,6 +122,19 @@ internal class InitialLetterDrawable(
         return PixelFormat.TRANSLUCENT
     }
 
+    /**
+     * Issue #46 Req 3.1 / 3.2: return a positive px size so that
+     * `ImageView` with `scaleType=fitCenter` can compute a non-empty
+     * destination rect when this drawable is applied via
+     * `setImageDrawable`. Returning `-1` (the [Drawable] default) caused
+     * `fitCenter` to collapse the drawing area to 0×0, leaving the parent
+     * tile background uncovered.
+     */
+    override fun getIntrinsicWidth(): Int = intrinsicSizePx
+
+    /** See [getIntrinsicWidth]. */
+    override fun getIntrinsicHeight(): Int = intrinsicSizePx
+
     companion object {
         /**
          * Ratio of tile short-edge taken by the letter glyph. 0.45 matches
@@ -113,6 +142,16 @@ internal class InitialLetterDrawable(
          * (the letter visually occupies just under half the tile).
          */
         internal const val TEXT_SIZE_RATIO: Float = 0.45f
+
+        /**
+         * Default intrinsic size in px (Issue #46 Req 3.1). 132 px is the
+         * widest tile in use (`kn_icon_tile_lg` = 44dp at xxhdpi).
+         * `ImageView.scaleType=fitCenter` will scale the drawable down to
+         * the actual `ImageView` bounds, so the absolute value only matters
+         * insofar as it is positive (the previous Drawable default `-1`
+         * collapsed the destination rect to 0×0).
+         */
+        internal const val DEFAULT_INTRINSIC_SIZE_PX: Int = 132
 
         /**
          * Pure helper: compute the single-character fallback for the given
