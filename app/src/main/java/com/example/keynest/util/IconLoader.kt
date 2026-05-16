@@ -98,7 +98,8 @@ class IconLoader(
      * Bind the icon for [packageName] into [imageView].
      *
      *   * Blank or null `packageName` -> clear the imageView (no fallback
-     *     drawing; the kn_icon_tile_bg behind it stays visible, Req 1.5).
+     *     drawing; the area is transparent after Issue #51 removed the
+     *     parent FrameLayout's @drawable/kn_icon_tile_bg, Req 1.5).
      *   * Cache hit -> synchronous `setImageDrawable` (Req 2.3 / NFR 1.2).
      *   * Cache miss -> resolve on [applicationScope] (process-wide,
      *     attachment-independent); on success the result is applied iff
@@ -126,9 +127,11 @@ class IconLoader(
         }
 
         // While resolving, clear any leftover drawable so the row does
-        // not flash the previous (recycled) ViewHolder's icon. The
-        // background tile (@drawable/kn_icon_tile_bg) remains visible
-        // because it sits on the parent FrameLayout.
+        // not flash the previous (recycled) ViewHolder's icon. After
+        // Issue #51 the parent FrameLayout has no background, so the
+        // tile area is transparent during the resolve window (a few ms
+        // on cache miss); cache hits stay synchronous and never expose
+        // a blank state. See requirements.md > Open Questions (1).
         imageView.setImageDrawable(null)
 
         applicationScope.launch {

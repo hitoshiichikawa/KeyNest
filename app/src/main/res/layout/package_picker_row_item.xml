@@ -42,17 +42,21 @@
     android:paddingVertical="@dimen/kn_space_3">
 
     <!-- Issue #43: inner ImageView (id=icon_app) is painted by
-         IconLoader.loadInto on bind. The kn_icon_tile_bg parent
-         background stays visible behind it (Req 3.1).
+         IconLoader.loadInto on bind.
          Issue #46 Req 5.x: clipToOutline removed (the ImageView has no
          outline provider; clipping rendered the content invisible).
-         Rounded corners come from the parent FrameLayout's
-         @drawable/kn_icon_tile_bg. -->
+         Issue #51: the parent FrameLayout's
+         android:background="@drawable/kn_icon_tile_bg" was removed so
+         the 12dp rounded rectangle (kn_blue_500 fill) no longer bleeds
+         through the four corners of the AdaptiveIconDrawable system
+         circular mask. Resolved icons paint themselves; the
+         InitialLetterDrawable fallback paints its own 12dp rounded
+         blue tile + white initial letter. While IconLoader is resolving
+         (cache miss), the ImageView holds no drawable. -->
     <FrameLayout
         android:layout_width="@dimen/kn_icon_tile_sm"
         android:layout_height="@dimen/kn_icon_tile_sm"
-        android:layout_marginEnd="@dimen/kn_space_3"
-        android:background="@drawable/kn_icon_tile_bg">
+        android:layout_marginEnd="@dimen/kn_space_3">
 
         <ImageView
             android:id="@+id/icon_app"
