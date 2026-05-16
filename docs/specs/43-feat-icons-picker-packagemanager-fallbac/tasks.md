@@ -42,7 +42,7 @@
   - `_Requirements: NFR 3.3_`
 
 - [ ] 2. クレデンシャル一覧本体への統合 (P)
-- [ ] 2.1 `credential_list_item.xml` にアイコン ImageView を追加 (P)
+- [x] 2.1 `credential_list_item.xml` にアイコン ImageView を追加 (P)
   - 既存 `<FrameLayout android:background="@drawable/kn_icon_tile_bg" .../>`（58-61 行目）
     の子として `<ImageView android:id="@+id/icon_app" android:layout_width="match_parent"
     android:layout_height="match_parent" android:scaleType="fitCenter"
