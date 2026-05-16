@@ -24,6 +24,9 @@ import com.example.keynest.util.AppInfoProvider
 import com.example.keynest.util.IconLoader
 import com.example.keynest.util.PackageSignatureResolver
 import com.example.keynest.util.VaultStorageMeasurer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * Lightweight DI container. Holds the singleton graph of database,
@@ -112,14 +115,42 @@ object ServiceLocator {
     }
 
     /**
+     * Issue #46 hotfix: process-wide coroutine scope that backs every
+     * async resolve in [IconLoader]. Held as a single value rather than
+     * `lazy` because it has no transitive dependency on
+     * [requireAppContext] and we want it constructed before [iconLoader]
+     * so the lazy initializer can reference it without ordering surprises.
+     *
+     * Properties:
+     *   - [SupervisorJob]: a single failed resolve does NOT cancel
+     *     sibling resolves bound to other rows (Req 2.2 isolation).
+     *   - [Dispatchers.Main.immediate]: result application happens on the
+     *     main thread; `.immediate` lets a same-thread continuation run
+     *     synchronously when possible, avoiding a needless reschedule on
+     *     cache-hit-like fast paths.
+     *   - Never cancelled: matches the JVM process lifetime. The
+     *     [com.example.keynest.KeyNestApp] singleton outlives every UI
+     *     ViewHolder, so we never need a teardown hook here.
+     */
+    val applicationScope: CoroutineScope =
+        CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /**
      * Issue #43: shared icon resolver for credential list / recent
      * carousel / package picker. Held as a process-wide singleton so the
      * LruCache is shared across all three adapters (NFR 1.1 cap=64).
+     *
+     * Issue #46 hotfix: now receives the process-wide [applicationScope]
+     * so resolves no longer depend on `ImageView.findViewTreeLifecycleOwner`
+     * (which returned `null` for not-yet-attached ViewHolders, silently
+     * dropping the first bind and leaving the row on the kn_blue_500
+     * background tile only).
      */
     val iconLoader: IconLoader by lazy {
         IconLoader(
             pm = requireAppContext().packageManager,
             resources = requireAppContext().resources,
+            applicationScope = applicationScope,
         )
     }
 

@@ -52,4 +52,69 @@ class InitialLetterDrawableTest {
         // is a valid identifying glyph.
         assertThat(InitialLetterDrawable.computeInitial("com.example.7zip")).isEqualTo("7")
     }
+
+    // --- Issue #46 Req 3.1 / 3.2: intrinsic size ----------------------------
+
+    @Test
+    fun intrinsicWidth_returnsPositivePxValuePassedAtConstruction() {
+        // Arrange: the InitialLetterDrawable must not fall back to the
+        // Drawable default of -1 for intrinsic dimensions, otherwise
+        // ImageView.scaleType=fitCenter collapses the drawing area to 0x0
+        // and the fallback letter never appears on top of the parent tile.
+        val drawable = InitialLetterDrawable(
+            letter = "K",
+            tileColor = 0xFF0000FF.toInt(),
+            textColor = 0xFFFFFFFF.toInt(),
+            cornerRadiusPx = 12f,
+            intrinsicSizePx = 132,
+        )
+
+        // Act
+        val width = drawable.intrinsicWidth
+
+        // Assert
+        assertThat(width).isEqualTo(132)
+        assertThat(width).isGreaterThan(0)
+    }
+
+    @Test
+    fun intrinsicHeight_returnsPositivePxValuePassedAtConstruction() {
+        // Arrange: the drawable is intentionally square so width and
+        // height share the same intrinsicSizePx value (the parent tile
+        // FrameLayout in all 3 layouts is square).
+        val drawable = InitialLetterDrawable(
+            letter = "K",
+            tileColor = 0xFF0000FF.toInt(),
+            textColor = 0xFFFFFFFF.toInt(),
+            cornerRadiusPx = 12f,
+            intrinsicSizePx = 132,
+        )
+
+        // Act
+        val height = drawable.intrinsicHeight
+
+        // Assert
+        assertThat(height).isEqualTo(132)
+        assertThat(height).isGreaterThan(0)
+    }
+
+    @Test
+    fun intrinsicSize_isNotNegativeOne_evenForSmallTilePx() {
+        // Arrange: 32dp tile ≈ 32px at 1x density; the smallest tile used
+        // by the 3 affected layouts. The intrinsic value must still be a
+        // positive integer (not -1, which is the Drawable default).
+        val drawable = InitialLetterDrawable(
+            letter = "?",
+            tileColor = 0xFF0000FF.toInt(),
+            textColor = 0xFFFFFFFF.toInt(),
+            cornerRadiusPx = 12f,
+            intrinsicSizePx = 32,
+        )
+
+        // Act / Assert
+        assertThat(drawable.intrinsicWidth).isNotEqualTo(-1)
+        assertThat(drawable.intrinsicHeight).isNotEqualTo(-1)
+        assertThat(drawable.intrinsicWidth).isGreaterThan(0)
+        assertThat(drawable.intrinsicHeight).isGreaterThan(0)
+    }
 }
