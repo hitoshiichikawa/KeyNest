@@ -83,7 +83,7 @@
   - `_Depends: 1.2, 1.3, 1.5, 3.1_`
 
 - [ ] 4. Package Picker への統合 (P)
-- [ ] 4.1 `package_picker_row_item.xml` にアイコン ImageView を追加 (P)
+- [x] 4.1 `package_picker_row_item.xml` にアイコン ImageView を追加 (P)
   - 既存 FrameLayout（44-48 行目、`kn_icon_tile_sm`）の子として `<ImageView
     android:id="@+id/icon_app" android:layout_width="match_parent"
     android:layout_height="match_parent" android:scaleType="fitCenter"
