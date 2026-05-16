@@ -1,7 +1,7 @@
 # Implementation Plan
 
 - [ ] 1. IconLoader / InitialLetterDrawable / 共通リソースの追加
-- [ ] 1.1 InitialLetterDrawable + 頭文字算出 helper の実装
+- [x] 1.1 InitialLetterDrawable + 頭文字算出 helper の実装
   - `app/src/main/java/com/example/keynest/util/InitialLetterDrawable.kt` を新規追加
   - `companion object fun computeInitial(packageName: String): String` を提供
     （末尾セグメント先頭 1 文字を大文字化、取得不能時は `"?"`）
