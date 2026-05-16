@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #34 Req 5.2: 「KeyNest で新規作成」フッター行の背景.
+
+  JSX `ScreenDataset` reference (screens-2.jsx L142-145):
+    padding: '10px 14px', color: '#1F6FEB', font: '600 13px/1', plus icon
+    16x16 leading. JSX 上の背景は dropdown surface (#FFFFFF) 上で透明だが
+    本要件 5.2 は明示的に @color/kn_blue_50 (#EAF2FE) を指定している。
+
+  Fill: @color/kn_blue_50 (light raw palette). 角丸 0 — Dataset 行と
+  「新規作成」行はドロップダウン下端の rectangle として地続きに描画される。
+  値 0dp は <corners> を省略しても等価だが、明示的に shape 矩形であることを
+  示すため定義した。
+
+  Dark mode は `drawable-night/kn_dataset_create_row_bg.xml` に分岐
+  (Req 6.5: kn_primary 文字色に対するコントラスト 4.5:1 維持のため).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_blue_50" />
+</shape>
