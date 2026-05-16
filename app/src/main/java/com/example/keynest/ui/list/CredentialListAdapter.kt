@@ -124,10 +124,13 @@ class CredentialListAdapter(
             }
 
             // Issue #43 Req 1.1: paint the real app icon (or the
-            // initial-letter fallback when PackageManager throws). The
-            // background @drawable/kn_icon_tile_bg stays behind the
-            // ImageView so an unresolved row still shows the kn_blue_500
-            // tile (Req 3.1).
+            // initial-letter fallback when PackageManager throws).
+            // Issue #51: the parent FrameLayout no longer carries
+            // @drawable/kn_icon_tile_bg, so the 12dp rounded blue tile is
+            // now drawn by InitialLetterDrawable itself on the fallback
+            // path. Real icons are handed to ImageView as-is and the
+            // system circular mask of AdaptiveIconDrawable no longer has
+            // a parent tile peeking through its four corners.
             iconLoader.loadInto(binding.iconApp, item.packageName)
         }
     }
