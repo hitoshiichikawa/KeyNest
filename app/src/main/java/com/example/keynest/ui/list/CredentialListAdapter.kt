@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.keynest.R
 import com.example.keynest.databinding.CredentialListItemBinding
 import com.example.keynest.domain.model.Credential
+import com.example.keynest.util.IconLoader
 
 /**
  * RecyclerView adapter for the credential list (Req 1.5 / Issue #9 Req
@@ -23,6 +24,7 @@ class CredentialListAdapter(
     private val onItemClick: (Credential) -> Unit,
     private val onItemLongClick: (Credential) -> Unit,
     private val onOverflowClick: (Credential, View) -> Unit,
+    private val iconLoader: IconLoader,
 ) : ListAdapter<Credential, CredentialListAdapter.ViewHolder>(DIFF) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -36,16 +38,32 @@ class CredentialListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        holder.bind(item, onItemClick, onItemLongClick, onOverflowClick)
+        holder.bind(item, onItemClick, onItemLongClick, onOverflowClick, iconLoader)
+    }
+
+    /**
+     * Issue #43 Req 2.4: when a ViewHolder is recycled (RecyclerView is
+     * about to rebind it to a different row), invalidate any in-flight
+     * IconLoader request so a delayed PackageManager result does not
+     * paint the wrong icon onto the now-rebound row.
+     */
+    override fun onViewRecycled(holder: ViewHolder) {
+        super.onViewRecycled(holder)
+        iconLoader.cancel(holder.iconAppView)
     }
 
     class ViewHolder(private val binding: CredentialListItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
+        /** Exposed for [onViewRecycled] race-prevention. */
+        internal val iconAppView get() = binding.iconApp
+
         fun bind(
             item: Credential,
             onClick: (Credential) -> Unit,
             onLongClick: (Credential) -> Unit,
             onOverflow: (Credential, View) -> Unit,
+            iconLoader: IconLoader,
         ) {
             val ctx = binding.root.context
 
@@ -104,6 +122,13 @@ class CredentialListAdapter(
             binding.btnOverflow.setOnClickListener { anchor ->
                 onOverflow(item, anchor)
             }
+
+            // Issue #43 Req 1.1: paint the real app icon (or the
+            // initial-letter fallback when PackageManager throws). The
+            // background @drawable/kn_icon_tile_bg stays behind the
+            // ImageView so an unresolved row still shows the kn_blue_500
+            // tile (Req 3.1).
+            iconLoader.loadInto(binding.iconApp, item.packageName)
         }
     }
 

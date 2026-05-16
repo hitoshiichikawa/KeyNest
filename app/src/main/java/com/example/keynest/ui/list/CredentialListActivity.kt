@@ -124,6 +124,7 @@ class CredentialListActivity : AppCompatActivity() {
             onItemClick = { startEdit(it) },
             onItemLongClick = { promptDelete(it) },
             onOverflowClick = { credential, anchor -> showRowOverflowMenu(credential, anchor) },
+            iconLoader = ServiceLocator.iconLoader,
         )
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
