@@ -3,31 +3,41 @@ package com.example.keynest.util
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
+import android.widget.ImageView
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Behaviour of [IconLoader.resolve] (the pure resolution path that backs
- * [IconLoader.loadInto]).
+ * Behaviour of [IconLoader.resolve] (the pure resolution path) and
+ * [IconLoader.loadInto] (the ImageView binding path with process-wide
+ * scope injection).
  *
- * Issue #43 Req 4.1 / 4.2 / 4.3 / 4.4. The PackageManager and Resources
- * are mocked with mockk; [android.util.LruCache] is exercised via the
- * real Android stub (Robolectric) because `isReturnDefaultValues = true`
- * would otherwise no-op `LruCache.put` and break the cache-hit assertion.
+ * Issue #43 Req 4.1 / 4.2 / 4.3 / 4.4 and Issue #46 Req 2.x. The
+ * PackageManager and Resources are mocked with mockk; [android.util.LruCache]
+ * is exercised via the real Android stub (Robolectric) because
+ * `isReturnDefaultValues = true` would otherwise no-op `LruCache.put` and
+ * break the cache-hit assertion.
  *
  * The Resources reference is mocked because [IconLoader] only uses it
  * to look up the kn_blue_500 / kn_on_primary colors and the
  * kn_r_icon_tile dimension — values whose exact numeric form is not
  * material to the cache / fallback / threading logic under test.
+ *
+ * The [applicationScope] passed in is a [TestScope] backed by an
+ * [UnconfinedTestDispatcher] (Issue #46 Req 2.1 verifies that resolves
+ * no longer depend on the host ViewHolder's lifecycle owner).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -51,6 +61,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
@@ -75,6 +86,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
@@ -103,6 +115,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
@@ -125,6 +138,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
@@ -153,6 +167,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
@@ -173,6 +188,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
         )
 
@@ -205,6 +221,7 @@ class IconLoaderTest {
         val loader = IconLoader(
             pm = pm,
             resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
             ioDispatcher = UnconfinedTestDispatcher(testScheduler),
             cacheCapacity = 2,
         )
@@ -221,5 +238,132 @@ class IconLoaderTest {
         verify(exactly = 2) { pm.getApplicationIcon("com.a") }
         verify(exactly = 1) { pm.getApplicationIcon("com.b") }
         verify(exactly = 1) { pm.getApplicationIcon("com.c") }
+    }
+
+    // --- Issue #46 Req 2.1: loadInto uses the injected process-wide scope ---
+
+    @Test
+    fun loadInto_resolvesWithInjectedScope_independentOfImageViewAttachment() = runTest {
+        // Arrange: a fresh ImageView constructed in test code is NOT
+        // attached to any window and therefore has no
+        // ViewTreeLifecycleOwner. Under Issue #43's implementation
+        // findViewTreeLifecycleOwner() returned null and the resolve was
+        // silently dropped — the symptom that motivated Issue #46.
+        // Issue #46's fix is to inject a process-wide CoroutineScope so
+        // attachment status is irrelevant.
+        val stub: Drawable = mockk(relaxed = true)
+        val pm: PackageManager = mockk {
+            every { getApplicationIcon("com.example") } returns stub
+        }
+        val scope = TestScope(UnconfinedTestDispatcher(testScheduler))
+        val loader = IconLoader(
+            pm = pm,
+            resources = resources,
+            applicationScope = scope,
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        val imageView = ImageView(ApplicationProvider.getApplicationContext())
+
+        // Act
+        loader.loadInto(imageView, "com.example")
+        advanceUntilIdle()
+
+        // Assert: the drawable was applied even though the ImageView is
+        // never attached to a window (no lifecycle owner up the tree).
+        assertThat(imageView.drawable).isSameInstanceAs(stub)
+        verify(exactly = 1) { pm.getApplicationIcon("com.example") }
+    }
+
+    @Test
+    fun loadInto_cacheMissResultIsPutIntoLruCache_soSecondBindIsSynchronous() = runTest {
+        // Arrange: the first loadInto must populate the cache so the
+        // second bind takes the synchronous cache-hit branch (Req 2.3 /
+        // NFR 1.2 16ms budget). Issue #43's loadInto path did not write
+        // through to the cache; Issue #46 fixes this so repeated scrolls
+        // do not re-invoke PackageManager.
+        val stub: Drawable = mockk(relaxed = true)
+        val pm: PackageManager = mockk {
+            every { getApplicationIcon("com.example") } returns stub
+        }
+        val loader = IconLoader(
+            pm = pm,
+            resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val firstView = ImageView(ctx)
+        val secondView = ImageView(ctx)
+
+        // Act
+        loader.loadInto(firstView, "com.example")
+        advanceUntilIdle()
+        loader.loadInto(secondView, "com.example")
+        advanceUntilIdle()
+
+        // Assert: both ImageViews got the same drawable, but PM was only
+        // queried once (the second bind hit the LruCache).
+        assertThat(firstView.drawable).isSameInstanceAs(stub)
+        assertThat(secondView.drawable).isSameInstanceAs(stub)
+        verify(exactly = 1) { pm.getApplicationIcon("com.example") }
+    }
+
+    @Test
+    fun loadInto_tagMismatchAfterRebind_doesNotOverwriteRecycledRow() = runTest {
+        // Arrange: simulate the ViewHolder recycle race that Issue #43
+        // Req 2.4 (and Issue #46 Req 2.3) guards against. After loadInto
+        // launches its coroutine, the adapter rebinds the ImageView to a
+        // different packageName (or cancels via cancel()); the late
+        // result must NOT clobber the newer drawable.
+        val stub: Drawable = mockk(relaxed = true)
+        val pm: PackageManager = mockk {
+            every { getApplicationIcon("com.first") } returns stub
+        }
+        val loader = IconLoader(
+            pm = pm,
+            resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        val imageView = ImageView(ApplicationProvider.getApplicationContext())
+
+        // Act: kick off the resolve, immediately cancel (mimics
+        // onViewRecycled), then drain the coroutine queue.
+        loader.loadInto(imageView, "com.first")
+        loader.cancel(imageView)
+        advanceUntilIdle()
+
+        // Assert: cancel() set the drawable to null and cleared the tag.
+        // The late resolve completion sees a tag mismatch and does NOT
+        // re-apply the stub drawable.
+        assertThat(imageView.drawable).isNull()
+    }
+
+    @Test
+    fun loadInto_blankPackageName_clearsImageView_andDoesNotCallPackageManager() = runTest {
+        // Arrange: Req 1.5 — blank / null packageName must clear the
+        // ImageView (so the parent's kn_icon_tile_bg shows through) and
+        // must NOT spin up an async resolve.
+        val pm: PackageManager = mockk(relaxed = true)
+        val loader = IconLoader(
+            pm = pm,
+            resources = resources,
+            applicationScope = TestScope(UnconfinedTestDispatcher(testScheduler)),
+            ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+        val imageView = ImageView(ApplicationProvider.getApplicationContext())
+        // Pre-populate the ImageView with a non-null drawable so we can
+        // observe that loadInto clears it.
+        imageView.setImageDrawable(mockk<Drawable>(relaxed = true))
+
+        // Act
+        loader.loadInto(imageView, "")
+        loader.loadInto(imageView, null)
+        loader.loadInto(imageView, "   ")
+        advanceUntilIdle()
+
+        // Assert
+        assertThat(imageView.drawable).isNull()
+        verify(exactly = 0) { pm.getApplicationIcon(any<String>()) }
     }
 }
