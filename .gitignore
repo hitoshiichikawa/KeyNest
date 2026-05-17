@@ -37,3 +37,10 @@ google-services.json
 # OS junk
 .DS_Store
 Thumbs.db
+
+# idd-claude scaffolding (local-only, excluded from public repo)
+.claude/
+CLAUDE.md
+docs/specs/
+.github/scripts/idd-claude-labels.sh
+.github/workflows/issue-to-pr.yml
