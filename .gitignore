@@ -39,8 +39,8 @@ google-services.json
 Thumbs.db
 
 # idd-claude scaffolding (local-only, excluded from public repo)
+# Note: docs/specs/ は tracking 維持（手元 clone でも spec を読めるようにするため）
 .claude/
 CLAUDE.md
-docs/specs/
 .github/scripts/idd-claude-labels.sh
 .github/workflows/issue-to-pr.yml
