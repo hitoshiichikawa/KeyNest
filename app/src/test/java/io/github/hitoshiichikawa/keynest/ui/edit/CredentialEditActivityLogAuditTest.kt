@@ -26,7 +26,7 @@ class CredentialEditActivityLogAuditTest {
     @Test
     fun activitySource_doesNotLogFullSignatureHex() {
         // Arrange: resolve the production source file relative to module root.
-        val source = File("src/main/java/inc/goodanswers/keynest/ui/edit/CredentialEditActivity.kt")
+        val source = File("src/main/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditActivity.kt")
         check(source.exists()) { "expected CredentialEditActivity.kt at $source" }
         val text = source.readText()
 
@@ -52,7 +52,7 @@ class CredentialEditActivityLogAuditTest {
         // SafeLogger string literal. We accept the canonical safe form
         // `${'$'}{SafeLogger.previewHex(hex)}` but reject a bare `${'$'}hex` or
         // `${'$'}{hex}` inside any SafeLogger.* call argument.
-        val source = File("src/main/java/inc/goodanswers/keynest/ui/edit/CredentialEditActivity.kt")
+        val source = File("src/main/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditActivity.kt")
         val text = source.readText()
 
         // Naive heuristic: regex over single lines.
