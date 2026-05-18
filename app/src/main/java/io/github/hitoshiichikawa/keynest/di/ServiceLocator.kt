@@ -223,7 +223,7 @@ object ServiceLocator {
     }
 
     val clearVaultUseCase: ClearVaultUseCase by lazy {
-        ClearVaultUseCase(credentialRepository, keystoreKeyProvider)
+        ClearVaultUseCase(credentialRepository, keystoreKeyProvider, detectedFieldRepository)
     }
 
     // ---- bootstrap -------------------------------------------------------

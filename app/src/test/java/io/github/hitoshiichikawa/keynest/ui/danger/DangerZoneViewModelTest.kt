@@ -227,7 +227,12 @@ class DangerZoneViewModelTest {
         repo: CredentialRepository = FakeCredentialRepository(),
         keystore: KeystoreKeyProvider = StubProvider(),
     ): DangerZoneViewModel {
-        return DangerZoneViewModel(ClearVaultUseCase(repo, keystore))
+        // Issue #67 Phase 2: ClearVaultUseCase now also wipes
+        // detected_fields. An empty fake repo is sufficient here — the
+        // ViewModel tests focus on the credentials + Keystore pipeline.
+        val detected = io.github.hitoshiichikawa.keynest.domain.usecase
+            .FakeDetectedFieldRepository()
+        return DangerZoneViewModel(ClearVaultUseCase(repo, keystore, detected))
     }
 
     /**
