@@ -8,6 +8,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFie
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.StubAesGcmCipher
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.ui.edit.CredentialEditViewModel
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
 import com.google.common.truth.Truth.assertThat
@@ -112,13 +113,19 @@ class CredentialEditViewModelTest {
         val newHash = io.github.hitoshiichikawa.keynest.domain.model.SigningHash.ofSha256("NEW".toByteArray())
         every { sigResolver.resolveSha256(any()) } returns newHash
         val cipher = StubAesGcmCipher()
-        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
-        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val codec = EncryptedCustomFieldsCodec(cipher)
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver, codec)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
         val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
-        val vm = CredentialEditViewModel(repo, save, update, delete, observeRecent)
+        val vm = CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
 
-        vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = charArrayOf(), label = "L2")
+        // Phase 1.5: an empty submitted password is treated as a blank
+        // validation error (Req 6.3) rather than the Phase 1 "untouched"
+        // semantics. Pass a non-empty new password so the use case
+        // pathway is exercised; signature re-resolution is the
+        // assertion of interest here.
+        vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = "pw2".toCharArray(), label = "L2")
         advanceUntilIdle()
 
         assertThat(vm.state.value).isEqualTo(CredentialEditViewModel.State.Saved)
@@ -174,12 +181,13 @@ class CredentialEditViewModelTest {
         val repo = FakeCredentialRepository()
         val sigResolver = mockk<PackageSignatureResolver>().also { every { it.resolveSha256(any()) } returns null }
         val cipher = StubAesGcmCipher()
-        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
-        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val codec = EncryptedCustomFieldsCodec(cipher)
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver, codec)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val deleteUseCase = mockk<DeleteCredentialUseCase>()
         coEvery { deleteUseCase.invoke(any()) } returns Result.failure(RuntimeException("disk full"))
         val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
-        val vm = CredentialEditViewModel(repo, save, update, deleteUseCase, observeRecent)
+        val vm = CredentialEditViewModel(repo, save, update, deleteUseCase, observeRecent, codec, cipher)
         val capturedNav = mutableListOf<Unit>()
         val collectorJob = launch { vm.navigation.collect { capturedNav.add(it) } }
 
@@ -216,10 +224,11 @@ class CredentialEditViewModelTest {
     private fun newViewModel(repo: FakeCredentialRepository = FakeCredentialRepository()): CredentialEditViewModel {
         val sigResolver = mockk<PackageSignatureResolver>().also { every { it.resolveSha256(any()) } returns null }
         val cipher = StubAesGcmCipher()
-        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
-        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val codec = EncryptedCustomFieldsCodec(cipher)
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver, codec)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
         val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
-        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
     }
 }

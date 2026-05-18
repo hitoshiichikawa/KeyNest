@@ -144,9 +144,13 @@ class CredentialEditViewModelCustomFieldsTest {
     }
 
     @Test
-    fun load_existingCredential_marksCustomFieldsSectionReadOnly() = runTest(testDispatcher) {
-        // design.md §9.3 暫定: in edit mode the customFields section is
-        // read-only for Phase 1. canAddMore must be false.
+    fun load_existingCredential_marksCustomFieldsSectionEditable_andLoadsDecryptedRows() = runTest(testDispatcher) {
+        // Issue #73 Phase 1.5 flipped the Mode.Edit customFields
+        // section to editable=true: the codec.decrypt result is
+        // exposed as rows and the user can add / edit / remove.
+        // The record below has an empty customFieldsCiphertext so
+        // the codec returns an empty list; the assertion focuses on
+        // the editable flag flip.
         val repo = FakeCredentialRepository()
         repo.put(
             io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord(
@@ -154,6 +158,11 @@ class CredentialEditViewModelCustomFieldsTest {
                 packageName = "com.example.target",
                 username = "alice",
                 label = "L",
+                // The stub cipher's decrypt(blob) returns ciphertext
+                // XORed with 0x5A — any non-empty ciphertext here
+                // succeeds; an empty-list customFieldsCiphertext is
+                // the codec's defaulted ByteArray(0), which the
+                // codec maps to emptyList() (Req 1.5).
                 passwordCiphertext = byteArrayOf(1),
                 passwordIv = ByteArray(12),
                 signatureSha256 = null,
@@ -168,8 +177,10 @@ class CredentialEditViewModelCustomFieldsTest {
         vm.load(id)
         advanceUntilIdle()
 
-        assertThat(vm.customFields.value.editable).isFalse()
-        assertThat(vm.customFields.value.canAddMore).isFalse()
+        // Phase 1.5: editable = true, canAddMore = true, rows empty
+        // (the record has no customFields).
+        assertThat(vm.customFields.value.editable).isTrue()
+        assertThat(vm.customFields.value.canAddMore).isTrue()
         assertThat(vm.customFields.value.rows).isEmpty()
     }
 
@@ -183,6 +194,6 @@ class CredentialEditViewModelCustomFieldsTest {
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
         val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
-        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
     }
 }

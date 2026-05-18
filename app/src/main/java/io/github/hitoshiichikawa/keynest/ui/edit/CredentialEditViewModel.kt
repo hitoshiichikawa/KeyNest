@@ -17,6 +17,9 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.SaveFailure
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialInput
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateFailure
+import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.EncryptedBlob
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import kotlinx.coroutines.Job
@@ -59,6 +62,12 @@ class CredentialEditViewModel(
     private val updateUseCase: UpdateCredentialUseCase,
     private val deleteUseCase: DeleteCredentialUseCase,
     private val observeRecentDetectedFieldsUseCase: ObserveRecentDetectedFieldsUseCase,
+    // Issue #73 Phase 1.5: decrypt customFields / password under the
+    // existing unlock session so the Mode.Edit screen can show + edit
+    // them. design.md §Architecture: codec / cipher are injected
+    // directly into the ViewModel (no new use case layer).
+    private val customFieldsCodec: EncryptedCustomFieldsCodec,
+    private val aesGcmCipher: AesGcmCipher,
 ) : ViewModel() {
 
     sealed class State {
@@ -128,6 +137,35 @@ class CredentialEditViewModel(
 
     private val _navigation = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigation: SharedFlow<Unit> = _navigation.asSharedFlow()
+
+    /**
+     * Mode.Edit-only metadata derived from the loaded
+     * [EncryptedCredentialRecord]. Phase 1.5 (Issue #73).
+     *
+     * - [initialPassword]: the password decrypted at [load] time. The
+     *   Activity uses it twice: (a) to call setText() exactly once so
+     *   the user sees the existing value masked, (b) the ViewModel
+     *   uses it as the dirty-judge reference in [save] — if the
+     *   submitted CharArray content-equals this string, the
+     *   UpdateCredentialInput is built with newPassword = null so the
+     *   existing ciphertext is preserved.
+     *
+     * In Mode.New the flow stays at [EditState.Empty] (initialPassword
+     * == null) for the entire ViewModel lifetime. The State sealed
+     * class above is kept intact (Idle / Saving / Saved / FieldError
+     * / Error) so existing observers do not need to know about the
+     * new EditState wiring.
+     */
+    data class EditState(
+        val initialPassword: String?,
+    ) {
+        companion object {
+            val Empty: EditState = EditState(initialPassword = null)
+        }
+    }
+
+    private val _editState = MutableStateFlow(EditState.Empty)
+    val editState: StateFlow<EditState> = _editState.asStateFlow()
 
     private val _advancedDetails = MutableStateFlow(AdvancedDetails.NewMode)
     val advancedDetails: StateFlow<AdvancedDetails> = _advancedDetails.asStateFlow()
@@ -260,6 +298,60 @@ class CredentialEditViewModel(
             .filter { it.fieldKey.isNotBlank() }
             .map { CustomField(fieldKey = it.fieldKey, value = it.value) }
 
+        // Issue #73 Phase 1.5: password dirty judgment for Mode.Edit.
+        // - Mode.Edit + password content-equals initialPassword
+        //     -> pass newPassword = null, the use case keeps the
+        //        existing ciphertext (NFR 2.4 unchanged semantics)
+        // - Mode.Edit + password differs (incl. empty -> validation)
+        //     -> pass newPassword = password, the use case re-encrypts
+        // - Mode.New
+        //     -> pass `password` through unchanged; SaveCredentialUseCase
+        //        validates blank itself.
+        // In Mode.Edit a fully blank submission is treated as a blank
+        // validation error (Req 6.3) so we do NOT silently substitute
+        // null = "untouched" any more. This is a behaviour change vs
+        // Phase 1: under Phase 1.5 the field shows the existing value
+        // up-front so an empty buffer is unambiguously a deletion
+        // attempt, not "user did not want to change it".
+        val initialPasswordSnapshot = _editState.value.initialPassword
+        val initialPasswordChars: CharArray? = initialPasswordSnapshot?.toCharArray()
+        val newPasswordArg: CharArray? = if (existingId != null) {
+            when {
+                // Mode.Edit blank -> defer to UpdateCredentialUseCase which
+                // does not validate blank; but UpdateFailure does not carry
+                // a PasswordBlank case. Emit FieldError directly so the
+                // Activity surfaces the error inline (Req 6.3 / 10.10).
+                password.isEmpty() -> {
+                    _state.value = State.FieldError(Field.Password, ErrorKind.Blank)
+                    // Wipe scratch buffers before bailing.
+                    if (initialPasswordChars != null) {
+                        java.util.Arrays.fill(initialPasswordChars, ' ')
+                    }
+                    java.util.Arrays.fill(password, ' ')
+                    return
+                }
+                initialPasswordChars != null &&
+                    password.contentEquals(initialPasswordChars) -> {
+                    // Unchanged -> preserve existing ciphertext. Wipe the
+                    // typed copy since we will not hand it to the use case
+                    // (the use case would normally do the zero-fill).
+                    java.util.Arrays.fill(password, ' ')
+                    null
+                }
+                else -> password
+            }
+        } else {
+            // Mode.New: SaveCredentialUseCase performs blank validation.
+            password
+        }
+        // The initial-password CharArray copy is no longer needed for
+        // comparison. Best-effort wipe; the underlying String inside
+        // EditState.initialPassword survives in the heap until Activity
+        // destruction (NFR 1.4 best-effort).
+        if (initialPasswordChars != null) {
+            java.util.Arrays.fill(initialPasswordChars, ' ')
+        }
+
         viewModelScope.launch {
             _state.value = State.Saving
             val result = if (existingId != null) {
@@ -269,11 +361,13 @@ class CredentialEditViewModel(
                         packageName = packageName.trim(),
                         username = username.trim(),
                         label = label.trim(),
-                        newPassword = if (password.isEmpty()) null else password,
-                        // design.md §9.3 暫定: in edit mode the editor is
-                        // read-only so we pass null = "leave existing
-                        // ciphertext untouched". In new mode this branch is
-                        // unreachable.
+                        newPassword = newPasswordArg,
+                        // Phase 1.5: load() now sets editable=true for
+                        // Mode.Edit so this branch always passes the
+                        // edited list through; the null branch is kept
+                        // only for the decrypt-failure fallback (where
+                        // editable=false and we MUST NOT overwrite the
+                        // existing ciphertext with `[]`).
                         customFields = if (_customFields.value.editable) effectiveCustomFields else null,
                     ),
                 ).map { Unit }
@@ -353,14 +447,70 @@ class CredentialEditViewModel(
             }
         }
         if (record != null) {
-            // Edit mode: design.md §9.3 暫定. The customField section is
-            // read-only because we cannot decrypt the existing entries
-            // without an extra biometric unlock (deferred to Phase 2).
-            _customFields.update { CustomFieldsState(rows = emptyList(), editable = false) }
-            // Issue #67 Phase 2 (§8.5): bind the package so a future
-            // Phase 1.5 that flips edit-mode editable=true can reuse
-            // the suggestion path without further work. Phase 2 will
-            // still hide the chip strip because editable=false.
+            // Issue #73 Phase 1.5 (design.md §Architecture):
+            // Decrypt the persisted customFields + password under the
+            // existing unlock session — no extra biometric prompt
+            // (requirements.md §9 Q1 採用案 A). On success we expose
+            // editable=true so the reducer / save paths Phase 1
+            // already implements work uniformly across Mode.New and
+            // Mode.Edit; on failure we fall back to the previous
+            // Phase 1 locked state (editable=false, rows=[]) and
+            // surface State.Error so the Activity can render a
+            // Snackbar without closing the screen (Req 4.5 / 7.3).
+            try {
+                val decrypted: List<CustomField> = customFieldsCodec.decrypt(
+                    EncryptedBlob(
+                        iv = record.customFieldsIv,
+                        ciphertext = record.customFieldsCiphertext,
+                    ),
+                )
+                val rows = decrypted.map { cf ->
+                    CustomFieldsState.Row(
+                        rowId = nextRowId++,
+                        fieldKey = cf.fieldKey,
+                        value = cf.value,
+                    )
+                }
+                _customFields.value = CustomFieldsState(rows = rows, editable = true)
+
+                // Decrypt the password in the same try block so a
+                // failure on either side flips both surfaces back to
+                // the locked default. UTF-8 decode mirrors the
+                // SaveCredentialUseCase encode side.
+                val passwordBytes = aesGcmCipher.decrypt(
+                    EncryptedBlob(iv = record.passwordIv, ciphertext = record.passwordCiphertext),
+                )
+                val passwordPlain = try {
+                    String(passwordBytes, Charsets.UTF_8)
+                } finally {
+                    // Minimise the lifetime of the intermediate byte
+                    // form (NFR 1.4 best-effort zero-fill).
+                    java.util.Arrays.fill(passwordBytes, 0.toByte())
+                }
+                _editState.value = EditState(initialPassword = passwordPlain)
+                SafeLogger.info(
+                    tag = TAG,
+                    message = "edit mode loaded (customFields=${rows.size}, password=loaded)",
+                )
+            } catch (t: Throwable) {
+                SafeLogger.error(
+                    tag = TAG,
+                    message = "edit mode decrypt failed",
+                    throwable = t,
+                )
+                // Keep Phase 1's locked surfaces so the Activity does
+                // not render a half-populated row list / stale
+                // password.
+                _customFields.value = CustomFieldsState(rows = emptyList(), editable = false)
+                _editState.value = EditState.Empty
+                _state.value = State.Error(cause = "decrypt_credential")
+            }
+            // Issue #67 Phase 2 (§8.5): bind the package so the
+            // suggestion strip can populate from the package's
+            // detected_fields rows once the user taps "Add field".
+            // Phase 1.5 keeps editable=true on success so the Phase 2
+            // refreshSuggestions() gate no longer suppresses Mode.Edit
+            // (this is intentional — see Phase 2 design.md §8.5 note).
             bindPackageForSuggestions(record.packageName)
         }
         return record
@@ -582,6 +732,11 @@ class CredentialEditViewModel(
         private val updateUseCase: UpdateCredentialUseCase,
         private val deleteUseCase: DeleteCredentialUseCase,
         private val observeRecentDetectedFieldsUseCase: ObserveRecentDetectedFieldsUseCase,
+        // Issue #73 Phase 1.5: same singletons as the use cases (see
+        // ServiceLocator); the ViewModel decrypts under the existing
+        // unlock session, no extra biometric prompt.
+        private val customFieldsCodec: EncryptedCustomFieldsCodec,
+        private val aesGcmCipher: AesGcmCipher,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -592,6 +747,8 @@ class CredentialEditViewModel(
                 updateUseCase = updateUseCase,
                 deleteUseCase = deleteUseCase,
                 observeRecentDetectedFieldsUseCase = observeRecentDetectedFieldsUseCase,
+                customFieldsCodec = customFieldsCodec,
+                aesGcmCipher = aesGcmCipher,
             ) as T
         }
     }

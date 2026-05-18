@@ -3,7 +3,7 @@
 Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するためのタスク分割。
 順序: 1 → 2 → 3 → 4 → 5 / 6 / 7（テスト系は並列可）。
 
-- [ ] 1. DI: `EncryptedCustomFieldsCodec` および `AesGcmCipher` を ViewModel から取得可能にする
+- [x] 1. DI: `EncryptedCustomFieldsCodec` および `AesGcmCipher` を ViewModel から取得可能にする
   - `ServiceLocator` に `encryptedCustomFieldsCodec: EncryptedCustomFieldsCodec` および
     `aesGcmCipher: AesGcmCipher` のシングルトン参照を expose
     （既に Phase 1 で生成済みなら参照可能化のみ）
@@ -12,7 +12,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - 既存 callers（use case 群）の挙動・参照経路を変えない
   - _Requirements: 1.1, 4.1, 7.2_
 
-- [ ] 2. `CredentialEditViewModel` の Factory / コンストラクタに codec / cipher を inject
+- [x] 2. `CredentialEditViewModel` の Factory / コンストラクタに codec / cipher を inject
   - `CredentialEditViewModel` の primary constructor に
     `customFieldsCodec: EncryptedCustomFieldsCodec` および `aesGcmCipher: AesGcmCipher` を追加
   - `Factory` クラスにも同パラメータを追加し、`create()` で ViewModel に引き渡す
@@ -26,7 +26,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Requirements: 1.1, 4.1, 7.2_
   - _Depends: 1_
 
-- [ ] 3. `CredentialEditViewModel.load()` 内で customField と password を復号して State に展開
+- [x] 3. `CredentialEditViewModel.load()` 内で customField と password を復号して State に展開
   - `record` が non-null な場合、`customFieldsCodec.decrypt(EncryptedBlob(iv = record.customFieldsIv, ciphertext = record.customFieldsCiphertext))`
     を呼び、結果を `CustomFieldsState.Row(rowId = nextRowId++, fieldKey = it.fieldKey, value = it.value)`
     に map して `CustomFieldsState(rows = ..., editable = true)` を emit
@@ -52,7 +52,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Requirements: 1.1, 1.2, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.5, 4.6, 6.1, 6.2, 6.3, 6.4, 6.5, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3, 9.3_
   - _Depends: 2_
 
-- [ ] 4. `CredentialEditActivity` に password 初期表示 / focus toggle / endIconMode 切替を配線
+- [x] 4. `CredentialEditActivity` に password 初期表示 / focus toggle / endIconMode 切替を配線
   - `viewModel.state` を collect し、`initialPassword != null` が **初めて成立した瞬間** に
     `binding.inputPassword.setText(initialPassword)` を 1 回だけ呼ぶ（`var passwordInitialized = false`
     等の guard でガード）
@@ -80,7 +80,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Requirements: 1.3, 1.4, 2.6, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 7.1, 8.4_
   - _Depends: 3_
 
-- [ ] 5. `CredentialEditViewModelEditModeCustomFieldsTest` を新規追加（並列可） (P)
+- [x] 5. `CredentialEditViewModelEditModeCustomFieldsTest` を新規追加（並列可） (P)
   - 新規ファイル `app/src/test/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModelEditModeCustomFieldsTest.kt`
   - test cases:
     - `loadInEditMode_decryptsAndExposesRows` — 2 件の customField を含む record で load → rows.size == 2 / editable == true
@@ -94,7 +94,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Boundary: CredentialEditViewModel, EncryptedCustomFieldsCodec_
   - _Depends: 3_
 
-- [ ] 6. `CredentialEditViewModelEditModePasswordTest` を新規追加（並列可） (P)
+- [x] 6. `CredentialEditViewModelEditModePasswordTest` を新規追加（並列可） (P)
   - 新規ファイル `app/src/test/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModelEditModePasswordTest.kt`
   - test cases:
     - `loadInEditMode_decryptsPasswordToInitialPassword` — `EncryptedCredentialRecord` で load →
@@ -113,7 +113,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Boundary: CredentialEditViewModel, AesGcmCipher_
   - _Depends: 3_
 
-- [ ] 7. `CredentialEditActivityPasswordFocusTest` (UI test) を新規追加（並列可） (P)
+- [x] 7. `CredentialEditActivityPasswordFocusTest` (UI test) を新規追加（並列可） (P)
   - 新規ファイル `app/src/androidTest/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditActivityPasswordFocusTest.kt`
     （Robolectric を使う場合は `app/src/test/.../CredentialEditActivityPasswordFocusTest.kt` も可）
   - 既存プロジェクトの UI テスト規約（Espresso / Robolectric / Compose Test の採用状況）に従って
@@ -130,7 +130,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Boundary: CredentialEditActivity_
   - _Depends: 4_
 
-- [ ] 8. 既存テスト群の非破壊性回帰確認（並列可） (P)
+- [x] 8. 既存テスト群の非破壊性回帰確認（並列可） (P)
   - `./gradlew :app:test` で以下が **全件 pass** することを確認:
     - `CredentialEditViewModelTest` / `CredentialEditViewModelCustomFieldsTest` / `CredentialEditViewModelSuggestionTest`
     - `UpdateCredentialUseCaseTest` / `SaveCredentialUseCaseCustomFieldsTest` / `UnlockVaultUseCaseCustomFieldsTest`

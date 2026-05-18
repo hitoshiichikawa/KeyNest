@@ -10,6 +10,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFie
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.StubAesGcmCipher
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
 import io.mockk.every
 import io.mockk.mockk
@@ -239,13 +240,14 @@ class CredentialEditViewModelSuggestionTest {
     }
 
     @Test
-    fun suggestions_hiddenWhenCustomFieldsNotEditable() = runTest(testDispatcher) {
-        // design.md §8.5: edit mode disables the customField editor;
-        // the suggestion strip must also be suppressed even if the
-        // package binding is valid.
+    fun suggestions_appearInEditMode_afterPhase1_5() = runTest(testDispatcher) {
+        // Issue #73 Phase 1.5 flipped the Mode.Edit customField
+        // section to editable=true; the existing Phase 2 §8.5 gate
+        // ("hide suggestion strip when editable=false") still holds,
+        // but the gate no longer suppresses Mode.Edit. As a result
+        // the chip strip can pop up after the user taps "Add field"
+        // in Mode.Edit, identical to Mode.New.
         val credRepo = FakeCredentialRepository()
-        // Pre-populate a credential so the load() path fires the
-        // Mode.Edit branch which flips editable = false.
         credRepo.put(
             io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord(
                 id = io.github.hitoshiichikawa.keynest.domain.model.CredentialId(0L),
@@ -267,13 +269,17 @@ class CredentialEditViewModelSuggestionTest {
         val vm = newViewModel(repo = credRepo, detectedRepo = detected)
         vm.load(id)
         advanceUntilIdle()
-        // load() in edit mode flipped editable=false, so the click
-        // sequence below must still produce a Hidden state.
+        // Phase 1.5: load() sets editable=true. After tapping
+        // "Add field" the suggestion strip becomes visible because
+        // the Phase 2 gate is now satisfied.
+        vm.addCustomFieldRow()
         vm.onAddCustomFieldClickedForSuggest()
         advanceUntilIdle()
 
-        assertThat(vm.customFields.value.editable).isFalse()
-        assertThat(vm.suggestion.value.visible).isFalse()
+        assertThat(vm.customFields.value.editable).isTrue()
+        assertThat(vm.suggestion.value.visible).isTrue()
+        assertThat(vm.suggestion.value.items.map { it.fieldKey })
+            .containsExactly("loginEmail")
     }
 
     @Test
@@ -318,10 +324,11 @@ class CredentialEditViewModelSuggestionTest {
             every { it.resolveSha256(any()) } returns null
         }
         val cipher = StubAesGcmCipher()
-        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
-        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val codec = EncryptedCustomFieldsCodec(cipher)
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver, codec)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
         val observeRecent = ObserveRecentDetectedFieldsUseCase(detectedRepo)
-        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
     }
 }
