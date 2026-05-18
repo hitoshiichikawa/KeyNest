@@ -168,7 +168,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T8. 編集画面 ViewModel への suggestion 状態追加
+### [x] T8. 編集画面 ViewModel への suggestion 状態追加
 
 **ファイル**:
 - 既存: `app/src/main/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModel.kt`
