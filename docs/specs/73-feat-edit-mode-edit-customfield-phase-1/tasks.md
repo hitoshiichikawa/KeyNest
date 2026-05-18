@@ -12,7 +12,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - 既存 callers（use case 群）の挙動・参照経路を変えない
   - _Requirements: 1.1, 4.1, 7.2_
 
-- [ ] 2. `CredentialEditViewModel` の Factory / コンストラクタに codec / cipher を inject
+- [x] 2. `CredentialEditViewModel` の Factory / コンストラクタに codec / cipher を inject
   - `CredentialEditViewModel` の primary constructor に
     `customFieldsCodec: EncryptedCustomFieldsCodec` および `aesGcmCipher: AesGcmCipher` を追加
   - `Factory` クラスにも同パラメータを追加し、`create()` で ViewModel に引き渡す
