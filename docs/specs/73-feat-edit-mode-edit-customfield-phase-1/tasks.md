@@ -80,7 +80,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Requirements: 1.3, 1.4, 2.6, 4.2, 4.3, 4.4, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 7.1, 8.4_
   - _Depends: 3_
 
-- [ ] 5. `CredentialEditViewModelEditModeCustomFieldsTest` を新規追加（並列可） (P)
+- [x] 5. `CredentialEditViewModelEditModeCustomFieldsTest` を新規追加（並列可） (P)
   - 新規ファイル `app/src/test/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModelEditModeCustomFieldsTest.kt`
   - test cases:
     - `loadInEditMode_decryptsAndExposesRows` — 2 件の customField を含む record で load → rows.size == 2 / editable == true
