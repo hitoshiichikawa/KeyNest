@@ -40,11 +40,18 @@ Thumbs.db
 
 # Room schema export defensive ignore (Issue #63)
 #
-# applicationId が `com.example.keynest` から `inc.goodanswers.keynest` に
-# 移行された際 (PR #55) の名残として、Room が旧 FQCN 配下に schema JSON を
-# 再生成・残置することを防ぐための「旧 applicationId 防衛用」ignore パターン。
-# 現行 applicationId の schema (`inc.goodanswers.keynest.data.KeyNestDatabase/`)
-# は引き続き git tracking 対象であり、本 ignore とは独立である。
-# 将来 applicationId を再度変更する場合の対応手順は `docs/development.md`
-# 「applicationId 変更時の schema ディレクトリ移行手順」を参照。
+# applicationId が変更されると Room が旧 FQCN 配下に schema JSON を再生成・残置
+# してしまう。これを防ぐため、過去 applicationId の directory をすべて ignore する。
+# 現行 applicationId の schema は引き続き git tracking 対象であり、本 ignore とは
+# 独立である。将来 applicationId を再度変更する場合は、`docs/development.md`
+# 「applicationId 変更時の schema ディレクトリ移行手順」を参照し、新たな legacy
+# pattern を本 section に追加すること。
 app/schemas/com.example.keynest.data.KeyNestDatabase/
+app/schemas/inc.goodanswers.keynest.data.KeyNestDatabase/
+
+# idd-claude scaffolding (local-only, excluded from public repo)
+# Note: docs/specs/ は tracking 維持（手元 clone でも spec を読めるようにするため）
+.claude/
+CLAUDE.md
+.github/scripts/idd-claude-labels.sh
+.github/workflows/issue-to-pr.yml

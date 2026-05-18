@@ -4,21 +4,21 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
-// Issue #9 Req 3.1 / Task 1.2 (Issue #54: applicationId / namespace 移行済み):
+// Issue #9 Req 3.1 / Task 1.2 (Issue #58: applicationId / namespace 再移行済み):
 // Room schema export location.
 // Required by MigrationTestHelper so it can load
-// app/schemas/inc.goodanswers.keynest.data.KeyNestDatabase/<version>.json and
+// app/schemas/io.github.hitoshiichikawa.keynest.data.KeyNestDatabase/<version>.json and
 // verify v1 -> v2 migrations apply cleanly.
 ksp {
     arg("room.schemaLocation", "${projectDir}/schemas")
 }
 
 android {
-    namespace = "inc.goodanswers.keynest"
+    namespace = "io.github.hitoshiichikawa.keynest"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "inc.goodanswers.keynest"
+        applicationId = "io.github.hitoshiichikawa.keynest"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
