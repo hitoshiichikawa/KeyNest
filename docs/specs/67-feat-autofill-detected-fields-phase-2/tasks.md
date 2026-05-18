@@ -235,7 +235,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T10. DetectedFieldDaoTest
+### [x] T10. DetectedFieldDaoTest
 
 **ファイル**:
 - 新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/data/dao/DetectedFieldDaoTest.kt`
