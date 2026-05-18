@@ -10,6 +10,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFie
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.StubAesGcmCipher
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
 import io.mockk.every
 import io.mockk.mockk
@@ -318,10 +319,11 @@ class CredentialEditViewModelSuggestionTest {
             every { it.resolveSha256(any()) } returns null
         }
         val cipher = StubAesGcmCipher()
-        val save = SaveCredentialUseCase(repo, cipher, sigResolver)
-        val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
+        val codec = EncryptedCustomFieldsCodec(cipher)
+        val save = SaveCredentialUseCase(repo, cipher, sigResolver, codec)
+        val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
         val observeRecent = ObserveRecentDetectedFieldsUseCase(detectedRepo)
-        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
     }
 }

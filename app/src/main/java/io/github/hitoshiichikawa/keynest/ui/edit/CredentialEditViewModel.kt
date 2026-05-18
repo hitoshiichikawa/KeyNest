@@ -17,6 +17,9 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.SaveFailure
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialInput
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateFailure
+import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.EncryptedBlob
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import kotlinx.coroutines.Job
@@ -59,6 +62,12 @@ class CredentialEditViewModel(
     private val updateUseCase: UpdateCredentialUseCase,
     private val deleteUseCase: DeleteCredentialUseCase,
     private val observeRecentDetectedFieldsUseCase: ObserveRecentDetectedFieldsUseCase,
+    // Issue #73 Phase 1.5: decrypt customFields / password under the
+    // existing unlock session so the Mode.Edit screen can show + edit
+    // them. design.md §Architecture: codec / cipher are injected
+    // directly into the ViewModel (no new use case layer).
+    private val customFieldsCodec: EncryptedCustomFieldsCodec,
+    private val aesGcmCipher: AesGcmCipher,
 ) : ViewModel() {
 
     sealed class State {
@@ -128,6 +137,35 @@ class CredentialEditViewModel(
 
     private val _navigation = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val navigation: SharedFlow<Unit> = _navigation.asSharedFlow()
+
+    /**
+     * Mode.Edit-only metadata derived from the loaded
+     * [EncryptedCredentialRecord]. Phase 1.5 (Issue #73).
+     *
+     * - [initialPassword]: the password decrypted at [load] time. The
+     *   Activity uses it twice: (a) to call setText() exactly once so
+     *   the user sees the existing value masked, (b) the ViewModel
+     *   uses it as the dirty-judge reference in [save] — if the
+     *   submitted CharArray content-equals this string, the
+     *   UpdateCredentialInput is built with newPassword = null so the
+     *   existing ciphertext is preserved.
+     *
+     * In Mode.New the flow stays at [EditState.Empty] (initialPassword
+     * == null) for the entire ViewModel lifetime. The State sealed
+     * class above is kept intact (Idle / Saving / Saved / FieldError
+     * / Error) so existing observers do not need to know about the
+     * new EditState wiring.
+     */
+    data class EditState(
+        val initialPassword: String?,
+    ) {
+        companion object {
+            val Empty: EditState = EditState(initialPassword = null)
+        }
+    }
+
+    private val _editState = MutableStateFlow(EditState.Empty)
+    val editState: StateFlow<EditState> = _editState.asStateFlow()
 
     private val _advancedDetails = MutableStateFlow(AdvancedDetails.NewMode)
     val advancedDetails: StateFlow<AdvancedDetails> = _advancedDetails.asStateFlow()
@@ -582,6 +620,11 @@ class CredentialEditViewModel(
         private val updateUseCase: UpdateCredentialUseCase,
         private val deleteUseCase: DeleteCredentialUseCase,
         private val observeRecentDetectedFieldsUseCase: ObserveRecentDetectedFieldsUseCase,
+        // Issue #73 Phase 1.5: same singletons as the use cases (see
+        // ServiceLocator); the ViewModel decrypts under the existing
+        // unlock session, no extra biometric prompt.
+        private val customFieldsCodec: EncryptedCustomFieldsCodec,
+        private val aesGcmCipher: AesGcmCipher,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -592,6 +635,8 @@ class CredentialEditViewModel(
                 updateUseCase = updateUseCase,
                 deleteUseCase = deleteUseCase,
                 observeRecentDetectedFieldsUseCase = observeRecentDetectedFieldsUseCase,
+                customFieldsCodec = customFieldsCodec,
+                aesGcmCipher = aesGcmCipher,
             ) as T
         }
     }

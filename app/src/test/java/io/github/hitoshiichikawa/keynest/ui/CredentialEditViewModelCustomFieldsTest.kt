@@ -183,6 +183,6 @@ class CredentialEditViewModelCustomFieldsTest {
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
         val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
-        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
     }
 }

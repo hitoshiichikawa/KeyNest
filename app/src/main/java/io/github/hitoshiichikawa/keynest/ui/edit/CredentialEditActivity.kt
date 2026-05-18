@@ -62,6 +62,11 @@ class CredentialEditActivity : AppCompatActivity() {
             ServiceLocator.updateCredentialUseCase,
             ServiceLocator.deleteCredentialUseCase,
             ServiceLocator.observeRecentDetectedFieldsUseCase,
+            // Issue #73 Phase 1.5: codec / cipher are needed to decrypt
+            // the existing customFields and password under the existing
+            // unlock session.
+            ServiceLocator.encryptedCustomFieldsCodec,
+            ServiceLocator.aesGcmCipher,
         )
     }
 
