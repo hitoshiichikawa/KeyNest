@@ -113,7 +113,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Boundary: CredentialEditViewModel, AesGcmCipher_
   - _Depends: 3_
 
-- [ ] 7. `CredentialEditActivityPasswordFocusTest` (UI test) を新規追加（並列可） (P)
+- [x] 7. `CredentialEditActivityPasswordFocusTest` (UI test) を新規追加（並列可） (P)
   - 新規ファイル `app/src/androidTest/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditActivityPasswordFocusTest.kt`
     （Robolectric を使う場合は `app/src/test/.../CredentialEditActivityPasswordFocusTest.kt` も可）
   - 既存プロジェクトの UI テスト規約（Espresso / Robolectric / Compose Test の採用状況）に従って
