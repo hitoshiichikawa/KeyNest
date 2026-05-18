@@ -1,58 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  KeyNest adaptive icon foreground.
-  108dp x 108dp canvas. The visible safe zone is the inner 66x66 square /
-  72dp circle centered at (54, 54). The roof peak and twig tips are
-  intentionally placed outside this zone so they only show on
-  squircle/square masks — the keyhole (the recognizable mark) is fully
-  inside the safe zone.
+  KeyNest adaptive icon foreground — Icon B (Filled K-Key).
+  108dp x 108dp canvas. The K-shaped key sits inside the safe zone
+  (inner 66dp circle around (54,54)); the paper-nest shelter touches
+  the edges and is intentionally trimmed by tighter masks.
 
-  Source: KeyNest Design / IconA (cream shelter + blue gradient roof).
-  Drop into: app/src/main/res/drawable/ic_launcher_foreground.xml
+  Source: design/screens/icons.jsx → IconB.
+  Place at: app/src/main/res/drawable/ic_launcher_foreground.xml
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Tan nest base (behind the roof) -->
+    <!-- Paper-nest shelter (cream) under the K -->
     <path
-        android:pathData="M9.72,85.32 Q54,71.28 98.28,85.32 L98.28,99.36 Q54,90.72 9.72,99.36 Z"
-        android:fillColor="#D9C3A0"/>
+        android:pathData="M12.96,90.72 Q54,65.88 95.04,90.72 Z"
+        android:fillColor="#F4EBDC"
+        android:fillAlpha="0.95"/>
 
-    <!-- Shelter / roof with brand gradient -->
-    <path android:pathData="M11.88,84.24 Q54,11.88 96.12,84.24 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:type="linear"
-                android:startX="11.88" android:startY="11.88"
-                android:endX="96.12"  android:endY="84.24">
-                <item android:offset="0" android:color="#FF2A7BF5"/>
-                <item android:offset="1" android:color="#FF0F4AA8"/>
-            </gradient>
-        </aapt:attr>
-    </path>
+    <!-- K-key: bow (ring) -->
+    <path
+        android:pathData="M32.4,54 m-11.88,0 a11.88,11.88 0 1,0 23.76,0 a11.88,11.88 0 1,0 -23.76,0"
+        android:strokeColor="#F4EBDC"
+        android:strokeWidth="7.56"
+        android:fillColor="@android:color/transparent"/>
 
-    <!-- Keyhole — bow (inside safe zone) -->
+    <!-- K-key: shaft -->
     <path
-        android:pathData="M54,52.92 m-9.72,0 a9.72,9.72 0 1,0 19.44,0 a9.72,9.72 0 1,0 -19.44,0 Z"
-        android:fillColor="#F4EBDC"/>
-    <!-- Keyhole — stem -->
-    <path
-        android:pathData="M49.14,59.4 L47.52,79.92 L60.48,79.92 L58.86,59.4 Z"
-        android:fillColor="#F4EBDC"/>
+        android:pathData="M44.28,54 L90.72,54"
+        android:strokeColor="#F4EBDC"
+        android:strokeWidth="10.8"
+        android:strokeLineCap="round"/>
 
-    <!-- Twigs -->
+    <!-- K-key: teeth -->
     <path
-        android:pathData="M16.2,93.96 L38.88,90.72"
-        android:strokeColor="#9B7A4A"
-        android:strokeWidth="2.16"
+        android:pathData="M74.52,54 L74.52,71.28"
+        android:strokeColor="#F4EBDC"
+        android:strokeWidth="7.56"
         android:strokeLineCap="round"/>
     <path
-        android:pathData="M69.12,90.72 L91.8,93.96"
-        android:strokeColor="#9B7A4A"
-        android:strokeWidth="2.16"
+        android:pathData="M85.32,54 L85.32,65.88"
+        android:strokeColor="#F4EBDC"
+        android:strokeWidth="7.56"
         android:strokeLineCap="round"/>
+
+    <!-- Bow centerpoint (brand blue dot) -->
+    <path
+        android:pathData="M32.4,54 m-3.24,0 a3.24,3.24 0 1,0 6.48,0 a3.24,3.24 0 1,0 -6.48,0"
+        android:fillColor="#1F6FEB"/>
 </vector>

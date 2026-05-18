@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Themed icon (Android 13+ Material You).
-  Single-color silhouette — system tints it to the user's wallpaper palette.
-  Drop into: app/src/main/res/drawable/ic_launcher_monochrome.xml
+  Themed icon (Android 13+ Material You) — Icon B silhouette.
+  Single-color K-key + nest swoop, system-tinted to wallpaper palette.
+  Place at: app/src/main/res/drawable/ic_launcher_monochrome.xml
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -11,9 +11,27 @@
     android:viewportHeight="108"
     android:tint="?attr/colorControlNormal">
 
-    <!-- Roof silhouette (the only mark; keyhole reverses out) -->
+    <!-- Nest swoop -->
     <path
-        android:pathData="M11.88,84.24 Q54,11.88 96.12,84.24 L96.12,93.6 Q54,79.92 11.88,93.6 Z M54,52.92 m-9.72,0 a9.72,9.72 0 1,0 19.44,0 a9.72,9.72 0 1,0 -19.44,0 Z M49.14,59.4 L47.52,79.92 L60.48,79.92 L58.86,59.4 Z"
+        android:pathData="M12.96,90.72 Q54,65.88 95.04,90.72 Z"
+        android:fillColor="#FFFFFFFF"/>
+
+    <!-- Bow ring (donut via evenOdd) -->
+    <path
+        android:pathData="M32.4,54 m-15.66,0 a15.66,15.66 0 1,0 31.32,0 a15.66,15.66 0 1,0 -31.32,0 Z M32.4,54 m-8.1,0 a8.1,8.1 0 1,0 16.2,0 a8.1,8.1 0 1,0 -16.2,0 Z"
         android:fillType="evenOdd"
+        android:fillColor="#FFFFFFFF"/>
+
+    <!-- Shaft -->
+    <path
+        android:pathData="M44.28,48.6 L90.72,48.6 L90.72,59.4 L44.28,59.4 Z"
+        android:fillColor="#FFFFFFFF"/>
+
+    <!-- Teeth -->
+    <path
+        android:pathData="M70.74,54 L78.3,54 L78.3,75.06 L70.74,75.06 Z"
+        android:fillColor="#FFFFFFFF"/>
+    <path
+        android:pathData="M81.54,54 L89.1,54 L89.1,69.66 L81.54,69.66 Z"
         android:fillColor="#FFFFFFFF"/>
 </vector>
