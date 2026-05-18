@@ -18,7 +18,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ## タスク一覧
 
-### T1. Room schema v4: `DetectedFieldEntity` 追加
+### [x] T1. Room schema v4: `DetectedFieldEntity` 追加
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/data/entity/DetectedFieldEntity.kt`
