@@ -83,7 +83,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T4. ドメイン型 `DetectedField` と repository インターフェース
+### [x] T4. ドメイン型 `DetectedField` と repository インターフェース
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/model/DetectedField.kt`
