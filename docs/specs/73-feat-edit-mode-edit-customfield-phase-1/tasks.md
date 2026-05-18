@@ -94,7 +94,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Boundary: CredentialEditViewModel, EncryptedCustomFieldsCodec_
   - _Depends: 3_
 
-- [ ] 6. `CredentialEditViewModelEditModePasswordTest` を新規追加（並列可） (P)
+- [x] 6. `CredentialEditViewModelEditModePasswordTest` を新規追加（並列可） (P)
   - 新規ファイル `app/src/test/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModelEditModePasswordTest.kt`
   - test cases:
     - `loadInEditMode_decryptsPasswordToInitialPassword` — `EncryptedCredentialRecord` で load →
