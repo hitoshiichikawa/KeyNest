@@ -288,7 +288,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T13. AutofillService 統合テスト（任意・Phase 1 のテストフィクスチャに依存）
+### [x] T13. AutofillService 統合テスト（任意・Phase 1 のテストフィクスチャに依存）
 
 **ファイル**:
 - 既存または新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/autofill/...Test.kt`
