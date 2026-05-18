@@ -37,7 +37,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T2. `DetectedFieldDao` の追加
+### [x] T2. `DetectedFieldDao` の追加
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/data/dao/DetectedFieldDao.kt`
