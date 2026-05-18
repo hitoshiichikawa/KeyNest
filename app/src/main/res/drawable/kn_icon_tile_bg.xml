@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #29: per-row / per-card icon tile background.
+
+  JSX `IconTile` (screens-1.jsx) renders a 36–44dp square with a 10–12dp
+  corner radius and the credential's accent color as the fill. The Issue
+  #29 scope keeps the per-credential color out (Out of Scope) and uses
+  a single fallback `@color/kn_blue_500` — this drawable provides the
+  shape, and adapters tint it via `setColorFilter` if/when per-credential
+  colors land in a follow-up.
+
+  Corner radius == @dimen/kn_r_sm (12dp) matches JSX `radius=12`.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_blue_500" />
+    <corners android:radius="@dimen/kn_r_sm" />
+</shape>

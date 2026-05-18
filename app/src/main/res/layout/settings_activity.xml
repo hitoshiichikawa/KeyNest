@@ -1,0 +1,629 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Settings screen. Issue #33 (Phase 2 #5) — JSX `ScreenSettings`
+  (design/screens/screens-2.jsx L244) を Android 側に貼り込む.
+
+  Layout 構成 (上から):
+    1. AppBar (MaterialToolbar / Issue #10 から維持) — back nav + 設定 title
+    2. ScrollView 内の vertical LinearLayout (20dp 横 padding):
+       a. Autofill ステータス hero (Req 2) — kn_settings_hero_gradient_enabled
+          または kn_settings_hero_bg_notenabled を runtime で差し替え.
+          中身: ステータスチップ + タイトル + 補足文 + Android 設定 CTA.
+       b. セキュリティ SettingGroup (Req 5) — Eyebrow + 1 行 (ロック解除方法).
+       c. Vault SettingGroup (Req 6) — Eyebrow + 3 行 (件数 / 最終更新 / DB).
+       d. About SettingGroup (Req 7) — Eyebrow + 3 行 (KeyNest / OSS / Privacy).
+       e. Danger zone SettingGroup (Req 8) — kn_danger_soft 背景 + 1 行.
+
+  Issue #10 で既に確立された View ID (`btn_open_autofill_settings` /
+  `btn_open_security_settings` / `btn_oss_licenses` / `btn_open_danger_zone`
+  / `text_autofill_status` / `text_lock_status` / `text_vault_count` /
+  `text_vault_latest_updated` / `text_vault_storage` / `text_app_version` /
+  `toolbar`) は本 Issue でも保持する (Req 5.9 / 5.10 / 6 / 7.6 / 7.13 /
+  8.11 / 12.4).
+
+  SettingRow の構造は JSX のテンプレートを Android の LinearLayout に
+  踏み変える (horizontal: icon tile / 32x32 + label + sub / vertical /
+  right-value or chevron). divider は LinearLayout の divider 属性で
+  注入する.
+
+  TalkBack:
+    - hero タイトル / 各 Eyebrow に accessibilityHeading="true" を付ける.
+    - 各 SettingRow の押下可能ルート LinearLayout に contentDescription を
+      割り当てる (Activity 側で動的に組み立てる場合は a11y_label のみ).
+    - icon タイル内の ImageView は importantForAccessibility="no" にする.
+-->
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/colorBackground">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationContentDescription="@string/settings_back_a11y"
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:title="@string/settings_title"
+            app:titleTextAppearance="@style/Text.KeyNest.TitleS" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/kn_screen_padding_h"
+            android:paddingTop="@dimen/kn_space_1"
+            android:paddingBottom="@dimen/kn_space_6">
+
+            <!-- =================================================== -->
+            <!-- 1. Autofill status hero (Req 2). -->
+            <!-- =================================================== -->
+            <LinearLayout
+                android:id="@+id/group_autofill_hero"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/kn_space_1"
+                android:layout_marginBottom="@dimen/kn_space_5"
+                android:background="@drawable/kn_settings_hero_gradient_enabled"
+                android:orientation="vertical"
+                android:padding="@dimen/kn_card_padding_lg">
+
+                <TextView
+                    android:id="@+id/chip_autofill_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/kn_settings_hero_chip_bg_enabled"
+                    android:paddingHorizontal="@dimen/kn_space_2"
+                    android:paddingVertical="@dimen/kn_space_1"
+                    android:text="@string/settings_autofill_badge_enabled"
+                    android:textAppearance="@style/Text.KeyNest.Eyebrow"
+                    android:textColor="@color/kn_on_primary"
+                    tools:text="Enabled" />
+
+                <TextView
+                    android:id="@+id/text_autofill_hero_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_3"
+                    android:accessibilityHeading="true"
+                    android:text="@string/settings_autofill_hero_title"
+                    android:textAppearance="@style/Text.KeyNest.TitleM"
+                    android:textColor="@color/kn_on_primary"
+                    tools:text="Autofill サービス" />
+
+                <TextView
+                    android:id="@+id/text_autofill_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_1"
+                    android:text="@string/settings_autofill_hero_description_enabled"
+                    android:textAppearance="@style/Text.KeyNest.Caption"
+                    android:textColor="@color/kn_on_primary"
+                    tools:text="KeyNest が Android のパスワード Autofill として動作しています。" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_open_autofill_settings"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/kn_space_3"
+                    android:background="@drawable/kn_settings_hero_cta_bg_enabled"
+                    android:minWidth="48dp"
+                    android:minHeight="48dp"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_2"
+                    android:text="@string/settings_autofill_hero_cta"
+                    android:textAppearance="@style/Text.KeyNest.Caption"
+                    android:textAllCaps="false"
+                    android:textColor="@color/kn_on_primary"
+                    app:backgroundTint="@null"
+                    app:rippleColor="@color/kn_hero_ripple_on_primary" />
+            </LinearLayout>
+
+            <!-- =================================================== -->
+            <!-- 2. Security group (Req 5). -->
+            <!-- =================================================== -->
+            <TextView
+                android:id="@+id/eyebrow_security"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_2"
+                android:accessibilityHeading="true"
+                android:paddingHorizontal="@dimen/kn_space_1"
+                android:text="@string/settings_section_security_title"
+                android:textAppearance="@style/Text.KeyNest.Eyebrow"
+                android:textColor="@color/kn_text_3" />
+
+            <LinearLayout
+                android:id="@+id/group_security"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_section_gap"
+                android:background="@drawable/kn_settings_group_bg"
+                android:divider="@drawable/kn_settings_row_divider"
+                android:orientation="vertical"
+                android:showDividers="middle">
+
+                <LinearLayout
+                    android:id="@+id/btn_open_security_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="@string/settings_lock_status_a11y_label"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_fingerprint_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_lock_status_label"
+                            android:textAppearance="@style/Text.KeyNest.Body"
+                            android:textColor="@color/kn_text"
+                            tools:text="ロック解除方法" />
+
+                        <TextView
+                            android:id="@+id/text_lock_status"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textAppearance="@style/Text.KeyNest.Caption"
+                            android:textColor="@color/kn_text_2"
+                            tools:text="生体認証 + デバイス資格情報" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right_24"
+                        app:tint="@color/kn_text_3" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- =================================================== -->
+            <!-- 3. Vault group (Req 6). -->
+            <!-- =================================================== -->
+            <TextView
+                android:id="@+id/eyebrow_vault"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_2"
+                android:accessibilityHeading="true"
+                android:paddingHorizontal="@dimen/kn_space_1"
+                android:text="@string/settings_section_vault_title"
+                android:textAppearance="@style/Text.KeyNest.Eyebrow"
+                android:textColor="@color/kn_text_3" />
+
+            <LinearLayout
+                android:id="@+id/group_vault"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_section_gap"
+                android:background="@drawable/kn_settings_group_bg"
+                android:divider="@drawable/kn_settings_row_divider"
+                android:orientation="vertical"
+                android:showDividers="middle">
+
+                <!-- Count row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_key_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:text="@string/settings_vault_count_label"
+                        android:textAppearance="@style/Text.KeyNest.Body"
+                        android:textColor="@color/kn_text" />
+
+                    <TextView
+                        android:id="@+id/text_vault_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/Text.KeyNest.BodyS"
+                        android:textColor="@color/kn_text_2"
+                        tools:text="42" />
+                </LinearLayout>
+
+                <!-- Latest updated row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_clock_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:text="@string/settings_vault_latest_updated_label"
+                        android:textAppearance="@style/Text.KeyNest.Body"
+                        android:textColor="@color/kn_text" />
+
+                    <TextView
+                        android:id="@+id/text_vault_latest_updated"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/Text.KeyNest.BodyS"
+                        android:textColor="@color/kn_text_2"
+                        tools:text="2025-05-13 14:00" />
+                </LinearLayout>
+
+                <!-- Storage row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_database_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:text="@string/settings_vault_storage_label"
+                        android:textAppearance="@style/Text.KeyNest.Body"
+                        android:textColor="@color/kn_text" />
+
+                    <TextView
+                        android:id="@+id/text_vault_storage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/Text.KeyNest.BodyS"
+                        android:textColor="@color/kn_text_2"
+                        tools:text="48 kB" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- =================================================== -->
+            <!-- 4. About group (Req 7). -->
+            <!-- =================================================== -->
+            <TextView
+                android:id="@+id/eyebrow_about"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_2"
+                android:accessibilityHeading="true"
+                android:paddingHorizontal="@dimen/kn_space_1"
+                android:text="@string/settings_section_about_title"
+                android:textAppearance="@style/Text.KeyNest.Eyebrow"
+                android:textColor="@color/kn_text_3" />
+
+            <LinearLayout
+                android:id="@+id/group_about"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_section_gap"
+                android:background="@drawable/kn_settings_group_bg"
+                android:divider="@drawable/kn_settings_row_divider"
+                android:orientation="vertical"
+                android:showDividers="middle">
+
+                <!-- KeyNest version row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_keynest_mark_24"
+                            app:tint="@color/kn_primary" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_about_keynest_label"
+                            android:textAppearance="@style/Text.KeyNest.Body"
+                            android:textColor="@color/kn_text" />
+
+                        <TextView
+                            android:id="@+id/text_app_version"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:textAppearance="@style/Text.KeyNest.Caption"
+                            android:textColor="@color/kn_text_2"
+                            tools:text="0.1.0 (1)" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- OSS licenses row -->
+                <LinearLayout
+                    android:id="@+id/btn_oss_licenses"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="@string/settings_about_oss_licenses_a11y_label"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_description_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:text="@string/settings_about_oss_licenses_label"
+                        android:textAppearance="@style/Text.KeyNest.Body"
+                        android:textColor="@color/kn_text" />
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right_24"
+                        app:tint="@color/kn_text_3" />
+                </LinearLayout>
+
+                <!-- Privacy row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_shield_outline_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_about_privacy_label"
+                            android:textAppearance="@style/Text.KeyNest.Body"
+                            android:textColor="@color/kn_text" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/settings_about_privacy_sub"
+                            android:textAppearance="@style/Text.KeyNest.Caption"
+                            android:textColor="@color/kn_text_2" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- =================================================== -->
+            <!-- 5. Danger zone group (Req 8). -->
+            <!-- =================================================== -->
+            <TextView
+                android:id="@+id/eyebrow_danger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_2"
+                android:accessibilityHeading="true"
+                android:paddingHorizontal="@dimen/kn_space_1"
+                android:text="@string/settings_section_danger_title"
+                android:textAppearance="@style/Text.KeyNest.Eyebrow"
+                android:textColor="@color/kn_text_3" />
+
+            <LinearLayout
+                android:id="@+id/group_danger"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/kn_settings_group_bg_danger"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/btn_open_danger_zone"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:contentDescription="@string/settings_danger_delete_all_a11y_label"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_warning_24"
+                            app:tint="@color/kn_danger" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_danger_delete_all_label"
+                            android:textAppearance="@style/Text.KeyNest.Body"
+                            android:textColor="@color/kn_danger" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/settings_danger_delete_all_sub"
+                            android:textAppearance="@style/Text.KeyNest.Caption"
+                            android:textColor="@color/kn_text_2" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_chevron_right_24"
+                        app:tint="@color/kn_danger" />
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

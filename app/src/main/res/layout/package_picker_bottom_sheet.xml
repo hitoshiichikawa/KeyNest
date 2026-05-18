@@ -1,69 +1,234 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Package picker bottom sheet.
+  Issue #32: Package Picker bottom sheet.
 
-    Maps `design/screens/screens-2.jsx` <ScreenPicker/>:
-      - 28dp top radius (provided by the theme's BottomSheet shape overlay)
-      - 36×4dp grab handle at the top
-      - Title 「アプリを選択」 + eyebrow subtitle 「署名情報も同時に取得します」
-      - Row layout: IconTile (40dp) + アプリ名 + monospace パッケージ名
+  Source of truth:
+  - JSX: design/screens/screens-2.jsx > ScreenPicker (L6-62).
+  - Token mapping: design/android-assets/mapping.md §5.
 
-    The selected row tint (`surface-tint` + check icon) lives in the
-    adapter's row layout — for now we keep the Kotlin-driven adapter
-    (PackagePickerBottomSheet.Adapter) which constructs simple TextView
-    rows programmatically. Row visual upgrades are tracked in
-    impl-notes.md "follow-ups" — see AC 4.5.4.
+  Visual contract (per Requirement):
+  - Sheet shell (Req 1.x): root background = ?attr/colorSurface (resolves
+    to @color/kn_surface via Theme.KeyNest), top corner radius = kn_r_sheet
+    (28dp). The BottomSheetDialogFragment frame already supplies the
+    ShapeAppearance via the Material parent; we also apply a vector
+    background drawable so the rounded corners render even before the
+    Material BottomSheet style propagates.
+  - Drag handle (Req 2.x): 36dp × 4dp, kn_ink_200 fill, kn_r_pill corners,
+    12dp top / 14dp bottom outer margin matching JSX `padding: 12 0 24`.
+  - Title + subtitle (Req 3.x): Text.KeyNest.TitleM + Text.KeyNest.BodyS
+    in a vertical column on the start side, with a 40dp tap-target close
+    × button on the end side.
+  - Search bar (Req 4.x): kn_picker_search_bar_bg drawable (kn_surface_2
+    fill + kn_r_sm corners) containing the ic_search_24 glyph (tinted
+    kn_text_3) and a borderless EditText.
+  - List region (Req 5.x / 6.x / 7.x): a RecyclerView that fills the
+    remaining vertical space. The adapter renders mixed-type items
+    (section header / row / empty placeholder); the manual-entry row
+    is rendered OUTSIDE the recycler so it stays pinned to the sheet
+    bottom (Req 8.2).
+  - Manual-entry fallback (Req 8.x): a fixed footer at the bottom of the
+    sheet, separated by a 1dp kn_border divider. Uses
+    kn_picker_manual_row_bg (kn_blue_50 fill) and kn_primary text color.
 
-    IDs kept: `recycler` (NFR 3.2).
+  IDs preserved (Req 9.x):
+  - @+id/recycler: existing RecyclerView ID. PackagePickerBottomSheet
+    keeps using `binding.recycler` to bind layoutManager / adapter.
 
-    Requirements: 4.5.1-4.5.4
+  IDs added (Req 4.x / 8.x; public API unchanged):
+  - @+id/drag_handle / @+id/text_title / @+id/text_subtitle / @+id/btn_close
+  - @+id/input_search_picker (search bar EditText)
+  - @+id/btn_manual_entry (fixed footer button)
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="?attr/colorSurface"
-    android:orientation="vertical"
-    android:paddingBottom="@dimen/kn_space_6">
+    android:layout_height="match_parent"
+    android:background="@drawable/kn_picker_sheet_bg"
+    android:orientation="vertical">
 
-    <!-- Grab handle (36×4dp, border-strong). -->
+    <!--
+      Req 2.x: drag handle. The View itself is 36x4dp; the LinearLayout
+      gravity centers it horizontally so we don't need a wrapping
+      FrameLayout. layout_marginTop = 12dp / layout_marginBottom = 14dp
+      satisfies the JSX `padding: 12 0 24` (top 12 / bottom 14 leaves
+      24dp - 12dp tail when combined with the title row top inset).
+    -->
     <View
-        android:layout_width="@dimen/kn_grab_handle_width"
-        android:layout_height="@dimen/kn_grab_handle_height"
+        android:id="@+id/drag_handle"
+        android:layout_width="@dimen/kn_handle_w"
+        android:layout_height="@dimen/kn_handle_h"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/kn_space_3"
-        android:background="@drawable/bg_grab_handle" />
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="14dp"
+        android:background="@drawable/kn_picker_drag_handle"
+        android:importantForAccessibility="no" />
 
-    <!-- Header: title + eyebrow subtitle -->
+    <!--
+      Req 3.x: title (TitleM / kn_text) + subtitle (BodyS / kn_text_2)
+      column, with the close × button on the end side.
+
+      Sheet horizontal inset = kn_screen_padding_h (20dp) for the title
+      row to match the JSX `padding: 0 20px 12px`. Vertical bottom inset
+      = kn_space_3 (12dp) before the search bar.
+    -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingHorizontal="@dimen/kn_pad_screen_horizontal"
-        android:paddingTop="@dimen/kn_space_4"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/kn_screen_padding_h"
+        android:paddingEnd="@dimen/kn_screen_padding_h"
         android:paddingBottom="@dimen/kn_space_3">
 
-        <TextView
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:letterSpacing="-0.02"
-            android:text="@string/package_picker_title"
-            android:textAppearance="@style/TextAppearance.KeyNest.SectionTitle" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="@string/package_picker_subtitle"
-            android:textAppearance="@style/TextAppearance.KeyNest.Meta" />
+            <TextView
+                android:id="@+id/text_title"
+                style="@style/Text.KeyNest.TitleM"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/package_picker_title"
+                android:textColor="@color/kn_text" />
+
+            <TextView
+                android:id="@+id/text_subtitle"
+                style="@style/Text.KeyNest.BodyS"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/package_picker_subtitle"
+                android:textColor="@color/kn_text_2" />
+        </LinearLayout>
+
+        <!--
+          Req 3.8 / 3.9: close × button. We use ImageButton with a
+          borderless selectableItemBackground so the 40dp tile follows
+          system ripple, and explicit android:minWidth/minHeight=48dp to
+          satisfy NFR 2.1 (48dp tap target).
+        -->
+        <ImageButton
+            android:id="@+id/btn_close"
+            android:layout_width="@dimen/kn_iconbtn_size"
+            android:layout_height="@dimen/kn_iconbtn_size"
+            android:layout_marginStart="@dimen/kn_space_2"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/package_picker_close_a11y"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:padding="@dimen/kn_space_2"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_close_24"
+            app:tint="@color/kn_text_2" />
     </LinearLayout>
 
+    <!--
+      Req 4.x: search bar. Wrapping LinearLayout supplies the
+      kn_picker_search_bar_bg drawable (kn_surface_2 + kn_r_sm) and the
+      kn_list_padding_h side margins (Req 1.3 / Req 4.x).
+
+      The EditText uses Text.KeyNest.Body (14sp / weight 600) for the
+      typed value but transparent background so the parent's drawable
+      shows through. Hint text is taken from values-ja/strings.xml's
+      `package_picker_search_hint` (and English default).
+    -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/kn_list_padding_h"
+        android:layout_marginEnd="@dimen/kn_list_padding_h"
+        android:layout_marginBottom="@dimen/kn_space_2"
+        android:background="@drawable/kn_picker_search_bar_bg"
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="@dimen/kn_space_2">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginEnd="@dimen/kn_space_2"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_search_24"
+            app:tint="@color/kn_text_3" />
+
+        <EditText
+            android:id="@+id/input_search_picker"
+            style="@style/Text.KeyNest.Body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="@string/package_picker_search_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:minHeight="0dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:textColor="@color/kn_text"
+            android:textColorHint="@color/kn_text_3"
+            tools:ignore="Autofill,LabelFor" />
+    </LinearLayout>
+
+    <!--
+      Req 5.x / 6.x / 7.x: list region. RecyclerView fills the remaining
+      vertical space; layout_weight=1 lets the fixed footer below claim
+      its natural height.
+
+      The adapter inflates package_picker_section_header_item /
+      package_picker_row_item / package_picker_empty_item depending on
+      item view-type. Horizontal padding = kn_space_2 (8dp) leaves the
+      inner row at 12dp + 8dp = 20dp from the sheet edge (Req 1.3 -
+      effective horizontal inset).
+    -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
         android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingHorizontal="@dimen/kn_space_2"
+        android:paddingTop="@dimen/kn_space_1"
+        android:paddingBottom="@dimen/kn_space_2"
+        tools:listitem="@layout/package_picker_row_item" />
+
+    <!--
+      Req 8.x: manual-entry fallback row, fixed at the bottom of the
+      sheet. The 1dp divider above mirrors the JSX `borderTop` separator.
+
+      The row has its own kn_blue_50 background; we use a MaterialButton
+      with a transparent ripple so a tap renders feedback while the
+      kn_blue_50 drawable surface stays visible.
+    -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/kn_border"
+        android:importantForAccessibility="no" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_manual_entry"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:maxHeight="480dp"
-        android:paddingHorizontal="@dimen/kn_space_3"
-        android:paddingBottom="@dimen/kn_space_3"
-        android:scrollbars="vertical" />
+        android:layout_marginStart="@dimen/kn_list_padding_h"
+        android:layout_marginTop="@dimen/kn_space_3"
+        android:layout_marginEnd="@dimen/kn_list_padding_h"
+        android:layout_marginBottom="@dimen/kn_space_3"
+        android:background="@drawable/kn_picker_manual_row_bg"
+        android:minHeight="48dp"
+        android:paddingHorizontal="@dimen/kn_space_4"
+        android:paddingVertical="@dimen/kn_space_3"
+        android:text="@string/package_picker_manual"
+        android:textAppearance="@style/Text.KeyNest.LabelL"
+        android:textColor="@color/kn_primary"
+        app:cornerRadius="@dimen/kn_r_sm"
+        app:rippleColor="@color/kn_primary_container" />
 
 </LinearLayout>

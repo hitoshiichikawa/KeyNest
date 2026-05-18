@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #31 Req 2.4: progress dot segment for "future" steps. Same
+  shape as active but filled with kn_border_strong so it reads as a
+  muted ghost segment.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_border_strong" />
+    <corners android:radius="@dimen/kn_space_1" />
+</shape>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html><head><meta charset="utf-8"/><title>KeyNest Icon A — Adaptive preview</title>
+<style>
+  html, body { margin: 0; padding: 32px; background: #F0EEE9; font-family: 'Manrope', system-ui, sans-serif; color: #0B1220; }
+  h1 { font: 800 22px/1 Manrope, sans-serif; letter-spacing: -.02em; }
+  .row { display: flex; gap: 28px; align-items: flex-end; margin-top: 24px; flex-wrap: wrap; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .lbl { font: 700 11px/1 Manrope, sans-serif; color: #5C6B8E; letter-spacing: .08em; text-transform: uppercase; }
+  .mask-circle { mask: radial-gradient(circle at center, #000 50%, transparent 50.5%); -webkit-mask: radial-gradient(circle at center, #000 50%, transparent 50.5%); }
+  .mask-squircle { mask: paint(squircle); border-radius: 22%; }
+  .mask-rounded { border-radius: 22%; }
+  .home {
+    width: 360px; padding: 18px; background: linear-gradient(180deg, #2a3458, #0B1220);
+    border-radius: 32px; margin-top: 32px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+  }
+  .home .app { display: flex; flex-direction: column; align-items: center; gap: 6px; color: white; }
+  .home .app .name { font: 600 10px/1 Manrope, sans-serif; }
+  .home .ic { width: 60px; height: 60px; border-radius: 22%; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+  .swatch { width: 60px; height: 60px; border-radius: 22%; display: flex; align-items: center; justify-content: center; font: 800 22px/1 Manrope, sans-serif; color: white; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+</style>
+</head>
+<body>
+<h1>KeyNest · Icon B — Adaptive Preview</h1>
+<div class="row">
+  <div class="cell">
+    <div class="ic-wrap" style="width:160px; height:160px; border-radius:36px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.12)">
+      <object data="icon-b.svg" type="image/svg+xml" style="width:100%; height:100%"></object>
+    </div>
+    <div class="lbl">Squircle · 160</div>
+  </div>
+  <div class="cell">
+    <div class="ic-wrap" style="width:96px; height:96px; border-radius:22%; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.12)">
+      <object data="icon-b.svg" type="image/svg+xml" style="width:100%; height:100%"></object>
+    </div>
+    <div class="lbl">96 dp</div>
+  </div>
+  <div class="cell">
+    <div class="ic-wrap" style="width:48px; height:48px; border-radius:22%; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.12)">
+      <object data="icon-b.svg" type="image/svg+xml" style="width:100%; height:100%"></object>
+    </div>
+    <div class="lbl">48 dp</div>
+  </div>
+  <div class="cell">
+    <div class="ic-wrap" style="width:96px; height:96px; border-radius:50%; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.12)">
+      <object data="icon-b.svg" type="image/svg+xml" style="width:100%; height:100%"></object>
+    </div>
+    <div class="lbl">Circle mask</div>
+  </div>
+</div>
+
+<div class="home">
+  <div class="app"><div class="ic"><object data="icon-b.svg" type="image/svg+xml" style="width:100%; height:100%"></object></div><div class="name">KeyNest</div></div>
+  <div class="app"><div class="swatch" style="background:#34A853">G</div><div class="name">Gmail</div></div>
+  <div class="app"><div class="swatch" style="background:#4285F4">D</div><div class="name">Drive</div></div>
+  <div class="app"><div class="swatch" style="background:#0F9D58">M</div><div class="name">Maps</div></div>
+  <div class="app"><div class="swatch" style="background:#1F6FEB">S</div><div class="name">Slack</div></div>
+  <div class="app"><div class="swatch" style="background:#6366F1">T</div><div class="name">Teams</div></div>
+  <div class="app"><div class="swatch" style="background:#0EA5E9">W</div><div class="name">Workday</div></div>
+  <div class="app"><div class="swatch" style="background:#EF4444">Y</div><div class="name">YouTube</div></div>
+</div>
+</body></html>

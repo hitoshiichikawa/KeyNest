@@ -137,7 +137,31 @@ Dark では `rgba(0,0,0,.4–.55)` ベースに置換。
 - パスワード表示は `monospace + letter-spacing .1em` で誤読防止
 - パッケージ名は常に monospace で 1 行 ellipsis (詳細設定では折り返し可)
 
-## 11. Android 実装メモ
+## 11. Token → Android Resource Mapping
+
+`android-assets/mapping.md` を **必ず** 参照すること。本 spec の値は
+`android-assets/res/values/{colors,dimens,themes,type}.xml` および
+`values-night/colors.xml` に 1:1 でマップされており、実装側はそのトークンだけを
+引いて作業する。手書きで dp / hex を入れない。
+
+| 設計トークン | Android リソース |
+|---|---|
+| `var(--primary)` | `?attr/colorPrimary` → `@color/kn_primary` |
+| `var(--surface)` | `?attr/colorSurface` → `@color/kn_surface` |
+| `var(--text)` | `?attr/colorOnSurface` → `@color/kn_text` |
+| `var(--text-2)` | `?attr/colorOnSurfaceVariant` → `@color/kn_text_2` |
+| `var(--border)` | `?attr/colorOutlineVariant` → `@color/kn_border` |
+| `--kn-r-md` | `@dimen/kn_r_md` (16dp) |
+| `--kn-r-lg` | `@dimen/kn_r_card` (18dp) for cards |
+| `--kn-r-xl` | `@dimen/kn_r_sheet` (28dp) for bottom sheets |
+| Manrope 800/28 | `style="@style/Text.KeyNest.Display"` |
+| Manrope 800/26 (Vault title) | `Text.KeyNest.TitleL` |
+| Manrope 700/15 (Button) | `Text.KeyNest.LabelL` |
+| JetBrains Mono 12 (package) | `Text.KeyNest.Mono` |
+
+> 完全な表は `android-assets/mapping.md` §1〜4 を参照。
+
+## 12. Android 実装メモ
 
 - `colors.xml` には light/dark で同名キーを `values/` と `values-night/` に分ける
 - `MaterialTheme` の `colorScheme` を上記トークンで上書き

@@ -23,52 +23,242 @@
     <string name="action_delete_credential">削除</string>
     <string name="menu_open_autofill_settings">Autofill 設定</string>
 
-    <!-- ============ Credential edit ============ -->
-    <string name="credential_edit_title_new">新しいクレデンシャル</string>
-    <string name="credential_edit_title_edit">クレデンシャル編集</string>
-    <string name="label_package_name">パッケージ名</string>
-    <string name="label_username">ユーザー名 / メール</string>
-    <string name="label_password">パスワード</string>
-    <string name="label_display_name">表示名</string>
-    <string name="label_display_name_help">Autofill 候補のラベル</string>
-    <string name="label_target_app">対象アプリ</string>
-    <string name="action_pick_installed_app">変更</string>
-    <string name="action_save">保存</string>
-    <string name="action_delete_credential_destructive">このクレデンシャルを削除</string>
-    <string name="error_package_name_blank">パッケージ名は必須です。</string>
-    <string name="error_package_name_invalid">パッケージ名の形式が正しくありません。</string>
-    <string name="error_username_blank">ユーザー名は必須です。</string>
-    <string name="error_password_blank">パスワードは必須です。</string>
-    <string name="error_label_blank">表示名は必須です。</string>
-    <string name="error_save_failed">クレデンシャルを保存できませんでした。</string>
-    <string name="message_credential_saved">保存しました。</string>
-    <string name="error_save_failed_with_reason">クレデンシャルを保存できませんでした: %1$s</string>
-    <string name="message_signature_not_captured">署名なし（アプリが未インストールのため）。再インストール後に再保存するまで Autofill 候補には現れません。</string>
+    <!-- Credential list: Issue #9 enhancements (search / filter / recent / sort / overflow) -->
+    <string name="credential_list_search_hint">Search by label, username, or package</string>
+    <string name="credential_list_search_a11y">Search saved credentials</string>
+    <string name="credential_list_chip_signature_matched">Signature captured</string>
+    <string name="credential_list_chip_signature_missing">Signature missing</string>
+    <string name="credential_list_recent_header">Recently used</string>
+    <string name="credential_list_empty_no_match">No matching credentials</string>
+    <string name="credential_list_sort_button">Sort</string>
+    <string name="credential_list_sort_button_a11y">Change sort order</string>
+    <string name="credential_list_sort_updated_at_desc">Recently updated</string>
+    <string name="credential_list_sort_label_asc">Label (A–Z)</string>
+    <string name="credential_list_sort_package_asc">Package name (A–Z)</string>
+    <string name="credential_list_row_overflow_a11y">More actions for %1$s</string>
+    <string name="credential_list_row_action_duplicate">Duplicate</string>
+    <string name="credential_list_recent_card_a11y">%1$s, used recently</string>
+    <string name="message_duplicate_failed">Failed to duplicate credential</string>
+    <string name="message_duplicate_success">Credential duplicated</string>
 
-    <!-- Status chips on the target app card -->
-    <string name="signature_match">署名一致</string>
-    <string name="signature_missing">署名なし</string>
-    <string name="signature_captured_chip">署名取得済み · SHA-256</string>
+    <!-- Credential list: Issue #29 design alignment (signature badge / strength bar). -->
+    <!-- These keys already exist in values-ja; add English defaults so AAPT2 keeps
+         them in the resource table (NFR 3.1). -->
+    <string name="signature_match">Signature OK</string>
+    <string name="signature_missing">Signature missing</string>
+    <string name="strength_strong">Strong</string>
+    <string name="strength_medium">Medium</string>
+    <string name="strength_weak">Weak</string>
 
-    <!-- ============ Autofill enable ============ -->
-    <string name="autofill_enable_title">Android の Autofill を KeyNest に切り替える</string>
-    <string name="autofill_enable_description">ログイン画面で保存済みのID/パスワードを候補表示するために、Autofill サービスを KeyNest に設定します。</string>
-    <string name="autofill_enable_action">設定を開く</string>
-    <string name="autofill_enable_dismiss">あとで</string>
-    <string name="autofill_enable_already_enabled">KeyNest はすでに Autofill サービスに設定されています。</string>
-    <string name="autofill_enable_settings_unavailable">この端末では Autofill 設定画面を開けません。</string>
-    <string name="autofill_enable_step1_title">「設定を開く」をタップ</string>
-    <string name="autofill_enable_step1_description">Android の設定画面に移動します</string>
-    <string name="autofill_enable_step2_title">「KeyNest」を選択</string>
-    <string name="autofill_enable_step2_description">パスワードとアカウントの項目で</string>
-    <string name="autofill_enable_step3_title">戻ってきたら準備完了</string>
-    <string name="autofill_enable_step3_description">クレデンシャルを登録できます</string>
+    <!-- Empty state body copy (Req 8.1 / 8.3, Issue #29). Shown between
+         the headline and the primary CTA on the Initial empty state with
+         Text.KeyNest.Body + kn_text_2. -->
+    <string name="credential_list_empty_body">Welcome to KeyNest. Save your first credential to get started with secure, on-device storage.</string>
 
-    <!-- ============ Autofill unlock ============ -->
-    <string name="biometric_prompt_title">クレデンシャルをアンロック</string>
-    <string name="biometric_prompt_subtitle">保存済みのクレデンシャルを入力するために認証してください。</string>
+    <!-- Empty state hero CTA secondary label (Req 8.4 / Issue #29). The
+         "クレデンシャルを登録" CTA reuses action_add_credential, this is the
+         security footer note shown beneath it. -->
+    <string name="credential_list_empty_security_note">AES-GCM · device-local only</string>
 
-    <!-- ============ Package picker ============ -->
-    <string name="package_picker_title">アプリを選択</string>
-    <string name="package_picker_subtitle">署名情報も同時に取得します</string>
+    <!-- Credential edit -->
+    <string name="credential_edit_title_new">New credential</string>
+    <string name="credential_edit_title_edit">Edit credential</string>
+    <string name="label_package_name">App package name</string>
+    <string name="label_username">Username</string>
+    <string name="label_password">Password</string>
+    <string name="label_display_name">Display name (label)</string>
+    <string name="action_pick_installed_app">Pick installed app</string>
+    <string name="action_save">Save</string>
+    <string name="error_package_name_blank">App package name is required.</string>
+    <string name="error_package_name_invalid">App package name format is invalid.</string>
+    <string name="error_username_blank">Username is required.</string>
+    <string name="error_password_blank">Password is required.</string>
+    <string name="error_label_blank">Display name is required.</string>
+    <string name="error_save_failed">Failed to save credential.</string>
+    <string name="message_credential_saved">Saved.</string>
+    <string name="error_save_failed_with_reason">Failed to save credential: %1$s</string>
+    <string name="message_signature_not_captured">Signature unavailable (app not installed). Candidates will not appear until you reinstall and re-save.</string>
+
+    <!-- Credential edit: Issue #30 design alignment (target app card,
+         password label, strength bar, advanced section, delete CTA).
+         These keys describe screen-3 fragments not yet covered above. -->
+    <string name="credential_edit_password_label">Password</string>
+    <string name="credential_edit_advanced_chevron_a11y">Show advanced details</string>
+    <string name="credential_edit_target_app_change_a11y">Change target app</string>
+    <string name="credential_edit_close_a11y">Close credential editor</string>
+
+    <!-- Delete confirmation dialog (Issue #30 Req 8.9 - 8.12). -->
+    <string name="credential_edit_delete_confirm_title">Delete this credential?</string>
+    <string name="credential_edit_delete_confirm_message">This permanently removes the credential. Autofill candidates for this app will no longer appear.</string>
+    <string name="credential_edit_delete_confirm_positive">Delete</string>
+    <string name="credential_edit_delete_confirm_negative">Cancel</string>
+    <string name="credential_edit_delete_failed">Failed to delete credential.</string>
+
+    <!-- Autofill enable -->
+    <string name="autofill_enable_title">Enable Autofill service</string>
+    <string name="autofill_enable_description">To suggest saved credentials, KeyNest needs to be selected as your Autofill service in Android Settings.</string>
+    <string name="autofill_enable_action">Enable in Settings</string>
+    <string name="autofill_enable_already_enabled">KeyNest is already set as your Autofill service.</string>
+    <string name="autofill_enable_settings_unavailable">Autofill Settings screen is not available on this device.</string>
+
+    <!-- Autofill enable: Issue #31 design alignment (steps card + "later" CTA).
+         The 3-step instruction card mirrors the JSX `ScreenOnboarding` mock
+         in design/screens/screens-1.jsx; the "later" button dismisses the
+         onboarding without launching Settings. -->
+    <string name="autofill_enable_step1_title">Tap \"Open Settings\"</string>
+    <string name="autofill_enable_step1_description">You\'ll be taken to the Android Settings screen.</string>
+    <string name="autofill_enable_step2_title">Pick \"KeyNest\"</string>
+    <string name="autofill_enable_step2_description">Under Passwords and accounts.</string>
+    <string name="autofill_enable_step3_title">Come back when you\'re done</string>
+    <string name="autofill_enable_step3_description">You can then save credentials.</string>
+    <string name="autofill_enable_action_later">Not now</string>
+
+    <!-- Autofill unlock -->
+    <string name="biometric_prompt_title">Unlock credential</string>
+    <string name="biometric_prompt_subtitle">Authenticate to fill the saved credential.</string>
+
+    <!-- Package picker -->
+    <string name="package_picker_title">Pick an installed app</string>
+
+    <!-- Package picker: Issue #32 design alignment (drag handle / title +
+         subtitle / search bar / sections / manual-entry fallback). The
+         Japanese translations already exist in values-ja/strings.xml from
+         the design import; the English defaults below mirror the JSX
+         `ScreenPicker` copy with neutral English wording. -->
+    <string name="package_picker_subtitle">Signing info is captured too</string>
+    <string name="package_picker_search_hint">Filter by app name or package</string>
+    <!-- Issue #48: `package_picker_section_used` removed along with the
+         "Frequently used" (業務でよく使う) SAMPLE section. -->
+    <string name="package_picker_section_all">All apps</string>
+    <string name="package_picker_manual">Not listed → Enter package name manually</string>
+    <string name="package_picker_close_a11y">Close package picker</string>
+    <string name="package_picker_no_results">No matching apps</string>
+    <string name="package_picker_manual_input_title">Enter package name</string>
+    <string name="package_picker_manual_input_hint">com.example.app</string>
+    <string name="package_picker_manual_input_invalid">Invalid package name format</string>
+
+    <!-- Advanced details section (Issue #14) -->
+    <string name="advanced_section_title">Advanced details</string>
+    <string name="advanced_section_header_a11y">Advanced details, double tap to expand or collapse</string>
+    <string name="advanced_label_created_at">Created at</string>
+    <string name="advanced_label_updated_at">Updated at</string>
+    <string name="advanced_label_signature_sha256">Signing certificate SHA-256</string>
+    <string name="advanced_label_signature_captured_at">Signature captured at</string>
+    <string name="advanced_label_credential_id">Credential ID</string>
+    <string name="advanced_value_unsaved">Not saved yet</string>
+    <string name="advanced_value_not_captured">Not captured</string>
+    <string name="advanced_value_id_hidden">••••</string>
+    <string name="advanced_toggle_show_id">Show ID</string>
+    <string name="advanced_toggle_show_id_a11y">Show credential ID. Disabled by default.</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_copy_signature_a11y">Copy signing certificate SHA-256 to clipboard</string>
+    <string name="message_signature_hex_copied">Signature hash copied</string>
+    <string name="clipboard_label_signature_hex">KeyNest signature SHA-256</string>
+
+    <!-- Custom fields section (Issue #66 Phase 1).
+         Lives inside the Advanced collapsible block on the credential edit
+         screen. In Phase 1 the editor is enabled only in "New credential"
+         mode; in "Edit" mode the section renders read-only and the add
+         button is disabled (design.md §9.3 暫定). -->
+    <string name="credential_edit_custom_fields_title">Custom fields</string>
+    <string name="credential_edit_custom_field_key_hint">Field name</string>
+    <string name="credential_edit_custom_field_value_hint">Value</string>
+    <string name="credential_edit_custom_field_add">Add field</string>
+    <string name="credential_edit_custom_field_remove_a11y">Remove this custom field</string>
+    <string name="credential_edit_custom_fields_readonly_note">Editing existing custom fields is not yet supported.</string>
+
+    <!-- Custom fields suggestion chip group (Issue #67 Phase 2).
+         Surfaces previously-observed fieldKeys for the target package so
+         the user can populate a new custom field with one tap. The empty
+         message hint nudges the user to open the target app's form at
+         least once before suggestions appear (requirements §4 Q2). -->
+    <string name="credential_edit_detected_fields_label">Recently detected fields</string>
+    <string name="credential_edit_detected_fields_empty">No detection history yet. Open the app\'s form once and we\'ll suggest fields here.</string>
+
+    <!-- Settings (Issue #10) -->
+    <string name="menu_open_settings">Settings</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_back_a11y">Back to credential list</string>
+
+    <string name="settings_section_autofill_title">Autofill service</string>
+    <string name="settings_autofill_badge_enabled">Enabled</string>
+    <string name="settings_autofill_badge_not_enabled">Not set</string>
+    <string name="settings_autofill_badge_a11y">Autofill service status: %1$s</string>
+    <string name="settings_autofill_open_settings_action">Open Android Settings</string>
+
+    <string name="settings_section_security_title">Security</string>
+    <string name="settings_lock_status_biometric_and_device">Biometric + device credential</string>
+    <string name="settings_lock_status_device_only">Device credential only</string>
+    <string name="settings_lock_status_none">No lock screen</string>
+    <string name="settings_lock_status_update_required">Security update required</string>
+    <string name="settings_lock_open_security_settings_action">Open Android Security settings</string>
+
+    <string name="settings_section_vault_title">Vault</string>
+    <string name="settings_vault_count_label">Saved credentials</string>
+    <string name="settings_vault_count_format">%1$d</string>
+    <string name="settings_vault_latest_updated_label">Last updated</string>
+    <string name="settings_vault_latest_updated_empty">—</string>
+    <string name="settings_vault_storage_label">Storage usage</string>
+
+    <string name="settings_section_about_title">About</string>
+    <string name="settings_about_version_label">Version</string>
+    <string name="settings_about_version_format">%1$s (%2$d)</string>
+    <string name="settings_about_oss_licenses_label">Open source licenses</string>
+
+    <string name="settings_section_danger_title">Danger zone</string>
+    <string name="settings_danger_open_action">Open Vault clear screen</string>
+
+    <string name="settings_intent_unavailable">This settings screen is not available on this device.</string>
+
+    <!-- Settings: Issue #33 design alignment (JSX ScreenSettings).
+         The keys below back the Autofill hero copy, the SettingRow labels
+         that the JSX mock spells out, and the Danger zone "delete all" row.
+         All new keys must be added to both en + ja string tables per NFR 3.1
+         / 3.4. -->
+    <string name="settings_autofill_hero_title">Autofill service</string>
+    <string name="settings_autofill_hero_description_enabled">KeyNest is acting as Android\'s password Autofill service.</string>
+    <string name="settings_autofill_hero_description_not_enabled">KeyNest is not yet set as the Android Autofill service.</string>
+    <string name="settings_autofill_hero_cta">Confirm in Android Settings</string>
+    <string name="settings_lock_status_label">Unlock method</string>
+    <string name="settings_lock_status_a11y_label">Unlock method, opens Android security settings</string>
+    <string name="settings_about_keynest_label">KeyNest</string>
+    <string name="settings_about_privacy_label">Privacy</string>
+    <string name="settings_about_privacy_sub">No network egress — Keystore protected</string>
+    <string name="settings_about_oss_licenses_a11y_label">Open source licenses, opens license list</string>
+    <string name="settings_danger_delete_all_label">Delete all</string>
+    <string name="settings_danger_delete_all_sub">Cannot be undone</string>
+    <string name="settings_danger_delete_all_a11y_label">Delete all credentials, opens danger zone</string>
+
+    <!-- Danger Zone (Issue #10) -->
+    <string name="danger_zone_title">Danger zone</string>
+    <string name="danger_zone_description">This action removes every saved credential and the encryption key. It is permanent and cannot be undone.</string>
+    <string name="danger_zone_clear_action">Delete all credentials</string>
+    <string name="danger_zone_clear_action_a11y">Danger: delete all credentials permanently</string>
+    <string name="danger_zone_confirm_title">Delete everything?</string>
+    <string name="danger_zone_confirm_message">This permanently removes every saved credential and the encryption key. This action cannot be undone.</string>
+    <string name="danger_zone_confirm_positive">Delete permanently</string>
+    <string name="danger_zone_confirm_negative">Cancel</string>
+    <string name="danger_zone_biometric_title">Authenticate to clear vault</string>
+    <string name="danger_zone_biometric_subtitle">Re-authenticate to confirm the permanent vault deletion.</string>
+    <string name="danger_zone_clearing">Clearing vault…</string>
+    <string name="danger_zone_cleared_message">Vault cleared.</string>
+    <string name="danger_zone_failed_message">Clearing failed. Tap retry to try again.</string>
+    <string name="danger_zone_retry_action">Retry</string>
+
+    <!-- OSS licenses (Issue #10) -->
+    <string name="oss_licenses_title">Open source licenses</string>
+    <string name="oss_licenses_load_failed">Could not load OSS license list.</string>
+    <string name="oss_licenses_url_a11y">Open project URL</string>
+    <string name="oss_licenses_expand_a11y">Expand license text</string>
+
+    <!-- Autofill dataset presentation (Issue #34 / Phase 2 #6).
+         The popup RemoteViews surface adds a KEYNEST eyebrow header + a
+         trailing "create new credential" row. Brand mark is rendered as a
+         silhouette; eyebrow is the brand wordmark (locale-invariant per
+         NFR 2.2). a11y-only labels for the decorative header icons keep
+         TalkBack focused on the actionable row text. -->
+    <string name="autofill_dataset_brand_eyebrow" translatable="false">KEYNEST</string>
+    <string name="autofill_dataset_create_new">+ New credential</string>
+    <string name="autofill_dataset_brand_mark_a11y">KeyNest</string>
+    <string name="autofill_dataset_row_lock_a11y">Locked, biometric authentication required</string>
 </resources>

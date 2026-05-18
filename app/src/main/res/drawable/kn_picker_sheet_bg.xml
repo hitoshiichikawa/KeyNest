@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 1.1 / 1.2: PackagePickerBottomSheet root background.
+
+  JSX `ScreenPicker` reference (screens-2.jsx L26):
+    background=bg-elev, borderTopLeftRadius=28, borderTopRightRadius=28,
+    padding=12 0 24.
+
+  Color: ?attr/colorSurface resolves to @color/kn_surface via Theme.KeyNest
+    (semantic token; values-night overrides it to a dark surface).
+  Corners: @dimen/kn_r_sheet (28dp) on the top edge only; bottom edge
+    stays sharp because the sheet bottom is flush with the screen.
+
+  We apply this drawable as android:background on the sheet root so the
+  rounded top renders even if Widget.KeyNest.BottomSheet (the
+  bottomSheetStyle override) is not propagated by the Material parent
+  theme. Req 1.2's source-level pin (kn_r_sheet referenced from the
+  layout / its drawable) is what the resource test enforces.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_surface" />
+    <corners
+        android:topLeftRadius="@dimen/kn_r_sheet"
+        android:topRightRadius="@dimen/kn_r_sheet" />
+</shape>

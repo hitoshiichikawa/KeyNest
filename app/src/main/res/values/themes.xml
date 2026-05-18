@@ -1,148 +1,253 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Theme.KeyNest — wires the design tokens defined in colors.xml / dimens.xml
-    into the Material Components DayNight theme. The night variant lives in
-    `values-night/themes.xml`; only attributes that need to differ in dark
-    mode are overridden there.
+  KeyNest — Material3 theme wiring.
+  Sourced from design/android-assets/res/values/themes.xml (Issue #28
+  Phase 1 取り込み) but restructured to retain the exact structure that
+  Issue #24 / Issue #13 の Material3ThemeMigrationTest と
+  FontTypefaceWiringTest が verify する不変条件 (Req 5.2):
 
-    Requirements: 4.1.3, 4.1.4, 4.1.6, 4.2.1, 4.2.2, 4.2.3
+    * Theme.KeyNest が Theme.Material3.DayNight.NoActionBar を直接親に持つ
+      (中間 Base スタイルを介さない).
+    * 13 個の M3 textAppearance attribute slot
+      (textAppearanceDisplayLarge ... textAppearanceLabelSmall) が
+      Theme.KeyNest 内に明示列挙され、それぞれ
+      TextAppearance.KeyNest.Headline1..Overline (M3 親) を指す.
+    * 13 個の TextAppearance.KeyNest.* スタイルが
+      TextAppearance.Material3.* を親とし、@font/manrope override を
+      android: と app: の両 namespace に保持する.
+    * Theme.KeyNest 自身が android:fontFamily / fontFamily を
+      @font/manrope で override している (素の TextView や EditText hint
+      を含む全 view が Manrope を引くため).
+    * Theme.KeyNest.Translucent は Material 2 親のままで保持
+      (AutofillUnlockActivity の透過テーマ. NFR 3.2 / Req 5.3).
+
+  Phase 1 取り込みで追加される design token bridge:
+
+    * colorPrimary / colorOnPrimary / colorSurface 等の Material3
+      colorScheme を kn_* セマンティック色にマップ (Req 1.4 / Req 2.x).
+      values-night/colors.xml が semantic を再定義する形で dark mode の
+      上書きが有効になる.
+    * shapeAppearanceCorner* を ShapeAppearance.KeyNest.* に橋渡しし、
+      共有 dimens (kn_r_xs..xl) を corner radius のソースに使う.
+    * Widget.KeyNest.Button.Primary / Card / TextField / Chip /
+      BottomSheet / ShapeAppearance.KeyNest.Sheet を design 側そのまま
+      持ち込む. これらは Phase 2 layout から style="@style/..." で参照する
+      用. 現時点の既存 layout は直接参照していない.
+    * dynamicColorThemeOverlay=@null で Material You を OFF
+      (Out of Scope に従い design 側カラーを単一情報源にする).
+    * 追加 Material3 type-scale slot
+      (textAppearanceTitleLarge / textAppearanceLabelMedium) を
+      Text.KeyNest.* の新 11 ロールに橋渡し (Req 1.3).
+
+  M2 / M3 type-scale 対応 (Issue #24 Req 2.5):
+    Headline1 -> DisplayLarge,    Headline2 -> DisplayMedium,
+    Headline3 -> DisplaySmall,    Headline4 -> HeadlineLarge,
+    Headline5 -> HeadlineMedium,  Headline6 -> HeadlineSmall,
+    Subtitle1 -> TitleMedium,     Subtitle2 -> TitleSmall,
+    Body1     -> BodyLarge,       Body2     -> BodyMedium,
+    Button    -> LabelLarge,      Caption   -> BodySmall,
+    Overline  -> LabelSmall.
 -->
-<resources>
-
-    <!-- ===== Shape Appearances (§6 / AC 4.1.3) ===== -->
-    <style name="ShapeAppearance.KeyNest.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/kn_radius_sm</item>
-    </style>
-
-    <style name="ShapeAppearance.KeyNest.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/kn_radius_md</item>
-    </style>
-
-    <style name="ShapeAppearance.KeyNest.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">@dimen/kn_radius_lg</item>
-    </style>
-
-    <!-- ===== TextAppearance roles (§4 / AC 4.2.1, 4.2.2) ===== -->
-    <!--
-        We don't ship Manrope / JetBrains Mono TTFs — the requirement
-        explicitly allows the system sans / monospace fallback as long as
-        the role/size/weight hierarchy is preserved. Activities can swap
-        fontFamily later via Downloadable Fonts without changing layouts.
-    -->
-    <style name="TextAppearance.KeyNest.AppBarTitle" parent="TextAppearance.MaterialComponents.Headline5">
-        <item name="android:textSize">@dimen/kn_text_appbar</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textFontWeight">800</item>
-        <item name="android:letterSpacing">-0.02</item>
-        <item name="android:textColor">?attr/colorOnSurface</item>
-    </style>
-
-    <style name="TextAppearance.KeyNest.SectionTitle" parent="TextAppearance.MaterialComponents.Headline6">
-        <item name="android:textSize">@dimen/kn_text_section</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textFontWeight">800</item>
-        <item name="android:letterSpacing">-0.01</item>
-        <item name="android:textColor">?attr/colorOnSurface</item>
-    </style>
-
-    <style name="TextAppearance.KeyNest.CardTitle" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <item name="android:textSize">@dimen/kn_text_card</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textFontWeight">700</item>
-        <item name="android:textColor">?attr/colorOnSurface</item>
-    </style>
-
-    <style name="TextAppearance.KeyNest.Body" parent="TextAppearance.MaterialComponents.Body2">
-        <item name="android:textSize">@dimen/kn_text_body</item>
-        <item name="android:textFontWeight">500</item>
-        <item name="android:textColor">@color/kn_text_2</item>
-    </style>
-
-    <style name="TextAppearance.KeyNest.Meta" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textSize">@dimen/kn_text_meta</item>
-        <item name="android:textFontWeight">500</item>
-        <item name="android:textColor">@color/kn_text_2</item>
-    </style>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-        Eyebrow / overline: uppercase 11–12 sp / 700 / +.06em letter spacing.
-        Used for "KeyNest" label above the Vault title, section headers in
-        the picker sheet, and outlined-field labels in the edit screen.
+        Issue #13 / Issue #24 互換: 13 個の TextAppearance.KeyNest.*
+        スタイル. 各スタイルは M3 親を継承しつつ Manrope を強制する.
+        Issue #24 の Material3ThemeMigrationTest が style 名 / 親 /
+        @font/manrope override を厳密に検証する.
     -->
-    <style name="TextAppearance.KeyNest.Eyebrow" parent="TextAppearance.MaterialComponents.Overline">
-        <item name="android:textSize">@dimen/kn_text_eyebrow</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textFontWeight">700</item>
-        <item name="android:letterSpacing">0.06</item>
-        <item name="android:textColor">@color/kn_text_2</item>
+    <style name="TextAppearance.KeyNest.Headline1"
+        parent="TextAppearance.Material3.DisplayLarge">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline2"
+        parent="TextAppearance.Material3.DisplayMedium">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline3"
+        parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline4"
+        parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline5"
+        parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Headline6"
+        parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Subtitle1"
+        parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Subtitle2"
+        parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Body1"
+        parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Body2"
+        parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Button"
+        parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Caption"
+        parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
+    </style>
+
+    <style name="TextAppearance.KeyNest.Overline"
+        parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
     </style>
 
     <!--
-        Monospace role (AC 4.2.2). Package names / SHA-256 / passwords.
-        fontFamily="monospace" maps to the device default monospace
-        (UbuntuMono / Roboto Mono / etc.). Fallback per requirements.
+        Theme.KeyNest 本体. Issue #24 の Material3ThemeMigrationTest が
+        次を厳密に verify する:
+          * parent="Theme.Material3.DayNight.NoActionBar" (中間 Base 不可).
+          * 13 個の M3 textAppearance attribute slot がすべて宣言され、
+            TextAppearance.KeyNest.Headline1..Overline を指す.
+          * android:fontFamily / fontFamily が @font/manrope.
+          * M2 の slot 名 (textAppearanceHeadline1 等) を redeclare しない.
+        ここに Issue #28 Phase 1 の design token bridge を追加注入する形で
+        構造的後方互換を維持する.
     -->
-    <style name="TextAppearance.KeyNest.Mono" parent="TextAppearance.MaterialComponents.Body2">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">@dimen/kn_text_meta</item>
-        <item name="android:textColor">@color/kn_text_3</item>
-    </style>
+    <style name="Theme.KeyNest" parent="Theme.Material3.DayNight.NoActionBar">
 
-    <!-- Password field text: monospace + .1em letter spacing (AC 4.4.4) -->
-    <style name="TextAppearance.KeyNest.Mono.Password">
-        <item name="android:fontFamily">monospace</item>
-        <item name="android:textSize">17sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">0.1</item>
-        <item name="android:textColor">?attr/colorOnSurface</item>
-    </style>
-
-    <!-- ===== App Theme ===== -->
-    <style name="Theme.KeyNest" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Brand palette → Material colorScheme (AC 4.1.4) -->
+        <!-- ── Color scheme (Issue #28 Phase 1) ────────── -->
         <item name="colorPrimary">@color/kn_primary</item>
-        <item name="colorPrimaryVariant">@color/kn_primary_hover</item>
         <item name="colorOnPrimary">@color/kn_on_primary</item>
-        <item name="colorSecondary">@color/kn_accent_500</item>
-        <item name="colorSecondaryVariant">@color/kn_accent_500</item>
-        <item name="colorOnSecondary">@color/kn_on_primary</item>
+        <item name="colorPrimaryContainer">@color/kn_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/kn_on_primary_container</item>
+
+        <item name="colorSecondary">@color/kn_secondary</item>
+        <item name="colorOnSecondary">@color/kn_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/kn_surface_tint</item>
+        <item name="colorOnSecondaryContainer">@color/kn_primary</item>
 
         <item name="android:colorBackground">@color/kn_bg</item>
+        <item name="colorOnBackground">@color/kn_text</item>
         <item name="colorSurface">@color/kn_surface</item>
-        <item name="colorOnSurface">@color/kn_text_primary</item>
-        <item name="colorOnBackground">@color/kn_text_primary</item>
+        <item name="colorOnSurface">@color/kn_text</item>
+        <item name="colorSurfaceVariant">@color/kn_surface_2</item>
+        <item name="colorOnSurfaceVariant">@color/kn_text_2</item>
+        <item name="colorSurfaceContainer">@color/kn_surface</item>
+        <item name="colorSurfaceContainerLow">@color/kn_bg</item>
+        <item name="colorSurfaceContainerHigh">@color/kn_bg_elev</item>
+        <item name="colorOutline">@color/kn_border_strong</item>
+        <item name="colorOutlineVariant">@color/kn_border</item>
 
         <item name="colorError">@color/kn_danger</item>
-        <item name="colorOnError">@color/kn_on_primary</item>
+        <item name="colorErrorContainer">@color/kn_danger_soft</item>
+        <item name="colorOnError">@color/kn_white</item>
 
+        <!-- Material You OFF: design 側 palette を単一情報源にする. -->
+        <item name="dynamicColorThemeOverlay">@null</item>
+
+        <!-- ── Shape (Issue #28 Phase 1) ───────────────── -->
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.KeyNest.XS</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.KeyNest.SM</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.KeyNest.MD</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.KeyNest.LG</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.KeyNest.XL</item>
+
+        <!-- ── Background fallback for non-M3 widgets ───── -->
         <!--
-            windowBackground must resolve through ?attr/colorSurface — pinning
-            a raw color leads to the DayNight contrast regression captured in
-            design.md "UI Theming" (white-on-white in dark mode).
+            Issue #24 までの実装では android:windowBackground を
+            ?attr/colorSurface に固定していたが、Phase 1 取り込み後は
+            colorBackground (kn_bg) と colorSurface (kn_surface) が
+            light/dark 両方で定義されているため、widgetBackground は
+            colorSurface に解決されたまま安全 (差分は paper / white の
+            濃淡だけ).
         -->
         <item name="android:windowBackground">?attr/colorSurface</item>
 
-        <!-- Shape system (AC 4.1.3) -->
-        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.KeyNest.SmallComponent</item>
-        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.KeyNest.MediumComponent</item>
-        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.KeyNest.LargeComponent</item>
+        <!--
+            Issue #24 が要求する 13 個の M3 textAppearance slot. Phase 1
+            では Material3ThemeMigrationTest / FontTypefaceWiringTest との
+            互換性を保つため、次の slot を必ず TextAppearance.KeyNest.* に
+            橋渡しする:
+        -->
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.KeyNest.Headline1</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.KeyNest.Headline2</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.KeyNest.Headline3</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.KeyNest.Headline4</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.KeyNest.Headline5</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.KeyNest.Headline6</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.KeyNest.Subtitle1</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.KeyNest.Subtitle2</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.KeyNest.Body1</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.KeyNest.Body2</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.KeyNest.Button</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.KeyNest.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.KeyNest.Overline</item>
 
-        <!-- Material text appearance bindings -->
-        <item name="textAppearanceHeadline5">@style/TextAppearance.KeyNest.AppBarTitle</item>
-        <item name="textAppearanceHeadline6">@style/TextAppearance.KeyNest.SectionTitle</item>
-        <item name="textAppearanceSubtitle1">@style/TextAppearance.KeyNest.CardTitle</item>
-        <item name="textAppearanceBody2">@style/TextAppearance.KeyNest.Body</item>
-        <item name="textAppearanceCaption">@style/TextAppearance.KeyNest.Meta</item>
-        <item name="textAppearanceOverline">@style/TextAppearance.KeyNest.Eyebrow</item>
+        <!--
+            Issue #13: theme-level Manrope override. textAppearance を
+            指定しない素の TextView / EditText hint も Manrope を引くため
+            に必要 (FontTypefaceWiringTest が直接これを verify する).
+        -->
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="fontFamily">@font/manrope</item>
 
-        <!-- Bottom sheet visual contract (AC 4.5.1) -->
-        <item name="bottomSheetDialogTheme">@style/ThemeOverlay.KeyNest.BottomSheetDialog</item>
+        <!-- ── System bars (Issue #28 Phase 1) ─────────── -->
+        <!--
+            Phase 2 の前段階として system bar 配色を kn_bg に揃える.
+            Light bar は light mode のみ true. values-night は
+            kn_bg をダーク色で再定義するためダーク時は dark icon が
+            選択される.
+        -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/kn_bg</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
     </style>
 
+    <!--
+        Issue #24 Out of Scope: Theme.KeyNest.Translucent parent is left on
+        Theme.MaterialComponents.DayNight.NoActionBar because (a) it is only
+        used by AutofillUnlockActivity which displays a BiometricPrompt on
+        top of an otherwise transparent window and never inflates any of
+        the M3 widgets that triggered the crash on Theme.KeyNest, and
+        (b) Req 3.5 only mandates that its transparent-launch behaviour be
+        preserved across this fix.
+
+        Issue #28 Phase 1: design 側 themes.xml は本テーマを含まないため、
+        既存実装をそのまま再掲して動作を保持する (NFR 3.2 / Req 5.3).
+    -->
     <style name="Theme.KeyNest.Translucent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -150,74 +255,130 @@
         <item name="android:windowContentOverlay">@null</item>
     </style>
 
-    <!-- ===== Component styles ===== -->
-
-    <!-- Primary CTA button: 52dp tall, r-md (16dp) corners (AC 4.3.5 / 4.6.2). -->
-    <style name="Widget.KeyNest.Button.Primary" parent="Widget.MaterialComponents.Button">
-        <item name="android:minHeight">@dimen/kn_btn_height</item>
-        <item name="android:textSize">@dimen/kn_text_card</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:letterSpacing">-0.005</item>
-        <item name="cornerRadius">@dimen/kn_radius_md</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
+    <!--
+        Issue #28 Phase 1: ShapeAppearance.KeyNest.* — Material3 corner
+        family を design tokens (kn_r_*) に橋渡し.
+    -->
+    <style name="ShapeAppearance.KeyNest.XS" parent="ShapeAppearance.Material3.Corner.ExtraSmall">
+        <item name="cornerSize">@dimen/kn_r_xs</item>
+    </style>
+    <style name="ShapeAppearance.KeyNest.SM" parent="ShapeAppearance.Material3.Corner.Small">
+        <item name="cornerSize">@dimen/kn_r_sm</item>
+    </style>
+    <style name="ShapeAppearance.KeyNest.MD" parent="ShapeAppearance.Material3.Corner.Medium">
+        <item name="cornerSize">@dimen/kn_r_md</item>
+    </style>
+    <style name="ShapeAppearance.KeyNest.LG" parent="ShapeAppearance.Material3.Corner.Large">
+        <item name="cornerSize">@dimen/kn_r_lg</item>
+    </style>
+    <style name="ShapeAppearance.KeyNest.XL" parent="ShapeAppearance.Material3.Corner.ExtraLarge">
+        <item name="cornerSize">@dimen/kn_r_xl</item>
     </style>
 
-    <style name="Widget.KeyNest.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textColor">?attr/colorPrimary</item>
+    <!--
+        Issue #28 Phase 1: 再利用可能な Widget スタイル. 現時点の layout は
+        参照していない. Phase 2 の各画面 PR で style="@style/Widget.KeyNest.X"
+        を貼ることでデザインに揃える前提.
+    -->
+    <style name="Widget.KeyNest.Button.Primary" parent="Widget.Material3.Button">
+        <item name="android:textAppearance">@style/Text.KeyNest.LabelL</item>
+        <item name="android:minHeight">@dimen/kn_button_height</item>
+        <item name="cornerRadius">@dimen/kn_r_md</item>
+        <item name="android:paddingStart">@dimen/kn_space_6</item>
+        <item name="android:paddingEnd">@dimen/kn_space_6</item>
     </style>
 
-    <!-- Danger button: r-md outline, danger text colour (AC 4.4.6) -->
-    <style name="Widget.KeyNest.Button.Danger" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:minHeight">@dimen/kn_btn_height</item>
+    <style name="Widget.KeyNest.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textAppearance">@style/Text.KeyNest.LabelL</item>
+        <item name="android:textColor">@color/kn_primary</item>
+        <item name="android:minHeight">44dp</item>
+    </style>
+
+    <!--
+        Issue #30 Req 8.5 / 8.6 / 8.7: destructive CTA used at the bottom of
+        the CredentialEdit screen in edit mode (削除).
+
+        Visual contract (JSX `ScreenEdit` の削除ボタン):
+          - background: 透過 (background transparent)
+          - border: 1dp CSS var border outline → strokeColor=@color/kn_border
+          - radius: 14dp (borderRadius 14) → @dimen/kn_r_input
+          - text color: CSS var kn danger → @color/kn_danger
+          - height: 52dp (@dimen/kn_button_height)
+          - text appearance: LabelL (15sp / weight 700)
+
+        OutlinedButton 親を採用したのは:
+          (a) strokeColor / strokeWidth / cornerRadius の M3 attribute
+              が直接効くため layout 側で属性を増やさない
+          (b) ripple / state list の最低限の挙動 (押下時のフィードバック) を
+              ベースのまま受け取れるため. 押下時の色変化は kn_danger 同系で
+              colorPrimary を override せずとも視覚的に許容範囲.
+    -->
+    <style name="Widget.KeyNest.Button.Destructive" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textAppearance">@style/Text.KeyNest.LabelL</item>
         <item name="android:textColor">@color/kn_danger</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="strokeColor">@color/kn_border_strong</item>
-        <item name="cornerRadius">@dimen/kn_radius_md</item>
+        <item name="android:minHeight">@dimen/kn_button_height</item>
+        <item name="cornerRadius">@dimen/kn_r_input</item>
+        <item name="strokeColor">@color/kn_border</item>
+        <item name="strokeWidth">1dp</item>
         <item name="rippleColor">@color/kn_danger_soft</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
     </style>
 
-    <!-- Outlined input fields (AC 4.4.3) -->
-    <style name="Widget.KeyNest.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.KeyNest.TextField</item>
-        <item name="boxStrokeColor">@color/kn_text_field_stroke</item>
+    <style name="Widget.KeyNest.Card" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardCornerRadius">@dimen/kn_r_card</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/kn_border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cardBackgroundColor">@color/kn_surface</item>
+        <item name="contentPadding">@dimen/kn_card_padding</item>
+    </style>
+
+    <style name="Widget.KeyNest.TextField" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">@dimen/kn_r_input</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/kn_r_input</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/kn_r_input</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/kn_r_input</item>
+        <item name="boxStrokeColor">@color/kn_primary</item>
+        <item name="hintTextColor">@color/kn_text_2</item>
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
-        <item name="hintTextColor">@color/kn_primary</item>
     </style>
 
-    <style name="ShapeAppearanceOverlay.KeyNest.TextField" parent="">
+    <style name="Widget.KeyNest.Chip" parent="Widget.Material3.Chip.Filter">
+        <item name="chipCornerRadius">@dimen/kn_r_chip</item>
+        <item name="chipMinHeight">@dimen/kn_chip_height</item>
+        <item name="android:textAppearance">@style/Text.KeyNest.Caption</item>
+    </style>
+
+    <style name="Widget.KeyNest.BottomSheet" parent="Widget.Material3.BottomSheet">
+        <item name="shapeAppearance">@style/ShapeAppearance.KeyNest.Sheet</item>
+    </style>
+    <style name="ShapeAppearance.KeyNest.Sheet" parent="">
         <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">14dp</item>
-    </style>
-
-    <!-- FAB tinted with brand primary (AC 4.3.5) -->
-    <style name="Widget.KeyNest.FloatingActionButton" parent="Widget.MaterialComponents.FloatingActionButton">
-        <item name="backgroundTint">?attr/colorPrimary</item>
-        <item name="tint">?attr/colorOnPrimary</item>
-    </style>
-
-    <!-- Bottom sheet dialog: 28dp top radius, surface background (AC 4.5.1) -->
-    <style name="ThemeOverlay.KeyNest.BottomSheetDialog" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
-        <item name="bottomSheetStyle">@style/Widget.KeyNest.BottomSheet</item>
-    </style>
-
-    <style name="Widget.KeyNest.BottomSheet" parent="Widget.MaterialComponents.BottomSheet.Modal">
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.KeyNest.BottomSheet</item>
-        <item name="backgroundTint">?attr/colorSurface</item>
-    </style>
-
-    <style name="ShapeAppearanceOverlay.KeyNest.BottomSheet" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">@dimen/kn_radius_xl</item>
-        <item name="cornerSizeTopRight">@dimen/kn_radius_xl</item>
+        <item name="cornerSizeTopLeft">@dimen/kn_r_sheet</item>
+        <item name="cornerSizeTopRight">@dimen/kn_r_sheet</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
+
+    <!--
+        Issue #31 Phase 2 (Onboarding) — small row / chip style helpers
+        used by autofill_enable_activity.xml. These keep the per-step
+        layout XML short and pin the JSX visual contract in one place.
+    -->
+    <style name="Widget.KeyNest.OnboardingStepRow" parent="">
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <style name="Widget.KeyNest.OnboardingStepChip" parent="">
+        <item name="android:background">@drawable/kn_onboarding_step_chip_bg</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/kn_primary</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/manrope</item>
+    </style>
+
 </resources>

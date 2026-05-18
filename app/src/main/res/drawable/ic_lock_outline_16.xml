@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #34 Req 3.20: Dataset row 末尾の lock icon (16dp 規格).
+
+  JSX reference (shared.jsx L78):
+    Icons.lock = <svg 24x24 fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="5" y="11" width="14" height="10" rx="2"/>
+      <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+    </svg>
+  Body 14x10 rounded rect (shackle 内側に空隙) + 上半部の U 字形ハスプ。
+
+  本 vector は stroke を path で fill 表現に展開した outline 版。Issue #34 は
+  RemoteViews 上で android:tint を直接適用するため、fillColor=@android:color/white
+  (monochrome silhouette) として描画し、layout 側で `android:tint="@color/kn_text_2"`
+  を適用する。
+
+  16dp サイズで配置する想定 (Req 3.19: 16dp × 16dp). 24dp viewport は JSX SVG と
+  整合させ、scale 比 16/24 で自然に縮退する。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- lock body (rounded rect outlined as 2 concentric rects) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M5,11 m0,2 a2,2 0 0,1 2,-2 h10 a2,2 0 0,1 2,2 v6 a2,2 0 0,1 -2,2 h-10 a2,2 0 0,1 -2,-2 z M7.5,12.5 v6 h9 v-6 z" />
+    <!-- shackle (U-shape outline: outer arc minus inner arc, drawn as evenodd) -->
+    <path
+        android:fillColor="@android:color/white"
+        android:fillType="evenOdd"
+        android:pathData="M8,11 v-3 a4,4 0 0,1 8,0 v3 h-1.5 v-3 a2.5,2.5 0 0,0 -5,0 v3 z" />
+</vector>

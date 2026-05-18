@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 7.x: PackagePickerBottomSheet row item.
+
+  Source of truth:
+  - JSX: design/screens/screens-2.jsx > PickerRow (L64-78).
+  - Token mapping: design/android-assets/mapping.md §5.
+
+  Visual contract:
+  - Row container (Req 7.8 / 7.9 / 7.11): horizontal LinearLayout, gravity
+    center_vertical, kn_space_3 (12dp) padding both sides, kn_space_3 (12dp)
+    gap between icon and text column, kn_r_sm (12dp) ripple background.
+    android:minHeight=48dp keeps the tap target above the 48dp NFR floor
+    (NFR 2.1).
+  - Icon tile (Req 7.1 / 7.2 / 7.3): 32dp × 32dp FrameLayout backed by
+    kn_icon_tile_bg drawable (kn_blue_500 fill + kn_r_sm corners). Per-app
+    dynamic color is Out of Scope; the single-color fallback is preserved.
+  - App name (Req 7.5): Text.KeyNest.Body (14sp / weight 600). Single line
+    with ellipsize=end.
+  - Package name (Req 7.6 / 7.7): Text.KeyNest.Mono (JetBrains Mono / 12sp
+    / weight 500), kn_text_3 color, single line ellipsize=end.
+
+  IDs:
+  - @+id/text_app_label  : binds AppItem.label
+  - @+id/text_app_package: binds AppItem.packageName
+
+  Click handling: the adapter wires View.setOnClickListener on the root
+  LinearLayout to invoke onPicked(item.packageName) + dismiss(). The root
+  uses ?attr/selectableItemBackground so taps render a ripple.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:minHeight="48dp"
+    android:orientation="horizontal"
+    android:paddingHorizontal="@dimen/kn_space_3"
+    android:paddingVertical="@dimen/kn_space_3">
+
+    <!-- Issue #43: inner ImageView (id=icon_app) is painted by
+         IconLoader.loadInto on bind.
+         Issue #46 Req 5.x: clipToOutline removed (the ImageView has no
+         outline provider; clipping rendered the content invisible).
+         Issue #51: the parent FrameLayout's
+         android:background="@drawable/kn_icon_tile_bg" was removed so
+         the 12dp rounded rectangle (kn_blue_500 fill) no longer bleeds
+         through the four corners of the AdaptiveIconDrawable system
+         circular mask. Resolved icons paint themselves; the
+         InitialLetterDrawable fallback paints its own 12dp rounded
+         blue tile + white initial letter. While IconLoader is resolving
+         (cache miss), the ImageView holds no drawable. -->
+    <FrameLayout
+        android:layout_width="@dimen/kn_icon_tile_sm"
+        android:layout_height="@dimen/kn_icon_tile_sm"
+        android:layout_marginEnd="@dimen/kn_space_3">
+
+        <ImageView
+            android:id="@+id/icon_app"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/text_app_label"
+            style="@style/Text.KeyNest.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/kn_text"
+            tools:text="Salesforce Mobile" />
+
+        <TextView
+            android:id="@+id/text_app_package"
+            style="@style/Text.KeyNest.Mono"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/kn_text_3"
+            tools:text="com.salesforce.chatter" />
+    </LinearLayout>
+</LinearLayout>

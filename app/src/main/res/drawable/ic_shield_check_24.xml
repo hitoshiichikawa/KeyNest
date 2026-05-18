@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #31 Req 7.3: success shield icon for the "already enabled" state.
+  24x24dp shield outline with an inset check mark. Tinted at runtime via
+  app:tint="@color/kn_success".
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/kn_success">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,2 L4,5 V11 C4,15.97 7.42,20.5 12,22 C16.58,20.5 20,15.97 20,11 V5 L12,2 Z M10.5,16 L6.5,12 L7.91,10.59 L10.5,13.17 L16.09,7.58 L17.5,9 L10.5,16 Z" />
+</vector>

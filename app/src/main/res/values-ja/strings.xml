@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KeyNest — 日本語 strings. JP wording from design/spec.md §9.
+  Place at: app/src/main/res/values-ja/strings.xml
+-->
+<resources>
+    <string name="app_name">KeyNest</string>
+
+    <!-- Credential list -->
+    <string name="credential_list_title">Vault</string>
+    <string name="credential_list_empty">最初の鍵を巣に入れよう。\n業務アプリの ID/パスワードを登録すると\nログイン画面で候補として表示されます。</string>
+    <string name="action_add_credential">クレデンシャルを登録</string>
+    <string name="action_edit_credential">編集</string>
+    <string name="action_delete_credential">削除</string>
+    <string name="menu_open_autofill_settings">Autofill 設定</string>
+
+    <!-- Credential edit -->
+    <string name="credential_edit_title_new">新しいクレデンシャル</string>
+    <string name="credential_edit_title_edit">クレデンシャル編集</string>
+    <string name="label_package_name">アプリのパッケージ名</string>
+    <string name="label_username">ユーザー名 / メール</string>
+    <string name="label_password">パスワード</string>
+    <string name="label_display_name">表示名</string>
+    <string name="action_pick_installed_app">インストール済みアプリから選択</string>
+    <string name="action_save">保存</string>
+    <string name="error_package_name_blank">パッケージ名は必須です。</string>
+    <string name="error_package_name_invalid">パッケージ名の形式が不正です。</string>
+    <string name="error_username_blank">ユーザー名は必須です。</string>
+    <string name="error_password_blank">パスワードは必須です。</string>
+    <string name="error_label_blank">表示名は必須です。</string>
+    <string name="error_save_failed">保存に失敗しました。</string>
+    <string name="message_credential_saved">保存しました。</string>
+    <string name="error_save_failed_with_reason">保存に失敗しました: %1$s</string>
+    <string name="message_signature_not_captured">署名情報を取得できませんでした (アプリが未インストール)。再インストール後に登録し直してください。</string>
+
+    <!-- Credential edit: Issue #30 design alignment (target app card,
+         password label, strength bar, advanced section, delete CTA). -->
+    <string name="credential_edit_password_label">パスワード</string>
+    <string name="credential_edit_advanced_chevron_a11y">詳細設定を表示</string>
+    <string name="credential_edit_target_app_change_a11y">対象アプリを変更</string>
+    <string name="credential_edit_close_a11y">編集画面を閉じる</string>
+
+    <!-- 削除確認ダイアログ (Issue #30 Req 8.9 - 8.12). -->
+    <string name="credential_edit_delete_confirm_title">このクレデンシャルを削除しますか?</string>
+    <string name="credential_edit_delete_confirm_message">このクレデンシャルを完全に削除します。このアプリの Autofill 候補は表示されなくなります。</string>
+    <string name="credential_edit_delete_confirm_positive">削除</string>
+    <string name="credential_edit_delete_confirm_negative">キャンセル</string>
+    <string name="credential_edit_delete_failed">削除に失敗しました。</string>
+
+    <!-- カスタムフィールドサジェスト (Issue #67 Phase 2, design.md §8.3). -->
+    <string name="credential_edit_detected_fields_label">最近検出されたフィールド</string>
+    <string name="credential_edit_detected_fields_empty">履歴なし。アプリで一度フォームを開くと候補が表示されます。</string>
+
+    <!-- Autofill enable -->
+    <string name="autofill_enable_title">Android の Autofill を\nKeyNest に切り替える</string>
+    <string name="autofill_enable_description">ログイン画面で保存済みの ID/パスワードを\n候補表示するために、Autofill サービスを\nKeyNest に設定します。</string>
+    <string name="autofill_enable_action">設定を開く</string>
+    <string name="autofill_enable_already_enabled">KeyNest は既に Autofill サービスとして有効です。</string>
+    <string name="autofill_enable_settings_unavailable">この端末では Autofill 設定画面を開けません。</string>
+
+    <!-- Autofill enable: Issue #31 design alignment (steps card + "later" CTA).
+         3 ステップ手順カードの見出し + 補足文 (JSX `ScreenOnboarding` の steps 配列より)
+         と、画面下部のサブアクション「あとで」ボタン. -->
+    <string name="autofill_enable_step1_title">「設定を開く」をタップ</string>
+    <string name="autofill_enable_step1_description">Android の設定画面に移動します</string>
+    <string name="autofill_enable_step2_title">「KeyNest」を選択</string>
+    <string name="autofill_enable_step2_description">パスワードとアカウントの項目で</string>
+    <string name="autofill_enable_step3_title">戻ってきたら準備完了</string>
+    <string name="autofill_enable_step3_description">クレデンシャルを登録できます</string>
+    <string name="autofill_enable_action_later">あとで</string>
+
+    <!-- Autofill unlock -->
+    <string name="biometric_prompt_title">クレデンシャルをアンロック</string>
+    <string name="biometric_prompt_subtitle">認証後にパスワードが復号され\nログイン画面に入力されます。</string>
+
+    <!-- Package picker -->
+    <string name="package_picker_title">アプリを選択</string>
+    <string name="package_picker_subtitle">署名情報も同時に取得します</string>
+    <!-- Issue #48: `package_picker_section_used` (業務でよく使う) を削除。
+         該当セクションそのものを撤去したため string も不要になった。 -->
+    <string name="package_picker_section_all">すべてのアプリ</string>
+    <string name="package_picker_manual">一覧にない → パッケージ名を手動入力</string>
+
+    <!-- Package picker: Issue #32 additional keys (search hint / close a11y /
+         empty-search hint / manual-input dialog). The 5 keys above already
+         existed; the 5 below are added for Phase 2 #32. -->
+    <string name="package_picker_search_hint">アプリ名・パッケージ名で絞り込み</string>
+    <string name="package_picker_close_a11y">アプリ選択画面を閉じる</string>
+    <string name="package_picker_no_results">該当するアプリがありません</string>
+    <string name="package_picker_manual_input_title">パッケージ名を入力</string>
+    <string name="package_picker_manual_input_hint">com.example.app</string>
+    <string name="package_picker_manual_input_invalid">パッケージ名の形式が不正です</string>
+
+    <!-- Misc -->
+    <string name="signature_match">署名一致</string>
+    <string name="signature_missing">署名なし</string>
+    <string name="strength_strong">強</string>
+    <string name="strength_medium">中</string>
+    <string name="strength_weak">弱</string>
+
+    <!-- Empty state body copy (Issue #29 Req 8.1 / 8.3). Shown between the
+         headline and the primary CTA on the Initial empty state. -->
+    <string name="credential_list_empty_body">KeyNest にようこそ。最初のクレデンシャルを登録して、安全な保管をはじめましょう。</string>
+
+    <!-- Empty state security note (Issue #29 Req 8 footer). -->
+    <string name="credential_list_empty_security_note">AES-GCM · 端末ローカルのみ</string>
+
+    <!-- Settings: Issue #33 design alignment (JSX ScreenSettings の hero /
+         SettingRow / Danger zone). Issue #10 で導入された既存 settings_*
+         キーの ja 翻訳追加は本 Issue では Out of Scope (Open Question 参照).
+         本 Issue で新規追加するキーのみ翻訳する (NFR 3.1 / 3.4). -->
+    <string name="settings_autofill_hero_title">Autofill サービス</string>
+    <string name="settings_autofill_hero_description_enabled">KeyNest が Android のパスワード Autofill として動作しています。</string>
+    <string name="settings_autofill_hero_description_not_enabled">KeyNest はまだ Android の Autofill サービスとして設定されていません。</string>
+    <string name="settings_autofill_hero_cta">Android 設定で確認</string>
+    <string name="settings_lock_status_label">ロック解除方法</string>
+    <string name="settings_lock_status_a11y_label">ロック解除方法、Android セキュリティ設定を開く</string>
+    <string name="settings_about_keynest_label">KeyNest</string>
+    <string name="settings_about_privacy_label">プライバシー</string>
+    <string name="settings_about_privacy_sub">ネットワーク送信なし · Keystore 保護</string>
+    <string name="settings_about_oss_licenses_a11y_label">OSS ライセンス、ライセンス一覧を開く</string>
+    <string name="settings_danger_delete_all_label">すべて削除</string>
+    <string name="settings_danger_delete_all_sub">復元できません</string>
+    <string name="settings_danger_delete_all_a11y_label">すべて削除、Danger zone を開く</string>
+
+    <!-- Autofill dataset presentation (Issue #34 / Phase 2 #6).
+         「KEYNEST」eyebrow はブランド名としてラテン大文字固定 (NFR 2.2). 末尾
+         「+ 新しいクレデンシャル」は JSX `ScreenDataset` フッター行 (screens-2.jsx
+         L142-145) に対応する作成導線。autofill_dataset_brand_mark_a11y /
+         autofill_dataset_row_lock_a11y は TalkBack の補助ラベル。 -->
+    <string name="autofill_dataset_create_new">+ 新しいクレデンシャル</string>
+    <string name="autofill_dataset_brand_mark_a11y">KeyNest</string>
+    <string name="autofill_dataset_row_lock_a11y">ロック中、生体認証が必要</string>
+</resources>

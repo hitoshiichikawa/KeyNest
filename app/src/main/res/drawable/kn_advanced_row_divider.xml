@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #30 Req 7.8: row separator inside the advanced details section.
+
+  1dp horizontal line that the JSX renders as a CSS var border
+  bottom rule on each Row. We materialise it as a Drawable so a
+  small View with android:layout_height="1dp" and this drawable
+  as background can be inserted between successive rows.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_border" />
+</shape>

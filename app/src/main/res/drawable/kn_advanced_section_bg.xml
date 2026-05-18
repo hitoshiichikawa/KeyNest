@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #30 Req 7.1 / 7.2: advanced details section container.
+
+  Background drawable for the collapsible "詳細設定" panel.
+  - Fill: @color/kn_surface_2 (kn_ink_50 light / kn_ink_800 dark).
+  - Corner radius: @dimen/kn_r_input (14dp). Matches the JSX
+    `ScreenEdit` advanced panel: background var surface-2,
+    borderRadius 14.
+  - No stroke (the section is differentiated from the main surface
+    purely via the slightly elevated fill, mirroring the JSX mock).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_surface_2" />
+    <corners android:radius="@dimen/kn_r_input" />
+</shape>

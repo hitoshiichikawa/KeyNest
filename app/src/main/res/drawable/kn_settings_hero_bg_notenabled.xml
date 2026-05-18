@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 2.7: Autofill status hero background (NotEnabled).
+
+  JSX `ScreenSettings` の NotEnabled パスは mock に存在しないが、
+  Req 2.7 に従い背景に @color/kn_warning_soft、角丸を @dimen/kn_r_lg (20dp)
+  に固定し、@color/kn_text を本文・@color/kn_warning を accent に使う前提.
+
+  values-night/colors.xml は kn_warning_soft を rgba(245,158,11,.12) 系に
+  落として dark surface 上でも本文 kn_text とのコントラストが 4.5:1 以上
+  保たれる (Req 11.5).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_warning_soft" />
+    <corners android:radius="@dimen/kn_r_lg" />
+</shape>

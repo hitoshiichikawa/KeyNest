@@ -1,86 +1,256 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Autofill dataset dropdown row (RemoteViews target).
+  Issue #34: Autofill dataset popup presentation (RemoteViews surface).
 
-    Maps `design/screens/screens-2.jsx` <DatasetRow/>:
-      - 32dp IconTile (9dp radius — approximated via the tile shape drawable)
-      - label (13sp/700) + username/subtitle (11sp/500 text-2)
+  Source of truth: `design/screens/screens-2.jsx` `ScreenDataset` (L96-161).
+  Three vertical sections — KEYNEST eyebrow header + signature chip / one
+  Dataset row (label + username + lock) / footer "新規作成" row. Phase 2 #6
+  of the design import (mapping.md §5).
 
-    The autofill UI inflates this layout in the host app's process via
-    `RemoteViews`, so we must keep to the AOSP supported view set
-    (LinearLayout / FrameLayout / TextView / ImageView). No custom views,
-    no styles that resolve at theme time on the host side.
+  RemoteViews 制約により以下を遵守する:
+  - 使える ViewGroup は LinearLayout / FrameLayout / RelativeLayout のみ
+    (本ファイルは LinearLayout のみで完結する).
+  - `?attr/...` 形式の Material3 attribute 参照は禁止 (Req 1.1) — host
+    activity (任意の third-party アプリ) の theme が解決できないため。
+  - `android:textAppearance` で `@style/Text.KeyNest.*` を参照する形は API
+    レベルによっては解決されないため、`android:textSize` / `android:textColor`
+    / `android:textStyle` / `android:textAllCaps` / `android:letterSpacing`
+    を個別にインライン指定する (Req 2.7 / 3.10 / 3.14 / 5.7 のフォールバック分岐).
+  - 色は `@color/kn_*` セマンティックトークンを直接参照する (`?attr/colorXxx`
+    禁止). dark mode は values-night/colors.xml の上書き値で吸収される。
+  - ImageView の tint は `android:tint` を使う (`app:tint` は AppCompatImageView
+    専用属性で、RemoteViews は framework ImageView のみ inflate するため使えない).
+    UseAppTint lint 警告は tools:ignore で抑制する。
 
-    IDs MUST remain `dataset_label` and `dataset_subtitle` — they are
-    consumed verbatim by `DatasetPresentationFactory` (AC 4.7.2 /
-    NFR 3.2). The third TextView (`text_icon_letter`) is set from
-    Kotlin if/when the factory chooses to surface a monogram; ignoring
-    it just leaves the IconTile blank.
+  既存配線の不変 (Req 7):
+  - `@+id/dataset_label` と `@+id/dataset_subtitle` の View ID は保持
+    (`DatasetPresentationFactory.build` から `setTextViewText` で書き込み).
+  - `DatasetPresentationFactory.build(label, subtitle)` のシグネチャは変更しない。
+  - `FillResponseBuilder.buildLockedDataset` のロジックは変更しない。
 
-    Note: We do NOT reference theme-resolved colours (?attr/...) here
-    because RemoteViews is inflated outside the KeyNest theme. We bind
-    raw `kn_*` colour resources so the row keeps its visual identity
-    regardless of the host app's palette.
-
-    Requirements: 4.7.1, 4.7.2
+  視覚仕様:
+  - Root: LinearLayout vertical / background = @color/kn_surface (Req 1.2).
+    `match_parent` 幅で Autofill framework が dropdown 内に配置する。
+  - Header LinearLayout: bg = @drawable/kn_dataset_header_bg (kn_surface_2 fill),
+    padding 8dp x 12dp. left to right: KN mark 16dp / eyebrow "KEYNEST" /
+    spacer / signature chip (kn_success_soft pill + shield 12dp + "署名一致").
+  - Row LinearLayout: bg = @color/kn_surface, padding 8dp x 12dp, minHeight
+    48dp (NFR 4.3). left to right: 32dp icon tile (kn_blue_500 + 12dp radius
+    + center 20dp key vector tinted white) / label + username 縦 2 段 (weight 1)
+    / 16dp lock icon trailing.
+  - Footer LinearLayout: bg = @drawable/kn_dataset_create_row_bg (kn_blue_50
+    light / kn_primary_container dark), padding 8dp x 12dp. left to right:
+    plus icon 16dp tinted kn_primary / "+ 新しいクレデンシャル" ラベル
+    (kn_primary, 13sp, weight 600 相当). Req 5.11 に従い onClick は配線しない
+    (装飾行).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_dataset_surface"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingHorizontal="14dp"
-    android:paddingVertical="10dp">
+    android:background="@color/kn_surface"
+    android:orientation="vertical"
+    tools:ignore="Overdraw">
 
-    <FrameLayout
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:background="@drawable/bg_icon_tile_primary">
-
-        <!--
-            The factory binds dataset_label / dataset_subtitle, leaving
-            this monogram blank. We keep the slot wired so a future PR
-            can derive a letter from the credential label without
-            re-architecting the RemoteViews schema. Not in NFR 3.2 id set
-            (it's a new addition, not a rename).
-        -->
-        <TextView
-            android:id="@+id/dataset_icon_letter"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:textColor="@color/kn_on_primary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-    </FrameLayout>
-
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- KEYNEST eyebrow header + signature chip (Req 2)         -->
+    <!-- ──────────────────────────────────────────────────────── -->
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:background="@drawable/kn_dataset_header_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="@dimen/kn_space_2"
+        android:paddingBottom="@dimen/kn_space_2"
+        android:paddingStart="@dimen/kn_space_3"
+        android:paddingEnd="@dimen/kn_space_3">
 
+        <!-- KN mark 16dp tinted kn_primary (Req 2.4 / 2.5).
+             ic_keynest_mark_24 は 24dp 規格だが width/height で 16dp に
+             縮退してビューに収める (Req 4.1 の "16dp 版を新規追加するか
+             既存 24dp を 16dp サイズで配置するか" の後者). -->
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:contentDescription="@string/autofill_dataset_brand_mark_a11y"
+            android:src="@drawable/ic_keynest_mark_24"
+            android:tint="@color/kn_primary"
+            tools:ignore="UseAppTint" />
+
+        <!-- Eyebrow "KEYNEST" (Req 2.6 / 2.7 / 2.8).
+             TextAppearance 解決の API 境界を避けるため `Text.KeyNest.Eyebrow`
+             の値 (11sp / weight 700 / 0.08em letter-spacing / uppercase /
+             kn_text) をインライン指定する。 -->
         <TextView
-            android:id="@+id/dataset_label"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
+            android:layout_marginStart="@dimen/kn_space_2"
+            android:layout_weight="1"
+            android:letterSpacing="0.08"
+            android:text="@string/autofill_dataset_brand_eyebrow"
+            android:textAllCaps="true"
             android:textColor="@color/kn_text"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <!-- Signature chip pill (Req 2.9 - 2.14).
+             kn_success_soft pill + shield fill + "署名一致" or "Signature OK".
+             padding は JSX `padding: '3px 7px'` に対応する 4dp x 8dp 相当
+             (KeyNest tokens の kn_space_1 / kn_space_2 を採用)。 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/kn_signature_chip_bg_success"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="@dimen/kn_space_1"
+            android:paddingBottom="@dimen/kn_space_1"
+            android:paddingStart="@dimen/kn_space_2"
+            android:paddingEnd="@dimen/kn_space_2">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_shield_fill_16"
+                android:tint="@color/kn_success"
+                tools:ignore="UseAppTint" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/kn_space_1"
+                android:text="@string/signature_match"
+                android:textColor="@color/kn_success"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Dataset row (Req 3)                                      -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:minHeight="48dp"
+        android:orientation="horizontal"
+        android:paddingTop="@dimen/kn_space_2"
+        android:paddingBottom="@dimen/kn_space_2"
+        android:paddingStart="@dimen/kn_space_3"
+        android:paddingEnd="@dimen/kn_space_3">
+
+        <!-- Icon tile 32dp (Req 3.4 - 3.7). Center に 20dp key vector を
+             ImageView で配置し、白 tint で blue tile 上に描く。FrameLayout で
+             tile bg と center icon を重ねる。
+             Open Question #3: 動的 letter は build(label, subtitle) シグネチャ
+             保持 (Req 7.1) と矛盾するため、固定の鍵 vector 中央配置を採用。 -->
+        <FrameLayout
+            android:layout_width="@dimen/kn_icon_tile_sm"
+            android:layout_height="@dimen/kn_icon_tile_sm"
+            android:background="@drawable/kn_icon_tile_bg">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_key_24"
+                android:tint="@color/kn_on_primary"
+                tools:ignore="UseAppTint" />
+
+        </FrameLayout>
+
+        <!-- Label + username 縦 2 段 (Req 3.8 - 3.16).
+             margin で icon tile から 10dp 離す (JSX `gap: 10`). -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="@dimen/kn_space_2"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Existing R.id.dataset_label preserved (Req 1.5 / 3.9 / 7.2).
+                 Text.KeyNest.BodyS 相当 (13sp / weight 500-700) をインライン展開。
+                 JSX `font: '700 13px/1.2'` を反映し textStyle=bold. -->
+            <TextView
+                android:id="@+id/dataset_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/kn_text"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <!-- Existing R.id.dataset_subtitle preserved (Req 1.5 / 3.13 / 7.2).
+                 JSX `font: '500 11px/1.3'` color #5C6B8E (= kn_text_2). -->
+            <TextView
+                android:id="@+id/dataset_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/kn_text_2"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+        <!-- Trailing lock icon (Req 3.17 - 3.20). 常に locked 表示 (KeyNest の
+             dataset は `setAuthentication` 付きの locked-only 設計). -->
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:contentDescription="@string/autofill_dataset_row_lock_a11y"
+            android:src="@drawable/ic_lock_outline_16"
+            android:tint="@color/kn_text_2"
+            tools:ignore="UseAppTint" />
+
+    </LinearLayout>
+
+    <!-- ──────────────────────────────────────────────────────── -->
+    <!-- Footer "新規作成" row (Req 5)                            -->
+    <!-- ──────────────────────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/kn_dataset_create_row_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="@dimen/kn_space_2"
+        android:paddingBottom="@dimen/kn_space_2"
+        android:paddingStart="@dimen/kn_space_3"
+        android:paddingEnd="@dimen/kn_space_3">
+
+        <!-- Plus icon 16dp tinted kn_primary (Req 5.4 / 5.5). -->
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:contentDescription="@null"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_plus_24"
+            android:tint="@color/kn_primary"
+            tools:ignore="UseAppTint" />
+
+        <!-- Footer label (Req 5.6 - 5.9). Text.KeyNest.BodyS 13sp weight 600
+             相当をインライン展開 (textStyle=bold が 600-700 範囲を再現). -->
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/kn_space_2"
+            android:layout_weight="1"
+            android:text="@string/autofill_dataset_create_new"
+            android:textColor="@color/kn_primary"
             android:textSize="13sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/dataset_subtitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/kn_ink_500"
-            android:textSize="11sp" />
     </LinearLayout>
 
 </LinearLayout>

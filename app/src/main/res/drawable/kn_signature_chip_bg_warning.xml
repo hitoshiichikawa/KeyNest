@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #29 Req 7.2: signature-missing chip background (warning variant).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_warning_soft" />
+    <corners android:radius="@dimen/kn_r_pill" />
+</shape>

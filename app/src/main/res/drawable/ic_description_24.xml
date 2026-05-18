@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 7.10: OSS ライセンス 行の leading アイコン (document).
+
+  Material Symbols "description" 24dp outline (折られた角つきドキュメント
+  シルエット). KeyNest mock では OSS 行に明示的アイコンが指定されていないが
+  Issue 要件 (Req 7.10) は "ドキュメント系 vector drawable" を求めている.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M8,16h8v2H8zM8,12h8v2H8zM14,2H6c-1.1,0 -2,0.9 -2,2v16c0,1.1 0.89,2 1.99,2H18c1.1,0 2,-0.9 2,-2V8L14,2zM18,20H6V4h7v5h5v11z" />
+</vector>

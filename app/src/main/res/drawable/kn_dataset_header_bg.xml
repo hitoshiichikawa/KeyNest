@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #34 Req 2.2: KEYNEST ヘッダー領域の背景.
+
+  JSX `ScreenDataset` reference (screens-2.jsx L131):
+    background: '#F1F4FA' (= KeyNest token kn_ink_50, セマンティック上は
+    kn_surface_2 で参照する). borderBottom 1px rgba(15,23,41,.06) は
+    Dataset 行領域との間の divider に相当するが、本 issue 範囲では
+    header 背景の塗りのみを扱う (divider は dataset 行側の paddingTop か
+    surface_2 と white surface の境界として視覚的に成立する).
+
+  Fill: @color/kn_surface_2 (light: kn_ink_50 / dark: kn_ink_800).
+  Corners: 0 — header は dropdown 上端の rectangle で角は ルートコンテナ側
+  (autofill framework が drawable round corners を適用しない場合は) ない。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/kn_surface_2" />
+</shape>

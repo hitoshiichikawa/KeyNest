@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #33 Req 7.15: プライバシー 行の leading アイコン (shield outline).
+
+  JSX `Icons.shield` (shared.jsx L64) を 24dp 規格で再現.
+  outline-only の盾 (Material Symbols "shield" outlined と同等).
+
+  既存 `ic_shield_check_24` は check mark 付きで Onboarding 完了状態を示すため、
+  プライバシー行用に check なしの純粋な shield outline を別途用意する.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,2L4,5v6.09c0,5.05 3.41,9.76 8,10.91c4.59,-1.15 8,-5.86 8,-10.91V5L12,2zM18,11.09c0,4 -2.55,7.7 -6,8.83c-3.45,-1.13 -6,-4.82 -6,-8.83V6.31l6,-2.12l6,2.12V11.09z" />
+</vector>

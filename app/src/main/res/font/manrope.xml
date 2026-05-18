@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Issue #13 Req 1.1: Manrope font-family bundled as APK resources (no
+    Downloadable Fonts API, no INTERNET permission).
+
+    Bundled weights:
+      - 400 Regular   (manrope_regular.ttf)
+      - 500 Medium    (manrope_medium.ttf)
+      - 600 SemiBold  (manrope_semibold.ttf)
+      - 700 Bold      (manrope_bold.ttf)
+
+    design/tokens.css references weight 800 (ExtraBold) as well but it is
+    NOT bundled here to keep the APK size delta within NFR 1.1 (+3 MB).
+    Weight 700 (Bold) substitutes for 800 references at runtime via the
+    closest-match weight resolution performed by FontFamily.
+-->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/manrope_regular"
+        app:fontStyle="normal"
+        app:fontWeight="400"
+        app:font="@font/manrope_regular" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="500"
+        android:font="@font/manrope_medium"
+        app:fontStyle="normal"
+        app:fontWeight="500"
+        app:font="@font/manrope_medium" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="600"
+        android:font="@font/manrope_semibold"
+        app:fontStyle="normal"
+        app:fontWeight="600"
+        app:font="@font/manrope_semibold" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="700"
+        android:font="@font/manrope_bold"
+        app:fontStyle="normal"
+        app:fontWeight="700"
+        app:font="@font/manrope_bold" />
+
+</font-family>

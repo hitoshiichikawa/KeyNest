@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #31 Req 5.3: step number chip background.
+  28dp circular chip filled with kn_surface_tint (light = kn_blue_50,
+  dark = rgba(31,111,235,.16) per values-night). The numeric label is
+  drawn in kn_primary on top.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/kn_surface_tint" />
+</shape>

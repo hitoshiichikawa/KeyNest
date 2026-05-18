@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #43: stable resource IDs referenced from code (rather than layout
+  XML). Each entry is declared once here so it can be looked up via
+  R.id.* without requiring an `@+id/...` first-use in a layout file.
+
+  IDs:
+    - icon_loader_request_tag : ImageView.setTag(int, Object) key used by
+      IconLoader to associate each in-flight resolve with the requesting
+      packageName, so async results can be ignored when the ViewHolder
+      has already been recycled to a different row (Req 2.4 race
+      prevention).
+    - custom_field_row_id : Issue #77 — View.setTag(int, Object) key
+      used by [CredentialEditActivity.renderCustomFields] to associate
+      each inflated row view with the [CustomFieldsState.Row.rowId] it
+      represents, enabling idempotent diff rendering (re-using existing
+      EditTexts across state emissions instead of full rebuild). Avoids
+      focus loss / IME dismissal on every keystroke.
+    - custom_field_key_watcher / custom_field_value_watcher : tag keys
+      used to hold a reference to the [TextWatcher] currently attached
+      to the fieldKey / value EditText of a row. Lets the renderer
+      detach the existing watcher before a defensive setText() sync so
+      the watcher does not re-emit the same value back into the
+      ViewModel (re-entrancy guard).
+-->
+<resources>
+    <item name="icon_loader_request_tag" type="id" />
+    <item name="custom_field_row_id" type="id" />
+    <item name="custom_field_key_watcher" type="id" />
+    <item name="custom_field_value_watcher" type="id" />
+</resources>

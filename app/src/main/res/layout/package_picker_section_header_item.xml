@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #32 Req 5.x / 6.x: section header item for PackagePickerBottomSheet.
+
+  Issue #48: the "業務でよく使う" SAMPLE section was removed, so this layout
+  now backs only the "すべてのアプリ" header. The adapter still binds the
+  string at runtime to keep the binding path flexible.
+
+  JSX `ScreenPicker` reference (screens-2.jsx L45 / L49):
+    font 700 11px var(kn-font-ui), color text-3, letterSpacing 0.08em,
+    padding 12px 12px 6px (first) / 16px 12px 6px (subsequent),
+    textTransform uppercase.
+
+  Visual contract:
+  - Text.KeyNest.Eyebrow already encodes 11sp / weight 700 / kn_text_3 /
+    letterSpacing 0.08 / textAllCaps=true (Req 5.2 / 5.3, Req 6.2).
+  - Padding: kn_space_3 (12dp) horizontal aligns with row items;
+    kn_space_3 top + kn_space_2 (8dp) bottom matches the JSX 12/6 gap.
+  - accessibilityHeading=true (NFR 2.4): screen readers announce this row
+    as a heading.
+
+  IDs:
+  - @+id/text_section_header: bound to package_picker_section_all.
+-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/text_section_header"
+    style="@style/Text.KeyNest.Eyebrow"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:accessibilityHeading="true"
+    android:paddingStart="@dimen/kn_space_3"
+    android:paddingTop="@dimen/kn_space_3"
+    android:paddingEnd="@dimen/kn_space_3"
+    android:paddingBottom="@dimen/kn_space_2"
+    android:textColor="@color/kn_text_3"
+    tools:text="すべてのアプリ" />
