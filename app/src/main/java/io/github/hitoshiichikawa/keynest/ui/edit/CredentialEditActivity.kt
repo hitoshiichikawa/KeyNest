@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.text.method.PasswordTransformationMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
@@ -19,6 +20,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.CredentialEditActivityBinding
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
@@ -54,6 +56,14 @@ class CredentialEditActivity : AppCompatActivity() {
 
     private lateinit var binding: CredentialEditActivityBinding
     private var editingId: Long? = null
+
+    /**
+     * Issue #73 Phase 1.5 guard: setText(initialPassword) must run
+     * exactly once when the value first becomes non-null, otherwise a
+     * second emission (re-render, configuration change replay) would
+     * overwrite the user's in-progress edits with the load-time value.
+     */
+    private var passwordInitialized: Boolean = false
 
     private val viewModel: CredentialEditViewModel by viewModels {
         CredentialEditViewModel.Factory(
@@ -105,9 +115,19 @@ class CredentialEditActivity : AppCompatActivity() {
                 // Issue #30 Req 3.7 / 3.8: signature chip tint follows the
                 // loaded record's signatureSha256 nullability.
                 renderSignatureChip(hasSignature = rec.signatureSha256 != null)
-                // password intentionally left blank in edit mode - if the
-                // user wants to change it they type a new one.
-                binding.layoutPassword.hint = getString(R.string.label_password) + " (optional)"
+                // Issue #73 Phase 1.5: configure the password field for
+                // Mode.Edit. The actual setText() for the decrypted value
+                // happens when EditState.initialPassword first arrives
+                // (collector below). Pre-configure layout-side state here
+                // so the field is non-focused & masked & without the
+                // password_toggle endIcon when the user first sees the
+                // screen (Req 4.3 / 4.4 / 5.4, §9 Q3 採用案 A).
+                binding.layoutPassword.endIconMode = TextInputLayout.END_ICON_NONE
+                // Move keyboard focus away from inputPassword so the
+                // soft IME / shoulder-surfing risk does not trigger the
+                // focus-gain plaintext path before the user explicitly
+                // taps the field (Req 4.4 / §9 Q5).
+                binding.inputLabel.requestFocus()
             }
         }
 
@@ -177,6 +197,17 @@ class CredentialEditActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.suggestion.collect(::renderDetectedFieldSuggestions)
+            }
+        }
+        // Issue #73 Phase 1.5: Mode.Edit password initial value +
+        // masking + focus toggle. Only triggers in Mode.Edit
+        // (editingId != null); Mode.New keeps the layout default
+        // password_toggle endIcon (NFR 5.2 / §9 Q3 採用案 A).
+        if (editingId != null) {
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    viewModel.editState.collect(::renderEditStatePassword)
+                }
             }
         }
     }
@@ -407,6 +438,47 @@ class CredentialEditActivity : AppCompatActivity() {
         binding.btnAddCustomField.isEnabled = state.canAddMore
         binding.tvCustomFieldsReadonlyNote.visibility =
             if (state.editable) View.GONE else View.VISIBLE
+    }
+
+    /**
+     * Render the Mode.Edit password initial value + masking + focus
+     * toggle. Issue #73 Phase 1.5.
+     *
+     * Wiring fires only the first time `initialPassword` becomes
+     * non-null (guarded by [passwordInitialized]) so subsequent
+     * StateFlow emissions (re-renders, configuration changes) do not
+     * stomp on the user's edits.
+     *
+     * Steps:
+     *  1. setText() the decrypted value into [binding.inputPassword].
+     *  2. Apply [PasswordTransformationMethod] so the value is masked
+     *     on first paint (Req 4.3, NFR 5.2).
+     *  3. Install a focus listener that swaps the transformation
+     *     method on focus gain / loss while preserving cursor
+     *     selection (Req 5.1 / 5.2 / 5.3).
+     *
+     * The listener intentionally does NOT call SafeLogger — masking
+     * toggle frequency / timing must not be logged (Req 8.4 / NFR 4.3).
+     */
+    private fun renderEditStatePassword(state: CredentialEditViewModel.EditState) {
+        val initial = state.initialPassword ?: return
+        if (passwordInitialized) return
+        passwordInitialized = true
+
+        binding.inputPassword.setText(initial)
+        binding.inputPassword.transformationMethod = PasswordTransformationMethod.getInstance()
+
+        binding.inputPassword.setOnFocusChangeListener { _, hasFocus ->
+            val selStart = binding.inputPassword.selectionStart
+            val selEnd = binding.inputPassword.selectionEnd
+            binding.inputPassword.transformationMethod =
+                if (hasFocus) null else PasswordTransformationMethod.getInstance()
+            // setSelection requires a valid range; defensive guard
+            // against pre-text states (selection == -1).
+            if (selStart >= 0 && selEnd >= 0) {
+                binding.inputPassword.setSelection(selStart, selEnd)
+            }
+        }
     }
 
     /**
