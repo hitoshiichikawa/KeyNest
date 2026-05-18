@@ -195,7 +195,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T8b. layout XML / strings.xml の追加
+### [x] T8b. layout XML / strings.xml の追加
 
 **ファイル**:
 - 既存: `app/src/main/res/layout/credential_edit_activity.xml`
