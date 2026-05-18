@@ -98,8 +98,36 @@ object AutofillFieldHeuristics {
     // requires BOTH a username candidate AND a password candidate before
     // returning a non-empty pair, so a stray "id" match cannot single-handedly
     // produce a wrong fill response.
-    private val USERNAME_KEYWORDS = listOf("user", "email", "id", "account", "login")
-    private val PASSWORD_KEYWORDS = listOf("pass", "pwd", "secret")
+    //
+    // Issue #68 Phase 3 adds Japanese hint literals and common business-app
+    // resourceId snake_case patterns via OR-concat. Japanese characters
+    // (hiragana / katakana / kanji / full-width Latin) are unchanged by
+    // Kotlin's lowercase() because Unicode lowercase mapping is a no-op for
+    // those code points, so the existing `descriptorText.contains(kw)` scan
+    // works on them as-is. The literals here must match Issue #68 / Req 1
+    // bit-exactly (NFR 3): ユーザー has the long-vowel mark U+30FC ("ー"),
+    // and ユーザーID uses half-width ASCII "ID" (U+0049 U+0044).
+    private val USERNAME_KEYWORDS = listOf(
+        // Existing English / ASCII patterns.
+        "user", "email", "id", "account", "login",
+        // Req 1: Japanese hint literals classified as username candidates.
+        "ユーザー名", "ユーザーid", "メールアドレス", "eメール",
+        "電話番号", "会員番号", "社員番号",
+        // Req 2: common business-app resourceId snake_case patterns.
+        // Several of these are already covered by the broad "id" / "email" /
+        // "account" entries above, but listing them explicitly improves
+        // readability of intent and pins the contract in test (Req 4.2).
+        "member_no", "member_id", "customer_id", "customer_no",
+        "email_input", "email_field", "mail_address",
+        "tel_input", "phone_input", "tel_no",
+        "staff_id", "employee_id", "account_id",
+    )
+    private val PASSWORD_KEYWORDS = listOf(
+        // Existing English / ASCII patterns.
+        "pass", "pwd", "secret",
+        // Req 1.5: Japanese hint literals classified as password candidates.
+        "パスワード", "暗証番号",
+    )
 
     // ---- Issue #66 Phase 1: custom field match key extraction --------------
 
