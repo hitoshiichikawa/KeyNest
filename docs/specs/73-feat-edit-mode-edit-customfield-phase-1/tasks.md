@@ -52,7 +52,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Requirements: 1.1, 1.2, 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.5, 4.6, 6.1, 6.2, 6.3, 6.4, 6.5, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3, 9.3_
   - _Depends: 2_
 
-- [ ] 4. `CredentialEditActivity` に password 初期表示 / focus toggle / endIconMode 切替を配線
+- [x] 4. `CredentialEditActivity` に password 初期表示 / focus toggle / endIconMode 切替を配線
   - `viewModel.state` を collect し、`initialPassword != null` が **初めて成立した瞬間** に
     `binding.inputPassword.setText(initialPassword)` を 1 回だけ呼ぶ（`var passwordInitialized = false`
     等の guard でガード）
