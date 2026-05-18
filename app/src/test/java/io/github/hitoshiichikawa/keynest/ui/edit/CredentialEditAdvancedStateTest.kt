@@ -5,6 +5,8 @@ import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
 import io.github.hitoshiichikawa.keynest.domain.model.SigningHash
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.FakeCredentialRepository
+import io.github.hitoshiichikawa.keynest.domain.usecase.FakeDetectedFieldRepository
+import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.StubAesGcmCipher
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
@@ -222,6 +224,7 @@ class CredentialEditAdvancedStateTest {
         val save = SaveCredentialUseCase(repo, cipher, sigResolver)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
         val delete = DeleteCredentialUseCase(repo)
-        return CredentialEditViewModel(repo, save, update, delete)
+        val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
     }
 }

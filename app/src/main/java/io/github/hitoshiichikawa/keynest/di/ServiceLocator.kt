@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.biometric.BiometricManager
 import io.github.hitoshiichikawa.keynest.data.KeyNestDatabase
 import io.github.hitoshiichikawa.keynest.data.repository.CredentialRepositoryImpl
+import io.github.hitoshiichikawa.keynest.data.repository.DetectedFieldRepositoryImpl
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
+import io.github.hitoshiichikawa.keynest.domain.repository.DetectedFieldRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.ClearVaultUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DuplicateCredentialUseCase
@@ -12,8 +14,10 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.GetDeviceLockStatusUseCa
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ListCredentialsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.MarkCredentialUsedUseCase
+import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentlyUsedUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveVaultMetadataUseCase
+import io.github.hitoshiichikawa.keynest.domain.usecase.RecordDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ResolveAutofillCandidatesUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.UnlockVaultUseCase
@@ -55,6 +59,16 @@ object ServiceLocator {
 
     val credentialRepository: CredentialRepository by lazy {
         CredentialRepositoryImpl(database.credentialDao())
+    }
+
+    /**
+     * Issue #67 Phase 2: backing store for the "recently detected fields"
+     * suggestion UI. Held as a singleton so the AutofillService (which
+     * writes) and the credential edit screen (which reads via Flow) see
+     * the same Room instance.
+     */
+    val detectedFieldRepository: DetectedFieldRepository by lazy {
+        DetectedFieldRepositoryImpl(database.detectedFieldDao())
     }
 
     val keystoreKeyProvider: KeystoreKeyProvider by lazy { KeystoreKeyProvider() }
@@ -106,6 +120,22 @@ object ServiceLocator {
 
     val resolveAutofillCandidatesUseCase: ResolveAutofillCandidatesUseCase by lazy {
         ResolveAutofillCandidatesUseCase(credentialRepository, packageSignatureResolver)
+    }
+
+    /**
+     * Issue #67 Phase 2: fire-and-forget detection writer invoked by
+     * [io.github.hitoshiichikawa.keynest.autofill.KeyNestAutofillService.onFillRequest].
+     */
+    val recordDetectedFieldsUseCase: RecordDetectedFieldsUseCase by lazy {
+        RecordDetectedFieldsUseCase(detectedFieldRepository, credentialRepository)
+    }
+
+    /**
+     * Issue #67 Phase 2: Flow source for the credential edit screen
+     * suggestion chip group.
+     */
+    val observeRecentDetectedFieldsUseCase: ObserveRecentDetectedFieldsUseCase by lazy {
+        ObserveRecentDetectedFieldsUseCase(detectedFieldRepository)
     }
 
     val unlockVaultUseCase: UnlockVaultUseCase by lazy {
@@ -193,7 +223,7 @@ object ServiceLocator {
     }
 
     val clearVaultUseCase: ClearVaultUseCase by lazy {
-        ClearVaultUseCase(credentialRepository, keystoreKeyProvider)
+        ClearVaultUseCase(credentialRepository, keystoreKeyProvider, detectedFieldRepository)
     }
 
     // ---- bootstrap -------------------------------------------------------

@@ -47,6 +47,10 @@
     <string name="credential_edit_delete_confirm_negative">キャンセル</string>
     <string name="credential_edit_delete_failed">削除に失敗しました。</string>
 
+    <!-- カスタムフィールドサジェスト (Issue #67 Phase 2, design.md §8.3). -->
+    <string name="credential_edit_detected_fields_label">最近検出されたフィールド</string>
+    <string name="credential_edit_detected_fields_empty">履歴なし。アプリで一度フォームを開くと候補が表示されます。</string>
+
     <!-- Autofill enable -->
     <string name="autofill_enable_title">Android の Autofill を\nKeyNest に切り替える</string>
     <string name="autofill_enable_description">ログイン画面で保存済みの ID/パスワードを\n候補表示するために、Autofill サービスを\nKeyNest に設定します。</string>

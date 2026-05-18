@@ -100,6 +100,49 @@ class KeyNestAutofillService : AutofillService() {
                 }
 
                 val parsed = parser.parse(structure)
+                val callerPackage = extractCallerPackage(structure)
+
+                // Issue #67 Phase 2 (design.md §7.3): fire-and-forget
+                // detection. Launched BEFORE the `hasUsernameAndPassword`
+                // short-circuit because the Phase 2 primary use case is
+                // exactly the case where Phase 1's heuristics fail to
+                // identify a username/password pair (custom-field-only
+                // forms). Skipping detection in that branch would leave
+                // those apps stuck in the "履歴なし" state forever.
+                //
+                // Concurrency contract:
+                //   - Launched on the service `scope` (NOT bound to
+                //     `handlerJob`) so the detection job is decoupled
+                //     from the autofill callback / cancellation. The
+                //     parent `scope` is `SupervisorJob`-backed so a
+                //     detection failure does not bring down siblings.
+                //   - Dispatched on `Dispatchers.IO` because the
+                //     downstream Room write is blocking-style.
+                //   - Registration check lives inside the use case
+                //     (`findByPackage`); we deliberately do not
+                //     re-check here so the responsibility stays in one
+                //     place.
+                //   - Any exception is swallowed inside the launched
+                //     coroutine — Req 3.8.
+                if (callerPackage != null) {
+                    val descriptors = parsed.customFieldCandidates.map { it.descriptor }
+                    if (descriptors.isNotEmpty()) {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                ServiceLocator.recordDetectedFieldsUseCase(
+                                    callerPackage,
+                                    descriptors,
+                                )
+                            } catch (t: Throwable) {
+                                SafeLogger.warn(
+                                    message = "detected_fields upsert failed",
+                                    throwable = t,
+                                )
+                            }
+                        }
+                    }
+                }
+
                 if (!parsed.hasUsernameAndPassword) {
                     // Req 3.2 / NFR 3.1 - we need BOTH fields to safely fill.
                     // (We are conservative here; a fill response with only
@@ -110,7 +153,6 @@ class KeyNestAutofillService : AutofillService() {
                     return@launch
                 }
 
-                val callerPackage = extractCallerPackage(structure)
                 if (callerPackage == null) {
                     SafeLogger.info(message = "onFillRequest: caller package unknown")
                     if (handlerJob.isActive) callback.onSuccess(null)

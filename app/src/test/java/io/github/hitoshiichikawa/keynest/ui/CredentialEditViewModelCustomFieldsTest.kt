@@ -3,6 +3,8 @@ package io.github.hitoshiichikawa.keynest.ui
 import com.google.common.truth.Truth.assertThat
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.FakeCredentialRepository
+import io.github.hitoshiichikawa.keynest.domain.usecase.FakeDetectedFieldRepository
+import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.StubAesGcmCipher
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
@@ -180,6 +182,7 @@ class CredentialEditViewModelCustomFieldsTest {
         val save = SaveCredentialUseCase(repo, cipher, sigResolver, codec)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver, codec)
         val delete = DeleteCredentialUseCase(repo)
-        return CredentialEditViewModel(repo, save, update, delete)
+        val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
     }
 }

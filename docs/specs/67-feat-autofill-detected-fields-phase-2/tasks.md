@@ -18,7 +18,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ## タスク一覧
 
-### T1. Room schema v4: `DetectedFieldEntity` 追加
+### [x] T1. Room schema v4: `DetectedFieldEntity` 追加
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/data/entity/DetectedFieldEntity.kt`
@@ -37,7 +37,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T2. `DetectedFieldDao` の追加
+### [x] T2. `DetectedFieldDao` の追加
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/data/dao/DetectedFieldDao.kt`
@@ -62,7 +62,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T3. Migration_3_4 実装と schemas/4.json コミット
+### [x] T3. Migration_3_4 実装と schemas/4.json コミット
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/data/migration/Migration_3_4.kt`
@@ -83,7 +83,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T4. ドメイン型 `DetectedField` と repository インターフェース
+### [x] T4. ドメイン型 `DetectedField` と repository インターフェース
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/model/DetectedField.kt`
@@ -104,7 +104,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T5. `RecordDetectedFieldsUseCase` 実装
+### [x] T5. `RecordDetectedFieldsUseCase` 実装
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/usecase/RecordDetectedFieldsUseCase.kt`
@@ -126,7 +126,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T6. `ObserveRecentDetectedFieldsUseCase` 実装
+### [x] T6. `ObserveRecentDetectedFieldsUseCase` 実装
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/usecase/ObserveRecentDetectedFieldsUseCase.kt`
@@ -143,7 +143,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T7. `KeyNestAutofillService.onFillRequest` への組み込み
+### [x] T7. `KeyNestAutofillService.onFillRequest` への組み込み
 
 **ファイル**:
 - 既存: `app/src/main/java/io/github/hitoshiichikawa/keynest/autofill/KeyNestAutofillService.kt`
@@ -168,7 +168,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T8. 編集画面 ViewModel への suggestion 状態追加
+### [x] T8. 編集画面 ViewModel への suggestion 状態追加
 
 **ファイル**:
 - 既存: `app/src/main/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModel.kt`
@@ -195,7 +195,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T8b. layout XML / strings.xml の追加
+### [x] T8b. layout XML / strings.xml の追加
 
 **ファイル**:
 - 既存: `app/src/main/res/layout/credential_edit_activity.xml`
@@ -216,7 +216,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T9. RecordDetectedFieldsUseCaseTest
+### [x] T9. RecordDetectedFieldsUseCaseTest
 
 **ファイル**:
 - 新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/domain/usecase/RecordDetectedFieldsUseCaseTest.kt`
@@ -235,7 +235,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T10. DetectedFieldDaoTest
+### [x] T10. DetectedFieldDaoTest
 
 **ファイル**:
 - 新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/data/dao/DetectedFieldDaoTest.kt`
@@ -252,7 +252,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T11. CredentialEditViewModelTest（サジェスト関連）
+### [x] T11. CredentialEditViewModelTest（サジェスト関連）
 
 **ファイル**:
 - 既存または新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/ui/edit/CredentialEditViewModelTest.kt`
@@ -270,7 +270,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T12. Migration_3_4_Test
+### [x] T12. Migration_3_4_Test
 
 **ファイル**:
 - 新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/data/Migration_3_4_Test.kt`
@@ -288,7 +288,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T13. AutofillService 統合テスト（任意・Phase 1 のテストフィクスチャに依存）
+### [x] T13. AutofillService 統合テスト（任意・Phase 1 のテストフィクスチャに依存）
 
 **ファイル**:
 - 既存または新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/autofill/...Test.kt`
@@ -307,7 +307,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T14. Vault clear-all 連動
+### [x] T14. Vault clear-all 連動
 
 **ファイル**:
 - 既存: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/usecase/ClearVaultUseCase.kt`
@@ -325,7 +325,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T15. リンタ / フォーマッタ通過 + 動作確認
+### [x] T15. リンタ / フォーマッタ通過 + 動作確認
 
 **内容**:
 - `./gradlew :app:lintDebug` / `./gradlew :app:testDebugUnitTest` / `./gradlew :app:assembleDebug` を全て pass。

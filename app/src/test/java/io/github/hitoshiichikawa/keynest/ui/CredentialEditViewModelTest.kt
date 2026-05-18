@@ -3,6 +3,8 @@ package io.github.hitoshiichikawa.keynest.ui
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.FakeCredentialRepository
+import io.github.hitoshiichikawa.keynest.domain.usecase.FakeDetectedFieldRepository
+import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.StubAesGcmCipher
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
@@ -113,7 +115,8 @@ class CredentialEditViewModelTest {
         val save = SaveCredentialUseCase(repo, cipher, sigResolver)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
         val delete = DeleteCredentialUseCase(repo)
-        val vm = CredentialEditViewModel(repo, save, update, delete)
+        val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
+        val vm = CredentialEditViewModel(repo, save, update, delete, observeRecent)
 
         vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = charArrayOf(), label = "L2")
         advanceUntilIdle()
@@ -175,7 +178,8 @@ class CredentialEditViewModelTest {
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
         val deleteUseCase = mockk<DeleteCredentialUseCase>()
         coEvery { deleteUseCase.invoke(any()) } returns Result.failure(RuntimeException("disk full"))
-        val vm = CredentialEditViewModel(repo, save, update, deleteUseCase)
+        val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
+        val vm = CredentialEditViewModel(repo, save, update, deleteUseCase, observeRecent)
         val capturedNav = mutableListOf<Unit>()
         val collectorJob = launch { vm.navigation.collect { capturedNav.add(it) } }
 
@@ -215,6 +219,7 @@ class CredentialEditViewModelTest {
         val save = SaveCredentialUseCase(repo, cipher, sigResolver)
         val update = UpdateCredentialUseCase(repo, cipher, sigResolver)
         val delete = DeleteCredentialUseCase(repo)
-        return CredentialEditViewModel(repo, save, update, delete)
+        val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
+        return CredentialEditViewModel(repo, save, update, delete, observeRecent)
     }
 }

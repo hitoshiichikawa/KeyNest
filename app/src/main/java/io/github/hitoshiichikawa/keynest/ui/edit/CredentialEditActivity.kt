@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
@@ -60,6 +61,7 @@ class CredentialEditActivity : AppCompatActivity() {
             ServiceLocator.saveCredentialUseCase,
             ServiceLocator.updateCredentialUseCase,
             ServiceLocator.deleteCredentialUseCase,
+            ServiceLocator.observeRecentDetectedFieldsUseCase,
         )
     }
 
@@ -116,8 +118,19 @@ class CredentialEditActivity : AppCompatActivity() {
                 // Issue #30 Req 3.6: keep the target-card preview in sync
                 // with the (possibly hidden) editable package field.
                 binding.tvTargetAppPackage.text = picked
+                // Issue #67 Phase 2: refresh suggestion source when the
+                // user picks a new package via the bottom sheet.
+                viewModel.bindPackageForSuggestions(picked)
             }
         }
+        // Issue #67 Phase 2: keep the suggestion source in sync with the
+        // (possibly hidden) editable package field. The TextWatcher
+        // covers manual entry through the PackagePicker manual-input
+        // dialog, restored state across rotations, and any future code
+        // path that mutates `input_package`.
+        binding.inputPackage.addTextChangedListener(simpleWatcher { text ->
+            viewModel.bindPackageForSuggestions(text)
+        })
 
         // Issue #30 Req 8.9: tapping the delete CTA shows a confirmation
         // dialog; only the positive action actually invokes the use case.
@@ -126,8 +139,14 @@ class CredentialEditActivity : AppCompatActivity() {
         binding.advancedHeader.setOnClickListener { viewModel.toggleAdvancedExpanded() }
         binding.toggleCredentialId.setOnClickListener { viewModel.toggleCredentialIdVisible() }
         binding.btnCopySignatureHex.setOnClickListener { copySignatureHexToClipboard() }
-        // Issue #66 Phase 1: customField editor wiring.
-        binding.btnAddCustomField.setOnClickListener { viewModel.addCustomFieldRow() }
+        // Issue #66 Phase 1 + Issue #67 Phase 2: customField editor wiring.
+        // After appending the row, ask the ViewModel to refresh the
+        // detected-fields suggestion chip strip so the user can populate
+        // the new row with one tap.
+        binding.btnAddCustomField.setOnClickListener {
+            viewModel.addCustomFieldRow()
+            viewModel.onAddCustomFieldClickedForSuggest()
+        }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -147,6 +166,12 @@ class CredentialEditActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.customFields.collect(::renderCustomFields)
+            }
+        }
+        // Issue #67 Phase 2: detected_fields suggestion chip strip.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.suggestion.collect(::renderDetectedFieldSuggestions)
             }
         }
     }
@@ -377,6 +402,61 @@ class CredentialEditActivity : AppCompatActivity() {
         binding.btnAddCustomField.isEnabled = state.canAddMore
         binding.tvCustomFieldsReadonlyNote.visibility =
             if (state.editable) View.GONE else View.VISIBLE
+    }
+
+    /**
+     * Render the detected_fields suggestion chip strip (Issue #67
+     * Phase 2). Driven by [CredentialEditViewModel.SuggestionState]:
+     *
+     * - Hidden (visible=false): label / scroll / empty-message all gone.
+     * - Visible + empty list + emptyMessage=true: show the empty
+     *   placeholder text instead of an empty chip group (Req 4.3).
+     * - Visible + items: rebuild the chip group from scratch — chip
+     *   count is capped at 10 by the ViewModel so a teardown-and-rebuild
+     *   per emission is cheap.
+     *
+     * The chip itself is a minimal Material chip; the only data shown
+     * is the raw `fieldKey`. We deliberately do NOT expose the
+     * `source` enum because (a) it would clutter the UI and (b) the
+     * source label is a developer-internal classification users do
+     * not benefit from seeing.
+     */
+    private fun renderDetectedFieldSuggestions(
+        state: CredentialEditViewModel.SuggestionState,
+    ) {
+        if (!state.visible) {
+            binding.labelDetectedFields.visibility = View.GONE
+            binding.scrollDetectedFieldSuggestions.visibility = View.GONE
+            binding.tvDetectedFieldsEmpty.visibility = View.GONE
+            binding.chipGroupDetectedFields.removeAllViews()
+            return
+        }
+        binding.labelDetectedFields.visibility = View.VISIBLE
+        if (state.items.isEmpty()) {
+            // Req 4.3: empty placeholder. The empty text also covers
+            // emptyMessage=false (Flow not yet emitted) — both surface
+            // as "nothing to show", which is fine.
+            binding.scrollDetectedFieldSuggestions.visibility = View.GONE
+            binding.chipGroupDetectedFields.removeAllViews()
+            binding.tvDetectedFieldsEmpty.visibility =
+                if (state.emptyMessage) View.VISIBLE else View.GONE
+            return
+        }
+        binding.tvDetectedFieldsEmpty.visibility = View.GONE
+        binding.scrollDetectedFieldSuggestions.visibility = View.VISIBLE
+        val chipGroup = binding.chipGroupDetectedFields
+        chipGroup.removeAllViews()
+        for (item in state.items) {
+            val chip = Chip(this).apply {
+                text = item.fieldKey
+                isClickable = true
+                isCheckable = false
+                isFocusable = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setOnClickListener { viewModel.onSuggestionClicked(item) }
+            }
+            chipGroup.addView(chip)
+        }
     }
 
     /**
