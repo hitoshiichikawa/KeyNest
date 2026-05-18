@@ -123,12 +123,17 @@ class KeyNestAutofillService : AutofillService() {
                     candidates = candidates,
                     usernameAutofillId = parsed.usernameId,
                     passwordAutofillId = parsed.passwordId,
+                    customFieldCandidates = parsed.customFieldCandidates,
                     inlineSpecs = inlineSpecs,
                 )
                 val elapsed = System.currentTimeMillis() - t0
+                // NFR 2.2 / Req 5.1: log counts only, never the underlying
+                // descriptor strings (which could leak third-party app field
+                // shapes or user-typed content).
                 SafeLogger.info(
                     message = "onFillRequest pkg=$callerPackage candidates=${candidates.size} " +
                         "userId=${parsed.usernameId != null} passId=${parsed.passwordId != null} " +
+                        "customFieldCandidates=${parsed.customFieldCandidates.size} " +
                         "inlineSpecs=${inlineSpecs.size} elapsedMs=$elapsed",
                 )
 

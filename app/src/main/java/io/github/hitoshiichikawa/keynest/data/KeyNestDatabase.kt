@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import io.github.hitoshiichikawa.keynest.data.dao.CredentialDao
 import io.github.hitoshiichikawa.keynest.data.entity.CredentialEntity
 import io.github.hitoshiichikawa.keynest.data.migration.Migration_1_2
+import io.github.hitoshiichikawa.keynest.data.migration.Migration_2_3
 
 /**
  * Room database holding all KeyNest persistent state.
@@ -21,10 +22,13 @@ import io.github.hitoshiichikawa.keynest.data.migration.Migration_1_2
  *
  * Schema history:
  *   v1 -> v2 ([Migration_1_2]): adds `last_used_at INTEGER NULL`.
+ *   v2 -> v3 ([Migration_2_3]): adds `custom_fields_ciphertext BLOB NOT NULL
+ *     DEFAULT x''` and `custom_fields_iv BLOB NOT NULL DEFAULT x''`
+ *     (Issue #66 Phase 1).
  */
 @Database(
     entities = [CredentialEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class KeyNestDatabase : RoomDatabase() {
@@ -40,7 +44,7 @@ abstract class KeyNestDatabase : RoomDatabase() {
                 KeyNestDatabase::class.java,
                 DB_NAME,
             )
-                .addMigrations(Migration_1_2)
+                .addMigrations(Migration_1_2, Migration_2_3)
                 .build()
         }
     }

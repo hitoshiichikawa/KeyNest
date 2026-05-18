@@ -61,6 +61,19 @@ data class EncryptedCredentialRecord(
     val updatedAt: Long,
     /** See [Credential.lastUsedAt]. Null = never used. */
     val lastUsedAt: Long? = null,
+    /**
+     * AES-GCM ciphertext of the JSON-encoded `List<CustomField>` for this
+     * credential. Issue #66 Phase 1. May be a zero-length array for rows
+     * that were inserted via Migration_2_3 and have not been re-saved yet
+     * (design.md §4.1 / §6.1). The codec interprets empty BLOB == empty
+     * customFields list.
+     */
+    val customFieldsCiphertext: ByteArray = ByteArray(0),
+    /**
+     * 12-byte AES-GCM IV that produced [customFieldsCiphertext]. Empty when
+     * [customFieldsCiphertext] is empty (post-migration default).
+     */
+    val customFieldsIv: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -75,7 +88,9 @@ data class EncryptedCredentialRecord(
             signatureCapturedAt == other.signatureCapturedAt &&
             createdAt == other.createdAt &&
             updatedAt == other.updatedAt &&
-            lastUsedAt == other.lastUsedAt
+            lastUsedAt == other.lastUsedAt &&
+            customFieldsCiphertext.contentEquals(other.customFieldsCiphertext) &&
+            customFieldsIv.contentEquals(other.customFieldsIv)
     }
 
     override fun hashCode(): Int {
@@ -90,6 +105,8 @@ data class EncryptedCredentialRecord(
         result = 31 * result + createdAt.hashCode()
         result = 31 * result + updatedAt.hashCode()
         result = 31 * result + (lastUsedAt?.hashCode() ?: 0)
+        result = 31 * result + customFieldsCiphertext.contentHashCode()
+        result = 31 * result + customFieldsIv.contentHashCode()
         return result
     }
 
@@ -98,5 +115,7 @@ data class EncryptedCredentialRecord(
         "EncryptedCredentialRecord(id=$id, packageName=$packageName, username=$username, label=$label, " +
             "ciphertext=<${passwordCiphertext.size}B>, iv=<${passwordIv.size}B>, " +
             "signatureSha256=$signatureSha256, signatureCapturedAt=$signatureCapturedAt, " +
-            "createdAt=$createdAt, updatedAt=$updatedAt, lastUsedAt=$lastUsedAt)"
+            "createdAt=$createdAt, updatedAt=$updatedAt, lastUsedAt=$lastUsedAt, " +
+            "customFieldsCiphertext=<${customFieldsCiphertext.size}B>, " +
+            "customFieldsIv=<${customFieldsIv.size}B>)"
 }

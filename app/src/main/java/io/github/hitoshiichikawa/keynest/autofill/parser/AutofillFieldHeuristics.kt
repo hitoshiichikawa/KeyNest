@@ -21,7 +21,7 @@ import android.view.View
  * multiple ViewNodes by preferring whichever rule fired earliest in this
  * priority order.
  */
-internal object AutofillFieldHeuristics {
+object AutofillFieldHeuristics {
 
     /** Plain-data view of an AssistStructure.ViewNode for unit-testability. */
     data class FieldDescriptor(
@@ -100,4 +100,55 @@ internal object AutofillFieldHeuristics {
     // produce a wrong fill response.
     private val USERNAME_KEYWORDS = listOf("user", "email", "id", "account", "login")
     private val PASSWORD_KEYWORDS = listOf("pass", "pwd", "secret")
+
+    // ---- Issue #66 Phase 1: custom field match key extraction --------------
+
+    /**
+     * Extract the set of "match keys" for [descriptor]. Used by the custom
+     * field matcher to decide whether any of a credential's
+     * [io.github.hitoshiichikawa.keynest.domain.model.CustomField] entries
+     * applies to this field.
+     *
+     * Sources (design.md §7.1):
+     *   - autofillHints (every element)
+     *   - hint
+     *   - idEntry
+     *   - contentDescription
+     *
+     * Source NOT included (design.md §7.2):
+     *   - text — the editable content the user is currently typing. Including
+     *     it would let a credential whose fieldKey is e.g. "社員" hijack any
+     *     field whose user-typed value contains "社員", which is unsafe.
+     *
+     * Each non-null / non-blank source string is normalised via
+     * [normalizeKey] (lowercase + whitespace stripped). Blank results after
+     * normalisation are dropped. Order is not significant; the return type
+     * is a [Set] to deduplicate sources that normalise to the same string
+     * (e.g. `idEntry="user_id"` and `hint="User ID"`).
+     */
+    fun extractMatchKeys(descriptor: FieldDescriptor): Set<String> {
+        val out = mutableSetOf<String>()
+        descriptor.autofillHints?.forEach { hint -> normalizeKey(hint).takeIf { it.isNotEmpty() }?.let(out::add) }
+        normalizeKey(descriptor.hint ?: "").takeIf { it.isNotEmpty() }?.let(out::add)
+        normalizeKey(descriptor.idEntry ?: "").takeIf { it.isNotEmpty() }?.let(out::add)
+        normalizeKey(descriptor.contentDescription ?: "").takeIf { it.isNotEmpty() }?.let(out::add)
+        return out
+    }
+
+    /**
+     * Single utility used by both the customField matcher and any future
+     * suggest-path (Phase 2). NFR 5: matcher and suggester must agree on
+     * the normalisation algorithm.
+     *
+     * Spec (requirements §3 / Q1):
+     *   1. lowercase()
+     *   2. drop every character classified as whitespace. Kotlin's
+     *      [Char.isWhitespace] already covers the full Unicode whitespace
+     *      set (half-width space, full-width `　`, tab, CR, LF, NBSP, etc.).
+     */
+    fun normalizeKey(raw: String): String = buildString(raw.length) {
+        for (c in raw) {
+            if (!c.isWhitespace()) append(c.lowercaseChar())
+        }
+    }
 }

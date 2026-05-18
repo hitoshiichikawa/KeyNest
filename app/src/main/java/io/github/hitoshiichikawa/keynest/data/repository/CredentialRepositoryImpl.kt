@@ -131,6 +131,11 @@ class CredentialRepositoryImpl(
             createdAt = createdAt,
             updatedAt = updatedAt,
             lastUsedAt = lastUsedAt,
+            // Issue #66 Phase 1: persist the AES-GCM ciphertext + IV that
+            // codecs the credential's customFields list. Empty arrays are
+            // valid (= "no fields" or "row predates the v3 migration").
+            customFieldsCiphertext = customFieldsCiphertext,
+            customFieldsIv = customFieldsIv,
         )
 
     private fun CredentialEntity.toEncryptedRecord(): EncryptedCredentialRecord =
@@ -146,6 +151,8 @@ class CredentialRepositoryImpl(
             createdAt = createdAt,
             updatedAt = updatedAt,
             lastUsedAt = lastUsedAt,
+            customFieldsCiphertext = customFieldsCiphertext,
+            customFieldsIv = customFieldsIv,
         )
 
     private fun CredentialEntity.toDomain(): Credential = Credential(

@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -13,13 +15,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputEditText
 import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.CredentialEditActivityBinding
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
 /**
@@ -123,6 +126,8 @@ class CredentialEditActivity : AppCompatActivity() {
         binding.advancedHeader.setOnClickListener { viewModel.toggleAdvancedExpanded() }
         binding.toggleCredentialId.setOnClickListener { viewModel.toggleCredentialIdVisible() }
         binding.btnCopySignatureHex.setOnClickListener { copySignatureHexToClipboard() }
+        // Issue #66 Phase 1: customField editor wiring.
+        binding.btnAddCustomField.setOnClickListener { viewModel.addCustomFieldRow() }
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -137,6 +142,11 @@ class CredentialEditActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.advancedDetails.collect(::renderAdvancedDetails)
+            }
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.customFields.collect(::renderCustomFields)
             }
         }
     }
@@ -321,6 +331,68 @@ class CredentialEditActivity : AppCompatActivity() {
             .setNegativeButton(R.string.credential_edit_delete_confirm_negative, null)
             .show()
     }
+
+    /**
+     * Rebuild the customFields row container from [state]. Issue #66 Phase 1.
+     *
+     * Implementation deliberately replaces the entire container subtree on
+     * every state emission (no view recycling) because the row count is
+     * capped at 10 — a few extra `addView` calls per keystroke are
+     * negligible and keep the row<->ViewModel binding obvious. Each
+     * EditText carries a TextWatcher that forwards the new text to the
+     * matching reducer method (updateCustomFieldKey / Value); a tag on the
+     * EditText guards against the TextWatcher firing re-entrantly when we
+     * call setText() during a re-render.
+     *
+     * design.md §9.3 暫定: in edit mode (`!state.editable`) the add button
+     * is hidden, the read-only explanatory note is shown, and the rows
+     * list is empty so the editor renders nothing.
+     */
+    private fun renderCustomFields(state: CredentialEditViewModel.CustomFieldsState) {
+        val container = binding.containerCustomFields
+        container.removeAllViews()
+        if (state.editable) {
+            val inflater = LayoutInflater.from(this)
+            for (row in state.rows) {
+                val rowView = inflater.inflate(R.layout.view_custom_field_row, container, false)
+                val keyEdit = rowView.findViewById<TextInputEditText>(R.id.input_field_key)
+                val valueEdit = rowView.findViewById<TextInputEditText>(R.id.input_field_value)
+                val removeBtn = rowView.findViewById<View>(R.id.btn_remove_row)
+                // Pre-fill before attaching the watcher so the watcher does
+                // not bounce the same text back into the ViewModel.
+                keyEdit.setText(row.fieldKey)
+                valueEdit.setText(row.value)
+                keyEdit.addTextChangedListener(simpleWatcher { text ->
+                    viewModel.updateCustomFieldKey(row.rowId, text)
+                })
+                valueEdit.addTextChangedListener(simpleWatcher { text ->
+                    viewModel.updateCustomFieldValue(row.rowId, text)
+                })
+                removeBtn.setOnClickListener { viewModel.removeCustomFieldRow(row.rowId) }
+                container.addView(rowView)
+            }
+        }
+        // Add button + read-only note visibility.
+        binding.btnAddCustomField.visibility = if (state.editable) View.VISIBLE else View.GONE
+        binding.btnAddCustomField.isEnabled = state.canAddMore
+        binding.tvCustomFieldsReadonlyNote.visibility =
+            if (state.editable) View.GONE else View.VISIBLE
+    }
+
+    /**
+     * Minimal [TextWatcher] that forwards `onTextChanged` to [onChanged].
+     * Kept inline because the editor rows are short-lived (re-created on
+     * every state emission); a class-level subclass would obscure the
+     * binding-to-rowId capture.
+     */
+    private fun simpleWatcher(onChanged: (String) -> Unit): TextWatcher =
+        object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                onChanged(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        }
 
     private fun copySignatureHexToClipboard() {
         val hex = viewModel.advancedDetails.value.signatureSha256Hex

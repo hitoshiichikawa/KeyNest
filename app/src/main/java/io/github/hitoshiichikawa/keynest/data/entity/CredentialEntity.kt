@@ -65,6 +65,27 @@ data class CredentialEntity(
      */
     @ColumnInfo(name = "last_used_at")
     val lastUsedAt: Long? = null,
+
+    /**
+     * AES-GCM ciphertext of the JSON-encoded `List<CustomField>` for this
+     * credential. Issue #66 Phase 1.
+     *
+     * Empty (zero-length) for rows that existed before Room schema v3
+     * (added by [io.github.hitoshiichikawa.keynest.data.migration.Migration_2_3]),
+     * which the codec interprets as "no custom fields". Once the row is
+     * re-saved through SaveCredentialUseCase / UpdateCredentialUseCase the
+     * field is populated with a real ciphertext (always non-empty because
+     * the JSON `[]` literal is also encrypted).
+     */
+    @ColumnInfo(name = "custom_fields_ciphertext", typeAffinity = ColumnInfo.BLOB)
+    val customFieldsCiphertext: ByteArray = ByteArray(0),
+
+    /**
+     * 12-byte AES-GCM IV bundled with [customFieldsCiphertext]. Empty when
+     * the ciphertext is empty (migration default).
+     */
+    @ColumnInfo(name = "custom_fields_iv", typeAffinity = ColumnInfo.BLOB)
+    val customFieldsIv: ByteArray = ByteArray(0),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -81,7 +102,9 @@ data class CredentialEntity(
             signatureCapturedAt == other.signatureCapturedAt &&
             createdAt == other.createdAt &&
             updatedAt == other.updatedAt &&
-            lastUsedAt == other.lastUsedAt
+            lastUsedAt == other.lastUsedAt &&
+            customFieldsCiphertext.contentEquals(other.customFieldsCiphertext) &&
+            customFieldsIv.contentEquals(other.customFieldsIv)
     }
 
     override fun hashCode(): Int {
@@ -96,14 +119,17 @@ data class CredentialEntity(
         result = 31 * result + createdAt.hashCode()
         result = 31 * result + updatedAt.hashCode()
         result = 31 * result + (lastUsedAt?.hashCode() ?: 0)
+        result = 31 * result + customFieldsCiphertext.contentHashCode()
+        result = 31 * result + customFieldsIv.contentHashCode()
         return result
     }
 
-    /** Hide encrypted / signature bytes from accidental logging (NFR 1.3). */
+    /** Hide encrypted / signature bytes from accidental logging (NFR 1.3 / Req 5.1). */
     override fun toString(): String =
         "CredentialEntity(id=$id, packageName=$packageName, username=$username, label=$label, " +
             "ciphertext=<${passwordCiphertext.size}B>, iv=<${passwordIv.size}B>, " +
             "signatureSha256=${signatureSha256?.let { "<${it.size}B>" }}, " +
             "signatureCapturedAt=$signatureCapturedAt, createdAt=$createdAt, updatedAt=$updatedAt, " +
-            "lastUsedAt=$lastUsedAt)"
+            "lastUsedAt=$lastUsedAt, customFieldsCiphertext=<${customFieldsCiphertext.size}B>, " +
+            "customFieldsIv=<${customFieldsIv.size}B>)"
 }

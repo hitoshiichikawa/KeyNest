@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Issue #66 Phase 1: a single editable customField row inside
+  credential_edit_activity.xml's advanced section.
+
+  Layout: [fieldKey EditText] [value EditText] [remove ImageButton]
+
+  - Both editable cells use plain text (Req 3.6 / requirements Q3).
+  - The remove button is a 48dp tap target (NFR 2.x accessibility).
+  - View IDs (input_field_key / input_field_value / btn_remove_row) are
+    queried at row inflation time by CredentialEditActivity.
+
+  Visual tokens mirror the existing TextInputLayouts in the parent
+  layout: Widget.KeyNest.TextField style, kn_input_height min,
+  Text.KeyNest.Body / kn_text_2 hint colors.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/kn_space_2"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_field_key"
+        style="@style/Widget.KeyNest.TextField"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/kn_space_2"
+        android:layout_weight="1"
+        android:hint="@string/credential_edit_custom_field_key_hint"
+        android:textColorHint="@color/kn_text_2">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_field_key"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionNext"
+            android:inputType="text"
+            android:minHeight="@dimen/kn_input_height"
+            android:textAppearance="@style/Text.KeyNest.Body"
+            android:textColor="@color/kn_text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_field_value"
+        style="@style/Widget.KeyNest.TextField"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/kn_space_2"
+        android:layout_weight="1"
+        android:hint="@string/credential_edit_custom_field_value_hint"
+        android:textColorHint="@color/kn_text_2">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/input_field_value"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="actionDone"
+            android:inputType="text"
+            android:minHeight="@dimen/kn_input_height"
+            android:textAppearance="@style/Text.KeyNest.Body"
+            android:textColor="@color/kn_text" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <ImageButton
+        android:id="@+id/btn_remove_row"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/credential_edit_custom_field_remove_a11y"
+        android:src="@drawable/ic_close_24"
+        app:tint="@color/kn_text_2" />
+
+</LinearLayout>
