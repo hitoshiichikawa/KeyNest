@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
+import io.github.hitoshiichikawa.keynest.domain.model.CustomField
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
@@ -126,6 +127,57 @@ class CredentialEditViewModel(
     private val _advancedDetails = MutableStateFlow(AdvancedDetails.NewMode)
     val advancedDetails: StateFlow<AdvancedDetails> = _advancedDetails.asStateFlow()
 
+    // ---- Issue #66 Phase 1: customFields editor ---------------------------
+
+    /**
+     * UI state for the dynamic customField rows. Issue #66 Phase 1.
+     *
+     * Reducer contract:
+     * - [addCustomFieldRow] adds a fresh empty row, capped at
+     *   [CustomFieldsState.MAX_CUSTOM_FIELDS] (Req 3.5).
+     * - [removeCustomFieldRow] drops the row with the given rowId.
+     * - [updateCustomFieldKey] / [updateCustomFieldValue] mutate the
+     *   in-place text.
+     * - [save] collects the rows, drops any with a blank fieldKey
+     *   (Req 3.4 silent drop), and passes the resulting list to
+     *   NewCredentialInput.customFields / UpdateCredentialInput.customFields.
+     *
+     * Edit-mode handling (design.md §9.3 暫定設計):
+     * - In [Mode.New], `editable = true` and the UI shows the row editor.
+     * - In [Mode.Edit], `editable = false` for Phase 1. The customField
+     *   section is rendered read-only (rows == empty list, no add CTA)
+     *   because we cannot read the existing customFields without an
+     *   additional biometric unlock — outside Phase 1 scope (see
+     *   impl-notes.md "確認事項"). Phase 2 will revisit.
+     */
+    data class CustomFieldsState(
+        val rows: List<Row> = emptyList(),
+        val editable: Boolean = true,
+    ) {
+        data class Row(
+            /** UI-only identity. Assigned by the ViewModel; never persisted. */
+            val rowId: Long,
+            val fieldKey: String,
+            val value: String,
+        )
+
+        val canAddMore: Boolean get() = editable && rows.size < MAX_CUSTOM_FIELDS
+
+        companion object {
+            const val MAX_CUSTOM_FIELDS = 10
+        }
+    }
+
+    private val _customFields = MutableStateFlow(CustomFieldsState())
+    val customFields: StateFlow<CustomFieldsState> = _customFields.asStateFlow()
+
+    /**
+     * Monotonic rowId generator. Survives configuration changes because the
+     * ViewModel does; reset on Activity destruction (matching the existing
+     * AdvancedDetails toggle lifetime).
+     */
+    private var nextRowId: Long = 1L
+
     /**
      * Save (or update) the credential. Ownership of [password] transfers to
      * this method - the underlying use case zero-fills it.
@@ -137,6 +189,14 @@ class CredentialEditViewModel(
         password: CharArray,
         label: String,
     ) {
+        // Issue #66 Phase 1: collect customFields from the ViewModel state,
+        // dropping rows with a blank fieldKey (Req 3.4 silent drop). Empty
+        // value strings are retained — the user might legitimately want to
+        // store an empty value (though this is a soft anti-pattern).
+        val effectiveCustomFields: List<CustomField> = _customFields.value.rows
+            .filter { it.fieldKey.isNotBlank() }
+            .map { CustomField(fieldKey = it.fieldKey, value = it.value) }
+
         viewModelScope.launch {
             _state.value = State.Saving
             val result = if (existingId != null) {
@@ -147,6 +207,11 @@ class CredentialEditViewModel(
                         username = username.trim(),
                         label = label.trim(),
                         newPassword = if (password.isEmpty()) null else password,
+                        // design.md §9.3 暫定: in edit mode the editor is
+                        // read-only so we pass null = "leave existing
+                        // ciphertext untouched". In new mode this branch is
+                        // unreachable.
+                        customFields = if (_customFields.value.editable) effectiveCustomFields else null,
                     ),
                 ).map { Unit }
             } else {
@@ -156,6 +221,7 @@ class CredentialEditViewModel(
                         username = username.trim(),
                         password = password,
                         label = label.trim(),
+                        customFields = effectiveCustomFields,
                     ),
                 ).map { Unit }
             }
@@ -223,7 +289,60 @@ class CredentialEditViewModel(
                 )
             }
         }
+        if (record != null) {
+            // Edit mode: design.md §9.3 暫定. The customField section is
+            // read-only because we cannot decrypt the existing entries
+            // without an extra biometric unlock (deferred to Phase 2).
+            _customFields.update { CustomFieldsState(rows = emptyList(), editable = false) }
+        }
         return record
+    }
+
+    // ---- Issue #66 Phase 1: customFields reducer methods --------------------
+
+    /**
+     * Append a fresh empty row. No-op past [CustomFieldsState.MAX_CUSTOM_FIELDS]
+     * (Req 3.5) or when the section is read-only (edit mode, design.md §9.3).
+     */
+    fun addCustomFieldRow() {
+        _customFields.update { current ->
+            if (!current.canAddMore) current
+            else current.copy(
+                rows = current.rows + CustomFieldsState.Row(
+                    rowId = nextRowId++,
+                    fieldKey = "",
+                    value = "",
+                ),
+            )
+        }
+    }
+
+    /** Remove the row identified by [rowId]. No-op if not found. */
+    fun removeCustomFieldRow(rowId: Long) {
+        _customFields.update { current ->
+            if (!current.editable) current
+            else current.copy(rows = current.rows.filterNot { it.rowId == rowId })
+        }
+    }
+
+    /** Update the fieldKey on the row identified by [rowId]. */
+    fun updateCustomFieldKey(rowId: Long, fieldKey: String) {
+        _customFields.update { current ->
+            if (!current.editable) current
+            else current.copy(rows = current.rows.map {
+                if (it.rowId == rowId) it.copy(fieldKey = fieldKey) else it
+            })
+        }
+    }
+
+    /** Update the value on the row identified by [rowId]. */
+    fun updateCustomFieldValue(rowId: Long, value: String) {
+        _customFields.update { current ->
+            if (!current.editable) current
+            else current.copy(rows = current.rows.map {
+                if (it.rowId == rowId) it.copy(value = value) else it
+            })
+        }
     }
 
     /**
