@@ -154,6 +154,14 @@
     <string name="credential_edit_custom_field_remove_a11y">Remove this custom field</string>
     <string name="credential_edit_custom_fields_readonly_note">Editing existing custom fields is not yet supported.</string>
 
+    <!-- Custom fields suggestion chip group (Issue #67 Phase 2).
+         Surfaces previously-observed fieldKeys for the target package so
+         the user can populate a new custom field with one tap. The empty
+         message hint nudges the user to open the target app's form at
+         least once before suggestions appear (requirements §4 Q2). -->
+    <string name="credential_edit_detected_fields_label">Recently detected fields</string>
+    <string name="credential_edit_detected_fields_empty">No detection history yet. Open the app\'s form once and we\'ll suggest fields here.</string>
+
     <!-- Settings (Issue #10) -->
     <string name="menu_open_settings">Settings</string>
     <string name="settings_title">Settings</string>
