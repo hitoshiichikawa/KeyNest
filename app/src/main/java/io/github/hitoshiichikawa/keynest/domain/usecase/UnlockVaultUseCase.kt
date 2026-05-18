@@ -1,10 +1,13 @@
 package io.github.hitoshiichikawa.keynest.domain.usecase
 
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
+import io.github.hitoshiichikawa.keynest.domain.model.CustomField
 import io.github.hitoshiichikawa.keynest.domain.model.PlaintextCredential
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
 import io.github.hitoshiichikawa.keynest.security.EncryptedBlob
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
+import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.util.Arrays
@@ -26,6 +29,8 @@ import java.util.Arrays
 class UnlockVaultUseCase(
     private val repo: CredentialRepository,
     private val cipher: AesGcmCipher,
+    private val customFieldsCodec: EncryptedCustomFieldsCodec =
+        EncryptedCustomFieldsCodec(cipher),
 ) {
 
     suspend operator fun invoke(id: CredentialId): Result<PlaintextCredential> {
@@ -35,6 +40,16 @@ class UnlockVaultUseCase(
         return try {
             plaintextBytes = cipher.decrypt(EncryptedBlob(iv = record.passwordIv, ciphertext = record.passwordCiphertext))
             val passwordChars = decodeUtf8(plaintextBytes)
+
+            // Issue #66 Phase 1: also decrypt the customFields list. The
+            // codec tolerates an empty BLOB (migration-default rows) and
+            // returns an empty list. AEAD failures on the customFields
+            // ciphertext are routed through the existing UnlockFailure.
+            // Decrypt path — we explicitly do NOT swallow them because the
+            // username/password path already succeeded and silent corruption
+            // would mask a real key/data problem.
+            val customFields: List<CustomField> = decryptCustomFields(record)
+
             Result.success(
                 PlaintextCredential(
                     id = record.id,
@@ -42,6 +57,7 @@ class UnlockVaultUseCase(
                     username = record.username,
                     label = record.label,
                     password = passwordChars,
+                    customFields = customFields,
                 ),
             )
         } catch (t: Throwable) {
@@ -49,6 +65,41 @@ class UnlockVaultUseCase(
         } finally {
             // Zero-fill the intermediate decrypted bytes.
             plaintextBytes?.let { Arrays.fill(it, 0.toByte()) }
+        }
+    }
+
+    /**
+     * Decrypt the customFields ciphertext bundled with [record]. AES-GCM
+     * failures here propagate (caller wraps in UnlockFailure.Decrypt); JSON
+     * parse failures inside the codec are swallowed into an empty list
+     * (design.md §5.4 fail-open).
+     *
+     * Empty ciphertext (= row predates Migration_2_3 and has not been
+     * re-saved yet) returns an empty list without touching the cipher
+     * (design.md §6.1 fallback).
+     */
+    private fun decryptCustomFields(
+        record: io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord,
+    ): List<CustomField> {
+        return try {
+            customFieldsCodec.decrypt(
+                EncryptedBlob(
+                    iv = record.customFieldsIv,
+                    ciphertext = record.customFieldsCiphertext,
+                ),
+            )
+        } catch (t: Throwable) {
+            // Distinguish from a username/password decrypt failure: the
+            // user already authenticated and the primary credential
+            // decrypted fine. Log a structured warning (cause class only)
+            // and fail open with an empty list so username/password fill
+            // still works. Design.md §5.4 / Req 5.1.
+            SafeLogger.warn(
+                tag = "KeyNest.Unlock",
+                message = "customFields decrypt failed; returning empty list",
+                throwable = t,
+            )
+            emptyList()
         }
     }
 

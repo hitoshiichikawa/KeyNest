@@ -109,7 +109,11 @@ object ServiceLocator {
     }
 
     val unlockVaultUseCase: UnlockVaultUseCase by lazy {
-        UnlockVaultUseCase(credentialRepository, aesGcmCipher)
+        UnlockVaultUseCase(
+            repo = credentialRepository,
+            cipher = aesGcmCipher,
+            customFieldsCodec = encryptedCustomFieldsCodec,
+        )
     }
 
     // ---- Issue #9 use cases ---------------------------------------------
