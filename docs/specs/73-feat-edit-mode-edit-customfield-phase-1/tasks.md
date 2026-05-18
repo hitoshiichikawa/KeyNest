@@ -26,7 +26,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Requirements: 1.1, 4.1, 7.2_
   - _Depends: 1_
 
-- [ ] 3. `CredentialEditViewModel.load()` 内で customField と password を復号して State に展開
+- [x] 3. `CredentialEditViewModel.load()` 内で customField と password を復号して State に展開
   - `record` が non-null な場合、`customFieldsCodec.decrypt(EncryptedBlob(iv = record.customFieldsIv, ciphertext = record.customFieldsCiphertext))`
     を呼び、結果を `CustomFieldsState.Row(rowId = nextRowId++, fieldKey = it.fieldKey, value = it.value)`
     に map して `CustomFieldsState(rows = ..., editable = true)` を emit
