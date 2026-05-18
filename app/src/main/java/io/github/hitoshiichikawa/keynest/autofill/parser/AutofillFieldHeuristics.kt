@@ -21,7 +21,7 @@ import android.view.View
  * multiple ViewNodes by preferring whichever rule fired earliest in this
  * priority order.
  */
-internal object AutofillFieldHeuristics {
+object AutofillFieldHeuristics {
 
     /** Plain-data view of an AssistStructure.ViewNode for unit-testability. */
     data class FieldDescriptor(

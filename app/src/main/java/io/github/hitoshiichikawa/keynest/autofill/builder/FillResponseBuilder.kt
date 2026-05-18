@@ -11,6 +11,7 @@ import android.service.autofill.InlinePresentation
 import android.view.autofill.AutofillId
 import android.view.autofill.AutofillValue
 import android.widget.inline.InlinePresentationSpec
+import io.github.hitoshiichikawa.keynest.autofill.parser.AssistStructureParser.CustomFieldCandidate
 import io.github.hitoshiichikawa.keynest.autofill.unlock.AutofillUnlockActivity
 import io.github.hitoshiichikawa.keynest.domain.usecase.AutofillCandidate
 
@@ -44,6 +45,16 @@ class FillResponseBuilder(
      * a fresh [PendingIntent] so that selecting it launches the unlock
      * Activity.
      *
+     * [customFieldCandidates] (Issue #66 Phase 1): the full list of
+     * editable view candidates harvested by AssistStructureParser. Every
+     * candidate's AutofillId is attached to the locked Dataset with the
+     * shared placeholder so the framework allows the post-auth Dataset to
+     * write to it. The actual customField match is performed AFTER unlock
+     * inside [AutofillUnlockActivity] (design.md §6.4 "案 Y"): we cannot
+     * match here because the customField keys live encrypted alongside
+     * their values and decrypting them at the locked stage would violate
+     * Req 5.2.
+     *
      * If [candidates] is empty, the caller should send a null FillResponse
      * back to the framework (which yields no Autofill UI).
      */
@@ -51,6 +62,7 @@ class FillResponseBuilder(
         candidates: List<AutofillCandidate>,
         usernameAutofillId: AutofillId?,
         passwordAutofillId: AutofillId?,
+        customFieldCandidates: List<CustomFieldCandidate> = emptyList(),
         inlineSpecs: List<InlinePresentationSpec> = emptyList(),
     ): FillResponse? {
         if (candidates.isEmpty()) return null
@@ -61,7 +73,13 @@ class FillResponseBuilder(
             // Per the InlineSuggestionsRequest contract the last spec is reused
             // for any datasets beyond the provided list size.
             val spec = inlineSpecs.getOrNull(index) ?: inlineSpecs.lastOrNull()
-            val dataset = buildLockedDataset(candidate, usernameAutofillId, passwordAutofillId, spec)
+            val dataset = buildLockedDataset(
+                candidate = candidate,
+                usernameAutofillId = usernameAutofillId,
+                passwordAutofillId = passwordAutofillId,
+                customFieldCandidates = customFieldCandidates,
+                inlineSpec = spec,
+            )
             builder.addDataset(dataset)
         }
         return builder.build()
@@ -72,6 +90,7 @@ class FillResponseBuilder(
         candidate: AutofillCandidate,
         usernameAutofillId: AutofillId?,
         passwordAutofillId: AutofillId?,
+        customFieldCandidates: List<CustomFieldCandidate>,
         inlineSpec: InlinePresentationSpec?,
     ): Dataset {
         val presentation = presentationFactory.build(
@@ -96,12 +115,29 @@ class FillResponseBuilder(
         if (passwordAutofillId != null) {
             attachLockedValue(datasetBuilder, passwordAutofillId, presentation, inlinePresentation)
         }
+        // Issue #66 Phase 1: also attach a placeholder for every customField
+        // candidate AutofillId so the framework permits the post-auth
+        // Dataset (built by AutofillUnlockActivity) to write to them. We
+        // dedupe against the username/password ids to avoid attaching the
+        // same value to the same id twice (the framework treats that as a
+        // contract violation).
+        val coveredIds = mutableSetOf<AutofillId>().apply {
+            usernameAutofillId?.let { add(it) }
+            passwordAutofillId?.let { add(it) }
+        }
+        for (cf in customFieldCandidates) {
+            if (coveredIds.add(cf.autofillId)) {
+                attachLockedValue(datasetBuilder, cf.autofillId, presentation, inlinePresentation)
+            }
+        }
 
         val authIntent = AutofillUnlockActivity.newIntent(
             context = context,
             credentialId = candidate.id.value,
             usernameAutofillId = usernameAutofillId,
             passwordAutofillId = passwordAutofillId,
+            customFieldAutofillIds = customFieldCandidates.map { it.autofillId },
+            customFieldDescriptors = customFieldCandidates.map { it.descriptor },
         )
         val pending = PendingIntent.getActivity(
             context,
@@ -134,13 +170,26 @@ class FillResponseBuilder(
         passwordAutofillId: AutofillId?,
         passwordValue: CharSequence?,
         label: String,
+        customFieldValues: Map<AutofillId, String> = emptyMap(),
     ): Dataset {
         val builder = Dataset.Builder()
+        val coveredIds = mutableSetOf<AutofillId>()
         if (usernameAutofillId != null && usernameValue != null) {
             builder.setValue(usernameAutofillId, AutofillValue.forText(usernameValue))
+            coveredIds.add(usernameAutofillId)
         }
         if (passwordAutofillId != null && passwordValue != null) {
             builder.setValue(passwordAutofillId, AutofillValue.forText(passwordValue))
+            coveredIds.add(passwordAutofillId)
+        }
+        // Issue #66 Phase 1: write customField values for any AutofillIds
+        // not already covered by username/password. The same dedupe rule as
+        // the locked builder applies (the framework forbids setValue twice
+        // for the same id within a Dataset).
+        for ((id, value) in customFieldValues) {
+            if (coveredIds.add(id)) {
+                builder.setValue(id, AutofillValue.forText(value))
+            }
         }
         return builder.build()
     }

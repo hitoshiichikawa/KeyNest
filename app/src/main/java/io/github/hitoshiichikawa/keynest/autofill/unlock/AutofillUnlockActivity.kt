@@ -16,6 +16,7 @@ import io.github.hitoshiichikawa.keynest.auth.AuthResult
 import io.github.hitoshiichikawa.keynest.auth.BiometricAuthenticator
 import io.github.hitoshiichikawa.keynest.autofill.builder.DatasetPresentationFactory
 import io.github.hitoshiichikawa.keynest.autofill.builder.FillResponseBuilder
+import io.github.hitoshiichikawa.keynest.autofill.parser.AutofillFieldHeuristics
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
@@ -167,15 +168,45 @@ class AutofillUnlockActivity : AppCompatActivity() {
         private const val EXTRA_CREDENTIAL_ID = "io.github.hitoshiichikawa.keynest.extra.CREDENTIAL_ID"
         private const val EXTRA_USERNAME_AUTOFILL_ID = "io.github.hitoshiichikawa.keynest.extra.USERNAME_AUTOFILL_ID"
         private const val EXTRA_PASSWORD_AUTOFILL_ID = "io.github.hitoshiichikawa.keynest.extra.PASSWORD_AUTOFILL_ID"
+        internal const val EXTRA_CUSTOM_FIELD_AUTOFILL_IDS =
+            "io.github.hitoshiichikawa.keynest.extra.CUSTOM_FIELD_AUTOFILL_IDS"
+        internal const val EXTRA_CUSTOM_FIELD_HINTS =
+            "io.github.hitoshiichikawa.keynest.extra.CUSTOM_FIELD_HINTS"
+        internal const val EXTRA_CUSTOM_FIELD_ID_ENTRIES =
+            "io.github.hitoshiichikawa.keynest.extra.CUSTOM_FIELD_ID_ENTRIES"
+        internal const val EXTRA_CUSTOM_FIELD_CONTENT_DESCRIPTIONS =
+            "io.github.hitoshiichikawa.keynest.extra.CUSTOM_FIELD_CONTENT_DESCRIPTIONS"
+        internal const val EXTRA_CUSTOM_FIELD_AUTOFILL_HINTS_FLAT =
+            "io.github.hitoshiichikawa.keynest.extra.CUSTOM_FIELD_AUTOFILL_HINTS_FLAT"
+        internal const val EXTRA_CUSTOM_FIELD_AUTOFILL_HINTS_LENGTHS =
+            "io.github.hitoshiichikawa.keynest.extra.CUSTOM_FIELD_AUTOFILL_HINTS_LENGTHS"
         private const val INVALID_ID = -1L
         private const val TAG = "KeyNest.Unlock"
 
+        /**
+         * Build the auth-PendingIntent target. Issue #66 Phase 1 added the
+         * customField parameters; both default to empty so call sites that
+         * don't yet care about customFields stay source-compatible.
+         *
+         * Encoding the descriptor list across Intent extras:
+         * - Per-field strings (idEntry / hint / contentDescription) are
+         *   carried as parallel String arrays indexed by AutofillId.
+         * - autofillHints is itself a `List<String>?` so it is flattened
+         *   into a single String[] plus a parallel IntArray of per-field
+         *   lengths so the receiver can re-slice it. `null` is represented
+         *   by length `-1`.
+         */
         fun newIntent(
             context: Context,
             credentialId: Long,
             usernameAutofillId: AutofillId?,
             passwordAutofillId: AutofillId?,
+            customFieldAutofillIds: List<AutofillId> = emptyList(),
+            customFieldDescriptors: List<AutofillFieldHeuristics.FieldDescriptor> = emptyList(),
         ): Intent {
+            require(customFieldAutofillIds.size == customFieldDescriptors.size) {
+                "customFieldAutofillIds and customFieldDescriptors must have the same length"
+            }
             // Intentionally NOT adding FLAG_ACTIVITY_NEW_TASK: the framework
             // launches this PendingIntent and manages task affinity itself.
             // Forcing a NEW_TASK detaches the unlock activity from the
@@ -186,6 +217,37 @@ class AutofillUnlockActivity : AppCompatActivity() {
                 putExtra(EXTRA_CREDENTIAL_ID, credentialId)
                 usernameAutofillId?.let { putExtra(EXTRA_USERNAME_AUTOFILL_ID, it as android.os.Parcelable) }
                 passwordAutofillId?.let { putExtra(EXTRA_PASSWORD_AUTOFILL_ID, it as android.os.Parcelable) }
+                if (customFieldAutofillIds.isNotEmpty()) {
+                    val idsArr = ArrayList<android.os.Parcelable>(customFieldAutofillIds.size).apply {
+                        customFieldAutofillIds.forEach { add(it as android.os.Parcelable) }
+                    }
+                    putParcelableArrayListExtra(EXTRA_CUSTOM_FIELD_AUTOFILL_IDS, idsArr)
+                    putExtra(
+                        EXTRA_CUSTOM_FIELD_HINTS,
+                        customFieldDescriptors.map { it.hint ?: "" }.toTypedArray(),
+                    )
+                    putExtra(
+                        EXTRA_CUSTOM_FIELD_ID_ENTRIES,
+                        customFieldDescriptors.map { it.idEntry ?: "" }.toTypedArray(),
+                    )
+                    putExtra(
+                        EXTRA_CUSTOM_FIELD_CONTENT_DESCRIPTIONS,
+                        customFieldDescriptors.map { it.contentDescription ?: "" }.toTypedArray(),
+                    )
+                    val flatHints = mutableListOf<String>()
+                    val lengths = IntArray(customFieldDescriptors.size)
+                    customFieldDescriptors.forEachIndexed { idx, descriptor ->
+                        val hints = descriptor.autofillHints
+                        if (hints == null) {
+                            lengths[idx] = -1
+                        } else {
+                            lengths[idx] = hints.size
+                            flatHints.addAll(hints)
+                        }
+                    }
+                    putExtra(EXTRA_CUSTOM_FIELD_AUTOFILL_HINTS_FLAT, flatHints.toTypedArray())
+                    putExtra(EXTRA_CUSTOM_FIELD_AUTOFILL_HINTS_LENGTHS, lengths)
+                }
             }
         }
     }

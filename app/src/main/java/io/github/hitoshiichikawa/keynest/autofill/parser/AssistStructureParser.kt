@@ -17,7 +17,7 @@ import android.view.autofill.AutofillId
  *   matches NFR 3.1 - the AutofillService MUST gracefully degrade if a
  *   third-party app exposes a malformed structure.
  */
-internal class AssistStructureParser {
+class AssistStructureParser {
 
     /**
      * One editable view harvested during the walk. Used as input to the
