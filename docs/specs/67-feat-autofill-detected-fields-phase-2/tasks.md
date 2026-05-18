@@ -216,7 +216,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T9. RecordDetectedFieldsUseCaseTest
+### [x] T9. RecordDetectedFieldsUseCaseTest
 
 **ファイル**:
 - 新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/domain/usecase/RecordDetectedFieldsUseCaseTest.kt`
