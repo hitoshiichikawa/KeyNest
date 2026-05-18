@@ -47,7 +47,7 @@ android-assets/
 ├── kotlin/
 │   └── KeyNestTheme.kt         ← Compose 用 (任意・将来用)
 │
-├── icon-a.svg                  ← Play Store / README 用
+├── icon-b.svg                  ← Play Store / README 用
 └── preview.html                ← アイコンのサイズ・並び確認
 ```
 
