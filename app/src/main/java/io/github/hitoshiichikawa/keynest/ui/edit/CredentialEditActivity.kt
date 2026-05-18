@@ -19,7 +19,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.CredentialEditActivityBinding
@@ -394,46 +393,52 @@ class CredentialEditActivity : AppCompatActivity() {
     }
 
     /**
-     * Rebuild the customFields row container from [state]. Issue #66 Phase 1.
+     * Lazily-initialised callback bridge handed to
+     * [CustomFieldsRowsRenderer]. Stored as a property (rather than a
+     * fresh instance per emission) so reused row views keep their
+     * already-attached TextWatchers — the renderer captures `rowId`
+     * through the lambda, not through callback identity, so a stable
+     * Callbacks instance is fine.
+     */
+    private val customFieldCallbacks = object : CustomFieldsRowsRenderer.Callbacks {
+        override fun onFieldKeyChanged(rowId: Long, text: String) {
+            viewModel.updateCustomFieldKey(rowId, text)
+        }
+        override fun onFieldValueChanged(rowId: Long, text: String) {
+            viewModel.updateCustomFieldValue(rowId, text)
+        }
+        override fun onRemoveRowClicked(rowId: Long) {
+            viewModel.removeCustomFieldRow(rowId)
+        }
+    }
+
+    /**
+     * Sync the customFields row container with [state]. Issue #66
+     * Phase 1 + Issue #73 Phase 1.5 + Issue #77 (this commit).
      *
-     * Implementation deliberately replaces the entire container subtree on
-     * every state emission (no view recycling) because the row count is
-     * capped at 10 — a few extra `addView` calls per keystroke are
-     * negligible and keep the row<->ViewModel binding obvious. Each
-     * EditText carries a TextWatcher that forwards the new text to the
-     * matching reducer method (updateCustomFieldKey / Value); a tag on the
-     * EditText guards against the TextWatcher firing re-entrantly when we
-     * call setText() during a re-render.
+     * Originally a full rebuild (Phase 1) — every state emission
+     * `removeAllViews()`d the container and re-inflated every row.
+     * That combined with the per-EditText [TextWatcher] to destroy
+     * the EditText (and its focus + IME) on every keystroke, so the
+     * user could only enter one character before having to tap again
+     * (Issue #77). The diff renderer below reuses existing row views
+     * keyed by rowId so focus is preserved across emissions.
      *
-     * design.md §9.3 暫定: in edit mode (`!state.editable`) the add button
-     * is hidden, the read-only explanatory note is shown, and the rows
-     * list is empty so the editor renders nothing.
+     * The renderer only manages the rows container itself; this
+     * method still owns the add-button + read-only-note visibility
+     * because they live in the parent layout, not in the rows
+     * container.
      */
     private fun renderCustomFields(state: CredentialEditViewModel.CustomFieldsState) {
-        val container = binding.containerCustomFields
-        container.removeAllViews()
-        if (state.editable) {
-            val inflater = LayoutInflater.from(this)
-            for (row in state.rows) {
-                val rowView = inflater.inflate(R.layout.view_custom_field_row, container, false)
-                val keyEdit = rowView.findViewById<TextInputEditText>(R.id.input_field_key)
-                val valueEdit = rowView.findViewById<TextInputEditText>(R.id.input_field_value)
-                val removeBtn = rowView.findViewById<View>(R.id.btn_remove_row)
-                // Pre-fill before attaching the watcher so the watcher does
-                // not bounce the same text back into the ViewModel.
-                keyEdit.setText(row.fieldKey)
-                valueEdit.setText(row.value)
-                keyEdit.addTextChangedListener(simpleWatcher { text ->
-                    viewModel.updateCustomFieldKey(row.rowId, text)
-                })
-                valueEdit.addTextChangedListener(simpleWatcher { text ->
-                    viewModel.updateCustomFieldValue(row.rowId, text)
-                })
-                removeBtn.setOnClickListener { viewModel.removeCustomFieldRow(row.rowId) }
-                container.addView(rowView)
-            }
-        }
-        // Add button + read-only note visibility.
+        CustomFieldsRowsRenderer.render(
+            container = binding.containerCustomFields,
+            inflater = LayoutInflater.from(this),
+            state = state,
+            callbacks = customFieldCallbacks,
+        )
+        // Add button + read-only note visibility. Unchanged from
+        // Phase 1 — these widgets live outside the rows container so
+        // the renderer never touches them.
         binding.btnAddCustomField.visibility = if (state.editable) View.VISIBLE else View.GONE
         binding.btnAddCustomField.isEnabled = state.canAddMore
         binding.tvCustomFieldsReadonlyNote.visibility =
