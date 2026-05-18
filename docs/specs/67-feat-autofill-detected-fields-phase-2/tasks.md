@@ -62,7 +62,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T3. Migration_3_4 実装と schemas/4.json コミット
+### [x] T3. Migration_3_4 実装と schemas/4.json コミット
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/data/migration/Migration_3_4.kt`
