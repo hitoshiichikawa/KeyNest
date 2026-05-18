@@ -130,7 +130,7 @@ Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するた�
   - _Boundary: CredentialEditActivity_
   - _Depends: 4_
 
-- [ ] 8. 既存テスト群の非破壊性回帰確認（並列可） (P)
+- [x] 8. 既存テスト群の非破壊性回帰確認（並列可） (P)
   - `./gradlew :app:test` で以下が **全件 pass** することを確認:
     - `CredentialEditViewModelTest` / `CredentialEditViewModelCustomFieldsTest` / `CredentialEditViewModelSuggestionTest`
     - `UpdateCredentialUseCaseTest` / `SaveCredentialUseCaseCustomFieldsTest` / `UnlockVaultUseCaseCustomFieldsTest`
