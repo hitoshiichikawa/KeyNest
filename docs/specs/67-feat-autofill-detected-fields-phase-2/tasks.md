@@ -270,7 +270,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T12. Migration_3_4_Test
+### [x] T12. Migration_3_4_Test
 
 **ファイル**:
 - 新規: `app/src/test/java/io/github/hitoshiichikawa/keynest/data/Migration_3_4_Test.kt`
