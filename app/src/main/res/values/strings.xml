@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Default (JP) strings. EN translations live in values-en/strings.xml.
+
+    Wording reflects `design/spec.md` §9 「i18n キー命名」. Existing
+    string resource KEYS are preserved (AC 4.9.5 / NFR 3.2) — only the
+    user-facing values change. A small number of new keys (eyebrow
+    labels, hero copy, badge text…) were added to back AC 4.x.x; none
+    of the existing keys are removed.
+-->
 <resources>
     <string name="app_name">KeyNest</string>
 
-    <!-- Credential list -->
-    <string name="credential_list_title">Saved credentials</string>
-    <string name="credential_list_empty">No credentials yet. Tap + to add one.</string>
-    <string name="action_add_credential">Add credential</string>
-    <string name="action_edit_credential">Edit</string>
-    <string name="action_delete_credential">Delete</string>
-    <string name="menu_open_autofill_settings">Autofill settings</string>
+    <!-- ============ Credential list ============ -->
+    <string name="credential_list_title">Vault</string>
+    <string name="credential_list_eyebrow">KeyNest</string>
+    <string name="credential_list_empty_title">最初の鍵を巣に入れよう</string>
+    <string name="credential_list_empty">最初の鍵を巣に入れよう</string>
+    <string name="credential_list_empty_description">業務アプリのID/パスワードを登録すると、ログイン画面で候補として表示されます。すべてこの端末の中だけに保存。</string>
+    <string name="credential_list_empty_footer">AES-GCM · 端末ローカルのみ</string>
+    <string name="action_add_credential">クレデンシャルを登録</string>
+    <string name="action_edit_credential">編集</string>
+    <string name="action_delete_credential">削除</string>
+    <string name="menu_open_autofill_settings">Autofill 設定</string>
 
     <!-- Credential list: Issue #9 enhancements (search / filter / recent / sort / overflow) -->
     <string name="credential_list_search_hint">Search by label, username, or package</string>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Pill backing for the onboarding step number (AC 4.6.1).
+    Surface-tint background, primary-coloured text.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/kn_surface_tint" />
+</shape>

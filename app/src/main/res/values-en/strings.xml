@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    English overrides. Wording lifted from `design/spec.md` §9
+    「i18n キー命名」. Keys mirror values/strings.xml.
+    AC 4.9.1, 4.9.2, 4.9.3, 4.9.4
+-->
+<resources>
+    <!-- Credential list -->
+    <string name="credential_list_title">Vault</string>
+    <string name="credential_list_eyebrow">KeyNest</string>
+    <string name="credential_list_empty_title">Tap + to add your first credential.</string>
+    <string name="credential_list_empty">Tap + to add your first credential.</string>
+    <string name="credential_list_empty_description">Save the credentials for your business apps and they will appear as autofill suggestions on the login screen. Everything stays on this device.</string>
+    <string name="credential_list_empty_footer">AES-GCM · device-local only</string>
+    <string name="action_add_credential">Add credential</string>
+    <string name="action_edit_credential">Edit</string>
+    <string name="action_delete_credential">Delete</string>
+    <string name="menu_open_autofill_settings">Autofill settings</string>
+
+    <!-- Credential edit -->
+    <string name="credential_edit_title_new">New credential</string>
+    <string name="credential_edit_title_edit">Edit credential</string>
+    <string name="label_package_name">App package name</string>
+    <string name="label_username">Username</string>
+    <string name="label_password">Password</string>
+    <string name="label_display_name">Display name</string>
+    <string name="label_display_name_help">Label shown in the autofill suggestion</string>
+    <string name="label_target_app">Target app</string>
+    <string name="action_pick_installed_app">Change</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete_credential_destructive">Delete this credential</string>
+    <string name="error_package_name_blank">App package name is required.</string>
+    <string name="error_package_name_invalid">App package name format is invalid.</string>
+    <string name="error_username_blank">Username is required.</string>
+    <string name="error_password_blank">Password is required.</string>
+    <string name="error_label_blank">Display name is required.</string>
+    <string name="error_save_failed">Failed to save credential.</string>
+    <string name="error_save_failed_with_reason">Failed to save credential: %1$s</string>
+    <string name="message_credential_saved">Saved.</string>
+    <string name="message_signature_not_captured">Signature unavailable (app not installed). Candidates will not appear until you reinstall and re-save.</string>
+    <string name="signature_match">Signature verified</string>
+    <string name="signature_missing">Signature unavailable</string>
+    <string name="signature_captured_chip">Signature captured · SHA-256</string>
+
+    <!-- Autofill enable -->
+    <string name="autofill_enable_title">Switch Android Autofill to KeyNest</string>
+    <string name="autofill_enable_description">To suggest saved credentials on login screens, set KeyNest as your device autofill service.</string>
+    <string name="autofill_enable_action">Open Settings</string>
+    <string name="autofill_enable_dismiss">Later</string>
+    <string name="autofill_enable_already_enabled">KeyNest is already set as your Autofill service.</string>
+    <string name="autofill_enable_settings_unavailable">Autofill Settings screen is not available on this device.</string>
+    <string name="autofill_enable_step1_title">Tap "Open Settings"</string>
+    <string name="autofill_enable_step1_description">You will be taken to Android Settings</string>
+    <string name="autofill_enable_step2_title">Choose "KeyNest"</string>
+    <string name="autofill_enable_step2_description">Under Passwords &amp; accounts</string>
+    <string name="autofill_enable_step3_title">You're all set</string>
+    <string name="autofill_enable_step3_description">Come back to start saving credentials</string>
+
+    <!-- Autofill unlock -->
+    <string name="biometric_prompt_title">Unlock credential</string>
+    <string name="biometric_prompt_subtitle">Authenticate to fill the saved credential.</string>
+
+    <!-- Package picker -->
+    <string name="package_picker_title">Pick an installed app</string>
+    <string name="package_picker_subtitle">Signing certificate will also be captured</string>
+</resources>

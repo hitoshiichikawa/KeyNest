@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Brand IconTile background. The design draws a 135° gradient from
+    primary → primary 18% darker. We approximate with brand 500 → 700
+    which are the two end-stops actually defined in the design tokens.
+
+    Used as the background for CredCard / Target App Card / Picker row
+    IconTiles. Letter / monogram is rendered by a foreground TextView.
+
+    AC 4.3.1, 4.4.2, 4.5.3
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/kn_radius_sm" />
+    <gradient
+        android:angle="135"
+        android:startColor="@color/kn_blue_500"
+        android:endColor="@color/kn_blue_700"
+        android:type="linear" />
+</shape>
