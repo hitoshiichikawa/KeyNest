@@ -143,7 +143,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T7. `KeyNestAutofillService.onFillRequest` への組み込み
+### [x] T7. `KeyNestAutofillService.onFillRequest` への組み込み
 
 **ファイル**:
 - 既存: `app/src/main/java/io/github/hitoshiichikawa/keynest/autofill/KeyNestAutofillService.kt`
