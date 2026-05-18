@@ -104,7 +104,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T5. `RecordDetectedFieldsUseCase` 実装
+### [x] T5. `RecordDetectedFieldsUseCase` 実装
 
 **ファイル**:
 - 新規: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/usecase/RecordDetectedFieldsUseCase.kt`
