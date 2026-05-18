@@ -307,7 +307,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T14. Vault clear-all 連動
+### [x] T14. Vault clear-all 連動
 
 **ファイル**:
 - 既存: `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/usecase/ClearVaultUseCase.kt`
