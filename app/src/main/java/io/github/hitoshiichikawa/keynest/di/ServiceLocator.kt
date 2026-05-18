@@ -19,6 +19,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.UnlockVaultUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.security.KeystoreKeyProvider
 import io.github.hitoshiichikawa.keynest.util.AppInfoProvider
 import io.github.hitoshiichikawa.keynest.util.IconLoader
@@ -60,6 +61,17 @@ object ServiceLocator {
 
     val aesGcmCipher: AesGcmCipher by lazy { AesGcmCipher(keystoreKeyProvider) }
 
+    /**
+     * Issue #66 Phase 1: shared codec that round-trips `List<CustomField>`
+     * through JSON and AES-GCM (reusing [aesGcmCipher] / the same Keystore
+     * key as username/password — Req 1.4). Held as a singleton so the use
+     * cases that need it (SaveCredentialUseCase / UpdateCredentialUseCase /
+     * UnlockVaultUseCase) all share one instance.
+     */
+    val encryptedCustomFieldsCodec: EncryptedCustomFieldsCodec by lazy {
+        EncryptedCustomFieldsCodec(aesGcmCipher)
+    }
+
     val packageSignatureResolver: PackageSignatureResolver by lazy {
         PackageSignatureResolver(requireAppContext().packageManager)
     }
@@ -67,11 +79,21 @@ object ServiceLocator {
     // ---- use cases -------------------------------------------------------
 
     val saveCredentialUseCase: SaveCredentialUseCase by lazy {
-        SaveCredentialUseCase(credentialRepository, aesGcmCipher, packageSignatureResolver)
+        SaveCredentialUseCase(
+            repo = credentialRepository,
+            cipher = aesGcmCipher,
+            sigResolver = packageSignatureResolver,
+            customFieldsCodec = encryptedCustomFieldsCodec,
+        )
     }
 
     val updateCredentialUseCase: UpdateCredentialUseCase by lazy {
-        UpdateCredentialUseCase(credentialRepository, aesGcmCipher, packageSignatureResolver)
+        UpdateCredentialUseCase(
+            repo = credentialRepository,
+            cipher = aesGcmCipher,
+            sigResolver = packageSignatureResolver,
+            customFieldsCodec = encryptedCustomFieldsCodec,
+        )
     }
 
     val deleteCredentialUseCase: DeleteCredentialUseCase by lazy {

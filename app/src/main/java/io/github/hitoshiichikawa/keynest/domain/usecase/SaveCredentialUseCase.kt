@@ -1,9 +1,11 @@
 package io.github.hitoshiichikawa.keynest.domain.usecase
 
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
+import io.github.hitoshiichikawa.keynest.domain.model.CustomField
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
 import java.nio.ByteBuffer
 import java.nio.CharBuffer
@@ -30,6 +32,8 @@ class SaveCredentialUseCase(
     private val repo: CredentialRepository,
     private val cipher: AesGcmCipher,
     private val sigResolver: PackageSignatureResolver,
+    private val customFieldsCodec: EncryptedCustomFieldsCodec =
+        EncryptedCustomFieldsCodec(cipher),
     private val now: () -> Long = System::currentTimeMillis,
 ) {
 
@@ -58,6 +62,11 @@ class SaveCredentialUseCase(
                 Arrays.fill(passwordBytes, 0.toByte())
             }
 
+            // 3b) Encrypt the customFields list (always; the codec serialises
+            //     [] for an empty list so the persistence shape stays
+            //     uniform — design.md §6.1).
+            val customFieldsBlob = customFieldsCodec.encrypt(input.customFields)
+
             // 4) Save.
             val timestamp = now()
             val id = repo.save(
@@ -72,6 +81,8 @@ class SaveCredentialUseCase(
                     signatureCapturedAt = sigCapturedAt,
                     createdAt = timestamp,
                     updatedAt = timestamp,
+                    customFieldsCiphertext = customFieldsBlob.ciphertext,
+                    customFieldsIv = customFieldsBlob.iv,
                 ),
             )
             Result.success(id)
@@ -111,12 +122,17 @@ class SaveCredentialUseCase(
 /**
  * Input DTO. [password] ownership transfers to [SaveCredentialUseCase] which
  * zero-fills it before returning.
+ *
+ * [customFields] defaults to empty so existing call sites need not change.
+ * The list is taken by value; once the use case returns it is no longer
+ * referenced (Issue #66 Phase 1).
  */
 data class NewCredentialInput(
     val packageName: String,
     val username: String,
     val password: CharArray,
     val label: String,
+    val customFields: List<CustomField> = emptyList(),
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -124,7 +140,8 @@ data class NewCredentialInput(
         return packageName == other.packageName &&
             username == other.username &&
             password.contentEquals(other.password) &&
-            label == other.label
+            label == other.label &&
+            customFields == other.customFields
     }
 
     override fun hashCode(): Int {
@@ -132,11 +149,13 @@ data class NewCredentialInput(
         r = 31 * r + username.hashCode()
         r = 31 * r + password.contentHashCode()
         r = 31 * r + label.hashCode()
+        r = 31 * r + customFields.hashCode()
         return r
     }
 
     override fun toString(): String =
-        "NewCredentialInput(packageName=$packageName, username=$username, label=$label, password=<redacted>)"
+        "NewCredentialInput(packageName=$packageName, username=$username, label=$label, " +
+            "password=<redacted>, customFields=<${customFields.size} entries>)"
 }
 
 /** Sealed error surface that never carries plaintext. NFR 1.3. */
