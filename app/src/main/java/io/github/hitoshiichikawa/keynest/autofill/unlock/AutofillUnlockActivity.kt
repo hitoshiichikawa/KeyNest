@@ -16,6 +16,8 @@ import io.github.hitoshiichikawa.keynest.auth.AuthResult
 import io.github.hitoshiichikawa.keynest.auth.BiometricAuthenticator
 import io.github.hitoshiichikawa.keynest.autofill.builder.DatasetPresentationFactory
 import io.github.hitoshiichikawa.keynest.autofill.builder.FillResponseBuilder
+import io.github.hitoshiichikawa.keynest.autofill.matcher.CustomFieldMatcher
+import io.github.hitoshiichikawa.keynest.autofill.parser.AssistStructureParser
 import io.github.hitoshiichikawa.keynest.autofill.parser.AutofillFieldHeuristics
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
@@ -52,11 +54,17 @@ class AutofillUnlockActivity : AppCompatActivity() {
         val credentialId = intent?.getLongExtra(EXTRA_CREDENTIAL_ID, INVALID_ID) ?: INVALID_ID
         val usernameAutofillId: AutofillId? = intent?.getAutofillIdExtra(EXTRA_USERNAME_AUTOFILL_ID)
         val passwordAutofillId: AutofillId? = intent?.getAutofillIdExtra(EXTRA_PASSWORD_AUTOFILL_ID)
+        val customFieldCandidates: List<AssistStructureParser.CustomFieldCandidate> =
+            readCustomFieldCandidates(intent)
 
+        // Req 5.1 / NFR 2.2: log counts only, never the underlying
+        // descriptor strings (third-party app field shapes are private to
+        // the user).
         SafeLogger.info(
             tag = TAG,
             message = "unlock launched id=$credentialId userIdPresent=${usernameAutofillId != null} " +
-                "passIdPresent=${passwordAutofillId != null}",
+                "passIdPresent=${passwordAutofillId != null} " +
+                "customFieldCandidates=${customFieldCandidates.size}",
         )
 
         if (credentialId == INVALID_ID) {
@@ -64,13 +72,14 @@ class AutofillUnlockActivity : AppCompatActivity() {
             finishWithCancel(); return
         }
 
-        runUnlockFlow(credentialId, usernameAutofillId, passwordAutofillId)
+        runUnlockFlow(credentialId, usernameAutofillId, passwordAutofillId, customFieldCandidates)
     }
 
     private fun runUnlockFlow(
         credentialId: Long,
         usernameAutofillId: AutofillId?,
         passwordAutofillId: AutofillId?,
+        customFieldCandidates: List<AssistStructureParser.CustomFieldCandidate>,
     ) {
         lifecycleScope.launch {
             val authenticator = BiometricAuthenticator(this@AutofillUnlockActivity as FragmentActivity)
@@ -96,22 +105,45 @@ class AutofillUnlockActivity : AppCompatActivity() {
                             applicationContext,
                             DatasetPresentationFactory(applicationContext),
                         )
+                        // Issue #66 Phase 1: now that the credential is
+                        // decrypted, the matcher can pair customField
+                        // candidates with the decrypted fieldKeys/values.
+                        // Wrapped in try/catch so a matcher bug does not
+                        // abort the username/password fill (fail-open).
+                        val customFieldValues: Map<AutofillId, String> = try {
+                            CustomFieldMatcher.match(
+                                candidates = customFieldCandidates,
+                                customFields = plain.customFields,
+                            )
+                        } catch (t: Throwable) {
+                            SafeLogger.warn(
+                                tag = TAG,
+                                message = "customField match failed; proceeding without customField values",
+                                throwable = t,
+                            )
+                            emptyMap()
+                        }
+
                         val dataset: Dataset = builder.buildUnlockedDataset(
                             usernameAutofillId = usernameAutofillId,
                             usernameValue = plain.username,
                             passwordAutofillId = passwordAutofillId,
                             passwordValue = String(plain.password),
                             label = plain.label,
+                            customFieldValues = customFieldValues,
                         )
                         val replyIntent = Intent().apply {
                             putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset as android.os.Parcelable)
                         }
                         setResult(RESULT_OK, replyIntent)
+                        // NFR 2.2 / Req 5.1: include counts only, never any
+                        // customField value or fieldKey.
                         SafeLogger.info(
                             tag = TAG,
                             message = "unlock returning dataset (userLen=${plain.username.length} " +
                                 "passLen=${plain.password.size}, userIdPresent=${usernameAutofillId != null}, " +
                                 "passIdPresent=${passwordAutofillId != null}, " +
+                                "customFieldsMatched=${customFieldValues.size}, " +
                                 "fwResultPresent=${intent?.hasExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT) == true})",
                         )
                         // Issue #9 Req 3.2 / NFR 2.2: stamp lastUsedAt for
@@ -161,6 +193,80 @@ class AutofillUnlockActivity : AppCompatActivity() {
             getParcelableExtra(key, AutofillId::class.java)
         } else {
             getParcelableExtra(key) as? AutofillId
+        }
+    }
+
+    /**
+     * Re-hydrate the [AssistStructureParser.CustomFieldCandidate] list from
+     * the extras layout produced by [newIntent] in T10.
+     *
+     * Wrapped in try/catch so any framework deserialisation error is
+     * swallowed into an empty list — the customField path is best-effort
+     * and must not abort username/password fill.
+     */
+    @Suppress("DEPRECATION")
+    private fun readCustomFieldCandidates(
+        source: Intent?,
+    ): List<AssistStructureParser.CustomFieldCandidate> {
+        if (source == null) return emptyList()
+        return try {
+            val ids: List<AutofillId> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                source.getParcelableArrayListExtra(EXTRA_CUSTOM_FIELD_AUTOFILL_IDS, AutofillId::class.java)
+                    .orEmpty()
+            } else {
+                source.getParcelableArrayListExtra<AutofillId>(EXTRA_CUSTOM_FIELD_AUTOFILL_IDS).orEmpty()
+            }
+            if (ids.isEmpty()) return emptyList()
+            val hints = source.getStringArrayExtra(EXTRA_CUSTOM_FIELD_HINTS).orEmpty()
+            val idEntries = source.getStringArrayExtra(EXTRA_CUSTOM_FIELD_ID_ENTRIES).orEmpty()
+            val contentDescs = source.getStringArrayExtra(EXTRA_CUSTOM_FIELD_CONTENT_DESCRIPTIONS).orEmpty()
+            val flatHints = source.getStringArrayExtra(EXTRA_CUSTOM_FIELD_AUTOFILL_HINTS_FLAT) ?: emptyArray()
+            val hintLengths: IntArray = source.getIntArrayExtra(EXTRA_CUSTOM_FIELD_AUTOFILL_HINTS_LENGTHS) ?: IntArray(0)
+            // Defensive: if any of the parallel arrays is missing / shorter
+            // than ids, fall back gracefully.
+            if (hints.size != ids.size || idEntries.size != ids.size ||
+                contentDescs.size != ids.size || hintLengths.size != ids.size
+            ) {
+                SafeLogger.warn(
+                    tag = TAG,
+                    message = "customField extras shape mismatch; skipping customField matching",
+                )
+                return emptyList()
+            }
+            val out = ArrayList<AssistStructureParser.CustomFieldCandidate>(ids.size)
+            var hintCursor = 0
+            for (idx in ids.indices) {
+                val autofillId = ids[idx]
+                val perFieldLen = hintLengths[idx]
+                val autofillHints: List<String>? = if (perFieldLen < 0) {
+                    null
+                } else {
+                    val end = hintCursor + perFieldLen
+                    val slice = flatHints.copyOfRange(hintCursor, end).toList()
+                    hintCursor = end
+                    slice
+                }
+                out.add(
+                    AssistStructureParser.CustomFieldCandidate(
+                        autofillId = autofillId,
+                        descriptor = AutofillFieldHeuristics.FieldDescriptor(
+                            autofillHints = autofillHints,
+                            inputType = 0, // not transported; not needed for match key extraction
+                            idEntry = idEntries[idx].takeIf { it.isNotEmpty() },
+                            hint = hints[idx].takeIf { it.isNotEmpty() },
+                            contentDescription = contentDescs[idx].takeIf { it.isNotEmpty() },
+                        ),
+                    ),
+                )
+            }
+            out
+        } catch (t: Throwable) {
+            SafeLogger.warn(
+                tag = TAG,
+                message = "readCustomFieldCandidates failed; skipping",
+                throwable = t,
+            )
+            emptyList()
         }
     }
 
