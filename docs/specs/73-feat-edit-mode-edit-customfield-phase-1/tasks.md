@@ -3,7 +3,7 @@
 Issue #73 (Phase 1.5) を独立にコミット可能な粒度で実装するためのタスク分割。
 順序: 1 → 2 → 3 → 4 → 5 / 6 / 7（テスト系は並列可）。
 
-- [ ] 1. DI: `EncryptedCustomFieldsCodec` および `AesGcmCipher` を ViewModel から取得可能にする
+- [x] 1. DI: `EncryptedCustomFieldsCodec` および `AesGcmCipher` を ViewModel から取得可能にする
   - `ServiceLocator` に `encryptedCustomFieldsCodec: EncryptedCustomFieldsCodec` および
     `aesGcmCipher: AesGcmCipher` のシングルトン参照を expose
     （既に Phase 1 で生成済みなら参照可能化のみ）
