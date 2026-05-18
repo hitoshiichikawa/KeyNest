@@ -5,14 +5,16 @@
 
 ## 前提条件
 
-- Phase 1 (Issue #66) の **実装 PR** が `develop` にマージされていること。
-- Phase 1 のマージ commit に以下が含まれていること（design.md §12.1 参照）：
-  - `KeyNestDatabase` version = 3
-  - `Migration_2_3` 実装と `Migration_2_3_Test`
-  - `AutofillFieldHeuristics.extractMatchKeys()` / `normalizeKey()` 実装
-  - `AssistStructureParser.ParsedFields.customFieldCandidates` の walk 実装
-  - `CredentialEditActivity` のカスタムフィールド入力 UI
-- 実装着手時点で Phase 1 の最終仕様（特に `FieldDescriptor` に `text` が含まれていないこと）を確認すること。差分があれば design.md と齟齬を解消する。
+Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e386e7`、2026-05-18 確認）。本 spec が前提とする Phase 1 の契約は **`develop` 上で確認済み**（design.md §0.1 / §12.1 表参照）:
+
+- ✅ `KeyNestDatabase` version = 3、entities = `[CredentialEntity::class]`、`addMigrations(Migration_1_2, Migration_2_3)`
+- ✅ `Migration_2_3` は `credentials` に `custom_fields_ciphertext` / `custom_fields_iv` BLOB を追加
+- ✅ `AutofillFieldHeuristics` は **`object` singleton**。`FieldDescriptor` は `text` を持たない。`extractMatchKeys` / `normalizeKey` 共に public
+- ✅ `AssistStructureParser.parse()` は `ParsedFields(usernameId, passwordId, customFieldCandidates)` を返し、全 editable view を `customFieldCandidates` に追加する
+- ✅ `KeyNestAutofillService.onFillRequest` には 3 つの short-circuit 経路あり（structure null / hasUsernameAndPassword false / callerPackage null）
+- ❌ `CredentialEditViewModel.CustomFieldsState.editable` は `Mode.Edit` で `false`（編集モード非対応、Phase 1 が Phase 2 へ申し送り）
+
+着手前再確認: Phase 1 のいずれかが本 spec マージ後に変更されていれば、その差分箇所の task を update する。
 
 ## タスク一覧
 
@@ -110,10 +112,11 @@
 **内容**:
 - design.md §7.1 のとおり実装。
 - 引数: `(packageName: String, descriptors: List<AutofillFieldHeuristics.FieldDescriptor>)`。
+- コンストラクタ: `(detectedFieldRepository, credentialRepository, clock = { System.currentTimeMillis() })`。**`AutofillFieldHeuristics` は `object` singleton なので DI 引数として受けない**（`AutofillFieldHeuristics.normalizeKey(...)` を直接呼ぶ）。
 - `CredentialRepository.findByPackage(pkg)` が empty の場合は no-op で早期 return。
 - 各 descriptor から 4 source（autofillHints / hint / idEntry / contentDescription）を抽出し、normalize 後に blank なら skip。
 - 保存する `fieldKey` は **raw 値**（Phase 1 と同方針）。
-- `text` は descriptor が持たないため自然に除外（型レベル）。Phase 1 が `text` を含めるよう変更されていた場合は明示 skip コードを追加。
+- `text` は descriptor が持たないため自然に除外（型レベル、§0.1）。Phase 1 仕様が将来変わったら明示 skip コードを追加。
 
 **Definition of Done**:
 - 単体テスト（T9 で書く）が成立する。
@@ -148,15 +151,18 @@
 
 **内容**:
 - `ServiceLocator` に `detectedFieldRepository` / `recordDetectedFieldsUseCase` / `observeRecentDetectedFieldsUseCase` を追加（design.md §7.4）。
-- `KeyNestAutofillService.onFillRequest` で **`callback.onSuccess(response)` 呼出後** に、`callerPackage != null` の場合に限り `scope.launch(Dispatchers.IO)` で `recordDetectedFieldsUseCase(callerPackage, descriptors)` を呼ぶ。
-- `descriptors = parsed.customFieldCandidates.map { it.descriptor }` で抽出（Phase 1 が `customFieldCandidates` を全 editable view から抽出する前提）。
-- 例外は内側 try/catch で `SafeLogger.warn` して swallow。
-- detection launch は **`handlerJob` に bind しない**（`scope` 直下、§7.3）。
+- `KeyNestAutofillService.onFillRequest` で detection の launch 位置は **`callerPackage` 確定直後・(b) `!parsed.hasUsernameAndPassword` short-circuit より前**（design.md §7.3）:
+  - これにより Phase 2 の主要ユースケース（Phase 1 ヒューリスティクスでは username/password として認識されないが credential が登録済みのアプリ）でも detection が走る。
+  - 登録済みゲートは use case 側で持つため、AutofillService 側で重複チェックしない。
+- `descriptors = parsed.customFieldCandidates.map { it.descriptor }`。`descriptors.isEmpty()` のときは launch 自体を skip（余計な coroutine 起動コスト 0）。
+- `scope.launch(Dispatchers.IO)` で起動（Room I/O、親 `scope` は `Dispatchers.Default`）。
+- 例外は内側 try/catch で `SafeLogger.warn` して swallow（Req 3.8）。
+- detection launch は **`handlerJob` に bind しない**（`scope` 直下の独立 child job、§7.3）。cancellation や callback タイミングと完全 decouple する。
 
 **Definition of Done**:
-- 既存テストが fail しない。
+- 既存テストが fail しない（既存 short-circuit 経路 (a)/(b)/(c) の挙動は変更しない）。
 - `./gradlew :app:assembleDebug` 成功。
-- 手動動作確認: 登録済み packageName のアプリで autofill を発火させた後、Room inspector で `detected_fields` テーブルに row が追加されることを確認（実機 or エミュ）。
+- 手動動作確認: 登録済み packageName のアプリで autofill を発火させた後、Room inspector で `detected_fields` テーブルに row が追加されることを確認（実機 or エミュ）。Phase 1 ヒューリスティクスが username/password を認識しないアプリ（custom field 主体のフォーム）でも row が追加されることを確認する。
 
 **Estimated size**: 30〜50 LOC
 

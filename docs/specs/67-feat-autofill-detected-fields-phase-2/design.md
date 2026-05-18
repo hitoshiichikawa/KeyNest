@@ -5,11 +5,25 @@
 
 ## 0. 制約（冒頭明示）
 
-1. 既存テスト（unit / instrumented / `Migration_1_2_Test` / Phase 1 が追加するテスト群）を一切 fail させないこと（requirements §5.5 / §12）。
+1. 既存テスト（unit / instrumented / `Migration_1_2_Test` / `Migration_2_3_Test` / Phase 1 が追加したテスト群）を一切 fail させないこと（requirements §5.5 / §12）。
 2. `develop` / `main` ブランチへの直接 push は禁止。feature branch + PR レビュー経由（requirements §12）。
 3. Phase 1 (Issue #66) の v3 スキーマと customField 入力 UI を変更しないこと。本 Phase 2 は **v4 への schema migration と新規 entity / DAO 追加** で完結する。
 4. 既存 username / password 補完挙動・Phase 1 の customField 補完挙動を変更しない（新規 hook のみ追加）。
 5. 本書は実装コードを含まず、データクラス定義・API シグネチャ案のみを擬似コードで示す。
+
+### 0.1 Phase 1 マージ状態の確認（2026-05-18）
+
+本設計は **Phase 1 (#66) が `develop` にマージ済み**（commit `2e386e7`）の状態を前提に確定している。`develop` 上で確認した Phase 1 の実装契約は以下のとおり（§12.1 risk R1 解消）。差分があれば本設計を update する：
+
+| 項目 | Phase 1 で確定した実装 | 本書での扱い |
+|---|---|---|
+| `KeyNestDatabase.version` | `3`、`entities = [CredentialEntity::class]`、`addMigrations(Migration_1_2, Migration_2_3)` | §4.3 で v3 → v4 に拡張 |
+| `Migration_2_3` | `credentials` に `custom_fields_ciphertext BLOB NOT NULL DEFAULT x''` / `custom_fields_iv BLOB NOT NULL DEFAULT x''` 追加 | §4 で `Migration_3_4` を直接 v3 → v4 として実装 |
+| `AutofillFieldHeuristics` | **`object` singleton**。`FieldDescriptor` data class（`autofillHints` / `inputType` / `idEntry` / `hint` / `contentDescription`、**`text` を持たない**）。`extractMatchKeys` / `normalizeKey` 共に public | §7 で直接参照（DI せず）。`text` 不在は型レベルで担保 |
+| `AssistStructureParser.parse()` | `ParsedFields(usernameId, passwordId, customFieldCandidates: List<CustomFieldCandidate>)`。`customFieldCandidates` は全 editable view から収集 | §7.3 で `customFieldCandidates.map { it.descriptor }` を流用 |
+| `KeyNestAutofillService.onFillRequest` short-circuit | (a) `structure == null` (b) `!parsed.hasUsernameAndPassword` (c) `callerPackage == null` のいずれかで `callback.onSuccess(null)` し早期 return | §7.3 で **(b) 経路でも detection を fire-and-forget で起動** するよう設計 |
+| `CredentialEditViewModel.CustomFieldsState` | `rows` / `editable` を持つ。**`Mode.Edit` では `editable = false`** で row 追加 / 編集を不可（Phase 1 §13 で Phase 2 へ申し送り）。`focusedRowIndex` 相当の状態は **無い** | §8.1 で `editable == true` を suggest UI 表示ゲートとし、転送先は **直近 `addCustomFieldRow()` で append された行**（list の末尾）に固定 |
+| `ServiceLocator` | `object`、`credentialRepository` / `clearVaultUseCase` などを lazy で提供。`initialize(context)` が `KeyNestApp.onCreate` と `KeyNestAutofillService.onCreate` から呼ばれる | §7.4 に従い `detectedFieldRepository` / `recordDetectedFieldsUseCase` / `observeRecentDetectedFieldsUseCase` を追加 |
 
 ---
 
@@ -38,9 +52,9 @@ requirements.md §2 を参照。本書は requirements §4 で確定済みの 3 
 | data/dao | `CredentialDao` | 新規 `DetectedFieldDao`（`upsertWithLruCap` / `getByPackage` / `deleteByPackage`） |
 | data/repository | `CredentialRepositoryImpl` | 新規 `DetectedFieldRepositoryImpl` |
 | data/migration | `Migration_1_2` / Phase 1 で `Migration_2_3` | 新規 `Migration_3_4` を追加し `detected_fields` テーブル + index を新設 |
-| autofill | `KeyNestAutofillService.onFillRequest` / `AssistStructureParser` | (a) `AssistStructureParser` に「全 editable ViewNode の descriptor list」を返す副次 API を追加（Phase 1 `customFieldCandidates` が既に同等の walk を行う前提で流用）。(b) `onFillRequest` 内で credential ヒット時に `RecordDetectedFieldsUseCase` を **fire-and-forget** で呼ぶ |
-| ui/edit | `CredentialEditActivity` / `CredentialEditViewModel` | Phase 1 のカスタムフィールド入力 UI に「最近検出されたフィールド」サジェスト chip 列を追加。`ObserveRecentDetectedFieldsUseCase` を購読 |
-| util | `SafeLogger` | 流用。新規 normalize / extract は Phase 1 の `AutofillFieldHeuristics` から借用 |
+| autofill | `KeyNestAutofillService.onFillRequest` / `AssistStructureParser` | (a) Phase 1 の `ParsedFields.customFieldCandidates` をそのまま流用（追加 walk なし）。(b) `onFillRequest` 内で **`!parsed.hasUsernameAndPassword` の short-circuit 経路も含めて** credential ヒット時に `RecordDetectedFieldsUseCase` を **fire-and-forget** で呼ぶ（§7.3） |
+| ui/edit | `CredentialEditActivity` / `CredentialEditViewModel` | Phase 1 の customField 入力 UI（`Mode.New` で `editable=true` の状態）の直下に「最近検出されたフィールド」サジェスト chip 列を追加。`ObserveRecentDetectedFieldsUseCase` を購読。**`Mode.Edit` では Phase 1 が customField を read-only にしているため suggest UI も表示しない**（§8.5） |
+| util | `SafeLogger` | 流用。`AutofillFieldHeuristics`（Phase 1 で `object` 化された singleton）の `normalizeKey()` を直接呼ぶ（DI せず） |
 
 ### 2.2 既存設計との整合性
 
@@ -404,18 +418,20 @@ private fun DetectedFieldEntity.toDomainOrNull(): DetectedField? {
 class RecordDetectedFieldsUseCase(
     private val detectedFieldRepository: DetectedFieldRepository,
     private val credentialRepository: CredentialRepository,
-    private val heuristics: AutofillFieldHeuristics = AutofillFieldHeuristics,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
     /**
      * 登録済み packageName のときのみ実行する。未登録なら no-op。
+     *
+     * `AutofillFieldHeuristics` は Phase 1 で `object` singleton として
+     * 配置されているため DI せず直接参照する（§0.1 整合性確認）。
      *
      * @param packageName  AssistStructure.activityComponent.packageName
      * @param descriptors  AssistStructureParser が抽出した全 editable ViewNode の descriptor
      */
     suspend operator fun invoke(
         packageName: String,
-        descriptors: List<FieldDescriptor>,
+        descriptors: List<AutofillFieldHeuristics.FieldDescriptor>,
     ) {
         // Req 3.1 + Q2-A: 登録済み packageName のみ
         val hasCredential = credentialRepository.findByPackage(packageName).isNotEmpty()
@@ -431,12 +447,15 @@ class RecordDetectedFieldsUseCase(
 
     private fun buildRecords(
         packageName: String,
-        descriptors: List<FieldDescriptor>,
+        descriptors: List<AutofillFieldHeuristics.FieldDescriptor>,
         now: Long,
     ): List<DetectedField> {
         val out = mutableListOf<DetectedField>()
         for (d in descriptors) {
             // Req 3.6: text source は除外
+            // FieldDescriptor は text を持たないため型レベルで担保される
+            // (§0.1 で確認)。
+            //
             // - autofillHints: 各要素を 1 row として扱う
             d.autofillHints?.forEach { hint ->
                 addIfNotBlank(out, packageName, hint, DetectedFieldSource.AutofillHints, now)
@@ -460,7 +479,7 @@ class RecordDetectedFieldsUseCase(
     ) {
         // Req 3.5: 空文字列は upsert しない（normalize 前後どちらも判定）
         if (raw.isNullOrBlank()) return
-        val normalized = heuristics.normalizeKey(raw)
+        val normalized = AutofillFieldHeuristics.normalizeKey(raw)
         if (normalized.isBlank()) return
         // `fieldKey` には 表示用の raw 値を保存（normalize は Phase 1 の比較経路で行う）。
         // requirements NFR 5 / Phase 1 §7.3 に揃え、表示値は raw を維持。
@@ -469,20 +488,20 @@ class RecordDetectedFieldsUseCase(
 }
 ```
 
-- **保存値**: `fieldKey` は **raw 値**（resource id `loginEmail` 等）をそのまま保存し、normalize は比較・dedup 経路でのみ行う方針。これは Phase 1 design §3 で確立した「Q1: fieldKey は入力ままで保存」と一貫させる。
+- **保存値**: `fieldKey` は **raw 値**（resource id `loginEmail` 等）をそのまま保存し、normalize は比較・dedup 経路でのみ行う方針。Phase 1 の `AutofillFieldHeuristics.extractMatchKeys()` は normalize 後の値を返すため、サジェスト UI で表示する文字列は **本 use case が保存した raw 値**を直接使う（ユーザーが認識しやすい元表記を維持）。
 - **重複排除**: 同 packageName / fieldKey / source の重複は **DB の複合 PK が自然に dedupe** する（INSERT OR REPLACE）。memo: 同一 FillRequest 内で重複 ViewNode があるとき `INSERT OR REPLACE` が複数回呼ばれるが、最終的に row 1 つに収束するため副作用なし。
-- **`text` 除外**: descriptor から `text` 系プロパティを抽出しない（そもそも descriptor が `text` を持たない設計で進める、§7.2 参照）。
+- **`text` 除外**: Phase 1 `FieldDescriptor` が `text` を持たないため **型レベルで担保**（§0.1）。将来 Phase 1 仕様が変わって `text` が追加された場合は `buildRecords` 内に明示 skip を追加する。
 
-### 7.2 `AssistStructureParser` / `FieldDescriptor` 拡張
+### 7.2 `AssistStructureParser` / `FieldDescriptor` の流用
 
-Phase 1 設計（§8.2）で `AssistStructureParser` が `customFieldCandidates: List<CustomFieldCandidate>` を返す walk を導入する前提。本 Phase 2 はその walk を再利用する。
+Phase 1 で導入済みの `AssistStructureParser.parse()` の戻り値 `ParsedFields.customFieldCandidates: List<CustomFieldCandidate>` をそのまま流用する。本 Phase 2 では `AssistStructureParser` / `AutofillFieldHeuristics` のシグネチャに **一切手を加えない**。
 
 ```kotlin
-// 既存 (Phase 1)
+// Phase 1 で確定済み (develop / 2026-05-18 確認)
 data class ParsedFields(
     val usernameId: AutofillId?,
     val passwordId: AutofillId?,
-    val customFieldCandidates: List<CustomFieldCandidate>,
+    val customFieldCandidates: List<CustomFieldCandidate> = emptyList(),
 )
 
 data class CustomFieldCandidate(
@@ -490,49 +509,94 @@ data class CustomFieldCandidate(
     val descriptor: AutofillFieldHeuristics.FieldDescriptor,
 )
 
-// Phase 1 の FieldDescriptor 定義（変更なし）
-internal object AutofillFieldHeuristics {
+// Phase 1 の AutofillFieldHeuristics (object singleton)
+object AutofillFieldHeuristics {
     data class FieldDescriptor(
         val autofillHints: List<String>?,
         val inputType: Int,
         val idEntry: String?,
         val hint: String?,
         val contentDescription: String?,
+        // 注: text を持たない。Phase 1 §7.2 で意図的に除外済み。
     )
+
+    fun extractMatchKeys(descriptor: FieldDescriptor): Set<String>
+    fun normalizeKey(raw: String): String
 }
 ```
 
-**設計判断**: Phase 1 の `FieldDescriptor` は **`text` プロパティを持たない**（Phase 1 §7.2 で意図的に除外）。これにより Phase 2 で `RecordDetectedFieldsUseCase` が誤って `text` を扱う**可能性自体を型で排除**できる。requirements Q1-A は型レベルで担保される。
-
-**Phase 1 マージ前の対応**: 万一 Phase 1 設計が `text` を `FieldDescriptor` に含めるよう変更された場合は、本 Phase 2 で `RecordDetectedFieldsUseCase` の `buildRecords` 内で **明示的に skip** する手当てを追加する。
+**型レベル保証**: `FieldDescriptor` に `text` が存在しないため、`RecordDetectedFieldsUseCase.buildRecords` が `text` を誤って扱う可能性は **型で排除** される。requirements Q1-A はコンパイル時に担保される。
 
 ### 7.3 `KeyNestAutofillService.onFillRequest` への組み込み
+
+Phase 1 実装の `onFillRequest` には **3 つの short-circuit 経路**がある（`develop` / 2026-05-18 確認）:
+
+1. `structure == null` → `callback.onSuccess(null)` で return
+2. `!parsed.hasUsernameAndPassword` → `callback.onSuccess(null)` で return
+3. `callerPackage == null` → `callback.onSuccess(null)` で return
+
+Phase 2 の detection を `callback.onSuccess(response)` 後だけに置くと、(2) 経路 **= 登録済みアプリだが Phase 1 ヒューリスティクスでは username/password として認識されないフォーム** で detection が走らない。しかしこれこそが Phase 2 の主要ユースケース（custom field 主体のアプリ）であり、ここで取りこぼすと「履歴なし」状態から抜け出せない。
+
+したがって detection は **structure と callerPackage が確定した直後**（=(1) を抜けた後、(2)/(3) のチェック前）に fire-and-forget で launch する。
 
 ```kotlin
 // autofill/KeyNestAutofillService.kt
 override fun onFillRequest(request, signal, callback) {
+    val handlerJob = Job(serviceJob)
+    cancellationSignal.setOnCancelListener { handlerJob.cancel() }
+
     scope.launch(handlerJob) {
         try {
-            // ... 既存処理（parse / candidates / response build）...
+            val structure = request.fillContexts.lastOrNull()?.structure
+            if (structure == null) {
+                if (handlerJob.isActive) callback.onSuccess(null)
+                return@launch
+            }
+
             val parsed = parser.parse(structure)
             val callerPackage = extractCallerPackage(structure)
-            // ... locked response 構築・callback.onSuccess(response) ...
 
-            if (handlerJob.isActive) callback.onSuccess(response)
-
-            // --- Phase 2 追加: callback 完了後に fire-and-forget ---
-            // Req 3.3 / 3.4: callback の遅延を発生させないため、応答後に launch
+            // --- Phase 2 追加: callerPackage 確定後に fire-and-forget で detection ---
+            // (2) /(3) の short-circuit より前に launch することで、
+            //   - Phase 1 ヒューリスティクスで username/password が検出できないアプリ
+            //   - locked response 構築が空 candidate で打ち切られるアプリ
+            // でも detection は走る（Phase 2 の主要ユースケース）。
+            //
+            // Req 3.1 (登録済み packageName のみ) のゲートは use case 側で持つ。
+            // 未登録のときは早期 return される (no DB 書き込み)。
+            //
+            // Req 3.3 / 3.4 (応答 latency に加算しない):
+            //   - `scope.launch(Dispatchers.IO)` で別 coroutine に分離。
+            //   - `handlerJob` に bind しないことで、cancellation や callback 完了の
+            //     タイミングと完全に独立させる。
             if (callerPackage != null) {
                 val descriptors = parsed.customFieldCandidates.map { it.descriptor }
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        ServiceLocator.recordDetectedFieldsUseCase(callerPackage, descriptors)
-                    } catch (t: Throwable) {
-                        // Req 3.8: swallow + warn
-                        SafeLogger.warn(message = "detected_fields upsert failed", throwable = t)
+                if (descriptors.isNotEmpty()) {
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            ServiceLocator.recordDetectedFieldsUseCase(callerPackage, descriptors)
+                        } catch (t: Throwable) {
+                            SafeLogger.warn(message = "detected_fields upsert failed", throwable = t)  // Req 3.8
+                        }
                     }
                 }
             }
+
+            // --- 既存 short-circuit (b) / (c) ---
+            if (!parsed.hasUsernameAndPassword) {
+                SafeLogger.info(message = "onFillRequest: no username+password fields detected")
+                if (handlerJob.isActive) callback.onSuccess(null)
+                return@launch
+            }
+            if (callerPackage == null) {
+                if (handlerJob.isActive) callback.onSuccess(null)
+                return@launch
+            }
+
+            // --- 既存 happy path ---
+            val candidates = ServiceLocator.resolveAutofillCandidatesUseCase(callerPackage)
+            val response = responseBuilder.buildLockedResponse(...)
+            if (handlerJob.isActive) callback.onSuccess(response)
         } catch (t: Throwable) {
             SafeLogger.warn(message = "onFillRequest swallowed exception", throwable = t)
             if (handlerJob.isActive) callback.onSuccess(null)
@@ -541,10 +605,25 @@ override fun onFillRequest(request, signal, callback) {
 }
 ```
 
-- **fire-and-forget**: `callback.onSuccess(response)` の **後** に detection を launch。応答 latency に絶対に加算されない。
-- **dispatcher**: `Dispatchers.IO`（Room I/O のため）。
-- **exception 隔離**: detection の例外は内側の try/catch で swallow し、`scope` 全体には影響を与えない。
-- **`handlerJob` への bind**: detection 用 launch は **`handlerJob` には bind しない**（cancel されると未完了な upsert が中断されるため、独立した `scope` の子ジョブとして扱う）。
+設計上のポイント：
+
+- **fire-and-forget の launch 位置**: `callerPackage` 確定直後 / short-circuit (b)(c) より前。検出取りこぼしを防ぐ。
+- **dispatcher**: `Dispatchers.IO`（Room I/O のため）。`scope` の親は `Dispatchers.Default` なので IO Dispatcher への切替は必須。
+- **`handlerJob` に bind しない**: `scope.launch(Dispatchers.IO)`（明示的に親を指定しない）で `scope` 直下の独立 child job として起動する。これにより:
+  - `cancellationSignal` がトリガーされて `handlerJob.cancel()` されても upsert は中断されない（途中で失敗すると DB 状態が中途半端になるため避ける）
+  - callback 完了タイミングと完全に decouple される
+- **descriptors が空のときは launch 自体を skip**: parser が何も descriptor を返さなかった場合の no-op launch を避けて余計な coroutine 起動コストを 0 にする。
+- **exception 隔離**: detection の例外は内側 try/catch で swallow（Req 3.8）。`scope` 全体には影響しない（`SupervisorJob` 配下のため、兄弟ジョブにも波及しない）。
+- **登録済みゲート**: `RecordDetectedFieldsUseCase.invoke` の冒頭で `credentialRepository.findByPackage` を呼ぶ。未登録なら即 return で DB 書き込みは発生しない（Req 3.1 / Q2-A）。`onFillRequest` 側で重複チェックしない（責務分離）。
+
+#### 7.3.1 latency への影響
+
+| measurement | 影響 |
+|---|---|
+| `callerPackage` 抽出 (`extractCallerPackage`) | 既存呼出と同じタイミング。変化なし |
+| `descriptors.isNotEmpty()` / `customFieldCandidates.map { it.descriptor }` | 既存 `parsed.customFieldCandidates` をなめるだけ。≤ 500 nodes × 数十バイトコピー、< 1 ms |
+| `scope.launch(Dispatchers.IO)` のオーバーヘッド | < 1 ms (coroutine 起動のみ) |
+| `callback.onSuccess(...)` 到達まで | 既存と同じパス。**理論上 0 ms 加算** |
 
 ### 7.4 `ServiceLocator` への追加
 
@@ -569,14 +648,37 @@ val observeRecentDetectedFieldsUseCase: ObserveRecentDetectedFieldsUseCase by la
 
 ### 8.1 ViewModel: `CredentialEditViewModel` に追加する状態
 
-Phase 1 で `CustomFieldRow` 状態 (新規追加された行の `fieldKey` / `value` 入力中値) を保持する前提。Phase 2 ではここに **「現在ハイライトされている customField 行 (= 直前に追加された行)」** を表す `focusedRowIndex: Int?` と、サジェスト一覧を追加する。
+Phase 1 で確定済みの `CustomFieldsState` は以下の形（`develop` / 2026-05-18 確認）:
 
 ```kotlin
-// ui/edit/CredentialEditViewModel.kt
+// Phase 1 既存定義（変更しない）
+data class CustomFieldsState(
+    val rows: List<Row> = emptyList(),
+    val editable: Boolean = true,  // Mode.New で true、Mode.Edit で false
+) {
+    data class Row(val rowId: Long, val fieldKey: String, val value: String)
+    val canAddMore: Boolean get() = editable && rows.size < MAX_CUSTOM_FIELDS
+    companion object { const val MAX_CUSTOM_FIELDS = 10 }
+}
+// Phase 1 既存 reducer:
+//   addCustomFieldRow()       -> rows に空 Row append（capacity 制限あり）
+//   removeCustomFieldRow(id)
+//   updateCustomFieldKey(id, key)
+//   updateCustomFieldValue(id, value)
+```
+
+**転送ターゲットの決定方針**: Phase 1 の `CustomFieldsState` は `focusedRowIndex` 相当の状態を持たない。Phase 2 で UI 状態を追加するよりも、**直近に `addCustomFieldRow()` した行 (= `rows.last()` の rowId)** を転送ターゲットとして扱う方が Phase 1 の reducer 契約を壊さない（§13 開発フローでこの方針を採用）。理由:
+
+- `addCustomFieldRow()` は capacity 内ならば常に末尾に append する単純な reducer。
+- サジェスト UI は「追加ボタン押下 → chip 列表示 → クリック → 末尾行に転送 → chip 列を非表示」という直線的なフローで成立する（§8.4）。
+- chip 列表示中に別の既存行を編集する操作は §8.4 で対象外とする（誤って既存行を上書きするのを避ける）。
+
+```kotlin
+// ui/edit/CredentialEditViewModel.kt に追加する Phase 2 状態
 data class SuggestionState(
-    val visible: Boolean,                    // chip 列を表示するか
-    val items: List<DetectedFieldSuggestion>,// 表示する候補
-    val emptyMessage: Boolean,               // 「履歴なし」プレースホルダ
+    val visible: Boolean,                     // chip 列を表示するか
+    val items: List<DetectedFieldSuggestion>, // 表示する候補
+    val emptyMessage: Boolean,                // 「履歴なし」プレースホルダを出すか
 )
 
 data class DetectedFieldSuggestion(
@@ -587,32 +689,55 @@ data class DetectedFieldSuggestion(
 private val _suggestion = MutableStateFlow(SuggestionState(false, emptyList(), false))
 val suggestion: StateFlow<SuggestionState> = _suggestion.asStateFlow()
 
-// Phase 1 が決める「新規行追加」アクション内で呼ぶ:
-fun onAddCustomFieldClicked() {
-    // Phase 1: 新しい customField row を internal list に追加して focused にする
-    // Phase 2 追加分:
+// Phase 1 の addCustomFieldRow() を Phase 2 で wrap せず、Activity 側で
+// 「追加ボタンタップ後」の hook として onAddCustomFieldClickedForSuggest() を
+// 追加で呼ぶ。Phase 1 addCustomFieldRow() の reducer は変更しない。
+fun onAddCustomFieldClickedForSuggest() {
+    // 直前に Phase 1 が append した行が「現在の転送先」になる。
     refreshSuggestions()
 }
 
 fun onSuggestionClicked(item: DetectedFieldSuggestion) {
-    val rowIdx = focusedRowIndex ?: return
-    // Phase 1 の CustomFieldRow 更新メソッドに転送
-    updateCustomFieldRowKey(rowIdx, item.fieldKey)
+    val current = _customFields.value
+    val targetRowId = current.rows.lastOrNull()?.rowId ?: return
+    // Phase 1 既存 reducer をそのまま使う（追加 reducer なし）
+    updateCustomFieldKey(targetRowId, item.fieldKey)
     // 候補リストから当該 row を除外し、再度 emit
     refreshSuggestions()
+    // chip 列を非表示にする（§8.4）
+    _suggestion.update { it.copy(visible = false) }
 }
 
+/**
+ * packageName が確定したら 1 度だけ collect を起動する。
+ * `currentPackageName` は Phase 1 load() の延長または save() 直前に
+ * Activity から渡される packageName。
+ */
 private fun refreshSuggestions() {
-    val pkg = currentPackageName ?: return _suggestion.update { SuggestionState(false, emptyList(), false) }
-    viewModelScope.launch {
+    val pkg = currentPackageName ?: run {
+        _suggestion.value = SuggestionState(false, emptyList(), false)
+        return
+    }
+    // Phase 1 が edit mode で editable=false にしているため、suggest UI も非表示
+    val state = _customFields.value
+    if (!state.editable) {
+        _suggestion.value = SuggestionState(false, emptyList(), false)
+        return
+    }
+    suggestionJob?.cancel()
+    suggestionJob = viewModelScope.launch {
         observeRecentDetectedFieldsUseCase(pkg, limit = 10).collect { list ->
-            // Req 4.4: 現在の customFields に既に存在する fieldKey は除外（normalize 一致で判定）
-            val existing = currentCustomFieldKeys().map(heuristics::normalizeKey).toSet()
-            val filtered = list.filter { heuristics.normalizeKey(it.fieldKey) !in existing }
-                .distinctBy { heuristics.normalizeKey(it.fieldKey) }
+            // Req 4.4: 現在の customFields に既に存在する fieldKey は除外
+            val existing = _customFields.value.rows
+                .map { AutofillFieldHeuristics.normalizeKey(it.fieldKey) }
+                .filter { it.isNotEmpty() }
+                .toSet()
+            val filtered = list
+                .filter { AutofillFieldHeuristics.normalizeKey(it.fieldKey) !in existing }
+                .distinctBy { AutofillFieldHeuristics.normalizeKey(it.fieldKey) }
                 .map { DetectedFieldSuggestion(it.fieldKey, it.source) }
             _suggestion.value = SuggestionState(
-                visible = currentlyEditingCustomField,
+                visible = true,
                 items = filtered,
                 emptyMessage = list.isEmpty(),
             )
@@ -621,8 +746,9 @@ private fun refreshSuggestions() {
 }
 ```
 
-- `observeRecentDetectedFieldsUseCase(pkg, 10)` は Flow。ViewModel が `viewModelScope.launch` で 1 度購読し、`packageName` 変更時に再 subscribe（`flatMapLatest` 等で実装可能）。
-- **重複排除**: `distinctBy(normalize)` で同 fieldKey が複数 source で重複表示されないようにする。
+- `observeRecentDetectedFieldsUseCase(pkg, 10)` は Flow。`refreshSuggestions()` 内で 1 度 collect を起動し、`packageName` が変わるか edit mode に遷移したら job を cancel する。
+- **重複排除**: `distinctBy(normalize)` で同一 normalized key が複数 source として重複表示されないようにする。
+- **`AutofillFieldHeuristics`** は `object` singleton なので DI せず直接呼ぶ（§0.1）。
 
 ### 8.2 Activity: chip group の追加
 
@@ -670,9 +796,16 @@ i18n は既存規約に従い、デフォルト ja。英訳は `values-en/string
 - 既存 customField 行を編集している間（フォーカスのみ移った場合）は chip 列を **表示しない**（誤って既存行に fieldKey を上書きすることを避ける）。
 - 新規行の `fieldKey` フィールドへの入力が **完了**（フォーカスアウト or サジェストクリック）した時点で chip 列を非表示。
 
-### 8.5 Phase 1 が編集モード対応を見送った場合
+### 8.5 編集モードでのサジェスト UI 不表示（Phase 1 確定により決着）
 
-Phase 1 設計 §13 で「編集モードでの customField 編集を Phase 1.5 に切り出す可能性」が申し送られている（requirements §10 R2）。Phase 1 で見送られた場合、Phase 2 サジェスト UI も **新規作成モードのみ** に限定する。判断は Phase 1 マージ後の状態を見て tasks.md で確定する。
+Phase 1 (`develop` / 2026-05-18 確認) では `CredentialEditViewModel.load()` 内で `Mode.Edit` 時に `CustomFieldsState(rows = emptyList(), editable = false)` を設定し、customField セクションを **読み取り専用** にしている（Phase 1 ViewModel コメント "Phase 2 will revisit." を参照）。これは「既存 customField を decrypt するには追加の biometric unlock が必要で Phase 1 のスコープ外」という Phase 1 設計判断による。
+
+Phase 2 は **このスコープ判断をそのまま継承する**:
+
+- **新規作成モード (`Mode.New`)**: `editable = true` で suggest UI を有効化（本 design の主対象）。
+- **編集モード (`Mode.Edit`)**: `editable = false` のため Phase 1 で既に「行追加ボタン」が無効化されており、suggest UI も自然に表示されない。`refreshSuggestions()` 冒頭で `state.editable == false` を見て早期 return する（§8.1 実装サンプル）。
+
+将来「編集モードでの customField 編集」が別 Issue（Phase 1.5）で実装される場合、その変更で `editable = true` のパスを edit mode にも開ければ、Phase 2 の suggest UI ロジックは **そのまま流用** できる（packageName と `customFields.editable` だけを条件にしているため）。requirements Req 4.6 はこの方針で満たされる。
 
 ---
 
@@ -854,23 +987,27 @@ class CredentialEditViewModelTest {
 
 ## 12. リスクと申し送り
 
-### 12.1 Phase 1 マージ前の本設計 PR レビュー (再掲、requirements §10 R1)
+### 12.1 Phase 1 整合性確認 (2026-05-18 解決済み、requirements §10 R1 / R2)
 
-Phase 1 (Issue #66) の設計 PR (#69) が未マージ。Phase 1 の `Migration_2_3` / `AutofillFieldHeuristics.extractMatchKeys` / `AutofillFieldHeuristics.normalizeKey` / `ParsedFields.customFieldCandidates` / `CredentialEditActivity` customField 入力 UI は本 Phase 2 設計の前提。Phase 1 で大きな変更があった場合、本 Phase 2 設計を update する必要がある。
+Phase 1 (#66) の実装 PR は `develop` にマージ済み（commit `2e386e7`）。requirements §10 R1 / R2 で挙げていた整合性懸念は、本 PR レビュー round で **`develop` 上のコードを直接確認** して以下のとおり決着した（詳細は §0.1）:
 
-**review 時の確認ポイント**:
-- Phase 1 `FieldDescriptor` が `text` を持たないこと（§7.2 の前提）
-- Phase 1 `Migration_2_3` のバージョン番号が `2 → 3` のままであること
-- Phase 1 `AutofillFieldHeuristics.normalizeKey()` の public/internal 可視性
-- Phase 1 `AssistStructureParser.parse()` が `customFieldCandidates` を全 editable view から抽出すること
+| 元 risk | 確認結果 |
+|---|---|
+| R1: Phase 1 スキーマ v3 確定 | ✅ `KeyNestDatabase.version = 3` / `Migration_2_3` 実装済み |
+| R1: `AutofillFieldHeuristics` 公開 IF | ✅ `object` singleton。`extractMatchKeys` / `normalizeKey` 共に public |
+| R1: `ParsedFields.customFieldCandidates` 全 view walk | ✅ `AssistStructureParser.parse()` が全 editable view を `customFieldCandidates` に追加 |
+| R1: `FieldDescriptor` の `text` 不在 | ✅ Phase 1 で意図的に除外（`AutofillFieldHeuristics.kt` の `extractMatchKeys` コメント参照） |
+| R2: 編集モードでの customField 編集サポート | ❌ Phase 1 では **見送り**（`CustomFieldsState.editable = false` in `Mode.Edit`）。Phase 2 suggest UI は新規モードのみ（§8.5） |
 
-### 12.2 サジェスト UI のスコープ (編集モード) → 申し送り
+**残課題**: なし。Phase 2 実装着手時にこの整合性が壊れていないか念のため再確認するが、現時点で設計の前提は満たされている。
 
-Phase 1 §13 で「編集モードでの customField 編集」が Phase 1.5 に切り出される可能性あり。Phase 2 では requirements Req 4.6 のとおり「Phase 1 が決めたスコープに従う」が決まっている。**実装着手時点**で Phase 1 の最終決定を確認し、tasks.md の該当 task をスコープ調整する。
+### 12.2 サジェスト UI が編集モード非対応であること
 
-### 12.3 `text` 除外の型レベル担保
+§8.5 のとおり Phase 1 が編集モードを read-only にしているため、Phase 2 suggest UI も新規モードのみで動作する。Phase 1.5 / Phase 3 等で編集モード対応が入ったときに、本 Phase 2 のロジックを **そのまま流用** できるよう、`refreshSuggestions()` のゲート条件は `customFields.editable == true` のみとし、Mode に直接依存させない（§8.1 サンプル参照）。
 
-Phase 1 `FieldDescriptor` が将来 `text` を含むよう拡張された場合、本 Phase 2 `RecordDetectedFieldsUseCase.buildRecords` で **明示的に skip する** 防御コードを追加する必要がある。Phase 2 実装時に Phase 1 の最終 FieldDescriptor を確認し、必要なら防御コードを追加する。
+### 12.3 `text` 除外の型レベル担保（Phase 1 で確定）
+
+Phase 1 `FieldDescriptor` は `text` を持たない（§0.1 / §7.2）。Phase 2 `RecordDetectedFieldsUseCase.buildRecords` も `text` を参照しない。将来 Phase 1 仕様が変わって `text` が `FieldDescriptor` に追加された場合のみ、明示 skip 防御コードを追加する（その時点での個別 PR で対応）。
 
 ### 12.4 Vault clear-all 連動 → 申し送り
 
@@ -897,11 +1034,11 @@ PR 作成時は `gh pr create --base develop` を明示し、`gh pr view <PR> --
 
 ## 13. 開発フロー（概要）
 
-1. Phase 1 (#66) の実装 PR が `develop` にマージされる。
-2. 本 Phase 2 設計 PR がレビュー & マージされる。
+1. ~~Phase 1 (#66) の実装 PR が `develop` にマージされる。~~ → **完了**（commit `2e386e7`、2026-05-18 時点）。
+2. 本 Phase 2 設計 PR がレビュー & マージされる（現フェーズ）。
 3. Developer が本設計 PR の merge commit ベースで新 feature branch を切る (`claude/issue-67-impl-...`)。
-4. tasks.md の T1 〜 T11 を **独立コミット可能な単位** で順次実装。
-5. 各 task の完了ごとに ./gradlew assembleDebug / test / lint を走らせる。
+4. tasks.md の T1 〜 T15 を **独立コミット可能な単位** で順次実装。
+5. 各 task の完了ごとに `./gradlew assembleDebug / test / lint` を走らせる。
 6. 実装 PR を `develop` に対して作成し、レビュー後マージ。
 
 ---
