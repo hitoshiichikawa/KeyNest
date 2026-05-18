@@ -5,9 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import io.github.hitoshiichikawa.keynest.data.dao.CredentialDao
+import io.github.hitoshiichikawa.keynest.data.dao.DetectedFieldDao
 import io.github.hitoshiichikawa.keynest.data.entity.CredentialEntity
+import io.github.hitoshiichikawa.keynest.data.entity.DetectedFieldEntity
 import io.github.hitoshiichikawa.keynest.data.migration.Migration_1_2
 import io.github.hitoshiichikawa.keynest.data.migration.Migration_2_3
+import io.github.hitoshiichikawa.keynest.data.migration.Migration_3_4
 
 /**
  * Room database holding all KeyNest persistent state.
@@ -25,15 +28,19 @@ import io.github.hitoshiichikawa.keynest.data.migration.Migration_2_3
  *   v2 -> v3 ([Migration_2_3]): adds `custom_fields_ciphertext BLOB NOT NULL
  *     DEFAULT x''` and `custom_fields_iv BLOB NOT NULL DEFAULT x''`
  *     (Issue #66 Phase 1).
+ *   v3 -> v4 ([Migration_3_4]): creates the `detected_fields` table for
+ *     the Phase 2 autofill suggestion UX (Issue #67).
  */
 @Database(
-    entities = [CredentialEntity::class],
-    version = 3,
+    entities = [CredentialEntity::class, DetectedFieldEntity::class],
+    version = 4,
     exportSchema = true,
 )
 abstract class KeyNestDatabase : RoomDatabase() {
 
     abstract fun credentialDao(): CredentialDao
+
+    abstract fun detectedFieldDao(): DetectedFieldDao
 
     companion object {
         const val DB_NAME = "keynest.db"
@@ -44,7 +51,7 @@ abstract class KeyNestDatabase : RoomDatabase() {
                 KeyNestDatabase::class.java,
                 DB_NAME,
             )
-                .addMigrations(Migration_1_2, Migration_2_3)
+                .addMigrations(Migration_1_2, Migration_2_3, Migration_3_4)
                 .build()
         }
     }
