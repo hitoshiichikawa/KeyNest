@@ -325,7 +325,7 @@ Phase 1 (Issue #66) の実装 PR は `develop` にマージ済み（commit `2e38
 
 ---
 
-### T15. リンタ / フォーマッタ通過 + 動作確認
+### [x] T15. リンタ / フォーマッタ通過 + 動作確認
 
 **内容**:
 - `./gradlew :app:lintDebug` / `./gradlew :app:testDebugUnitTest` / `./gradlew :app:assembleDebug` を全て pass。
