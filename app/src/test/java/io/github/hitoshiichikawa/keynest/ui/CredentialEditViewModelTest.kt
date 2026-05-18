@@ -120,7 +120,12 @@ class CredentialEditViewModelTest {
         val observeRecent = ObserveRecentDetectedFieldsUseCase(FakeDetectedFieldRepository())
         val vm = CredentialEditViewModel(repo, save, update, delete, observeRecent, codec, cipher)
 
-        vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = charArrayOf(), label = "L2")
+        // Phase 1.5: an empty submitted password is treated as a blank
+        // validation error (Req 6.3) rather than the Phase 1 "untouched"
+        // semantics. Pass a non-empty new password so the use case
+        // pathway is exercised; signature re-resolution is the
+        // assertion of interest here.
+        vm.save(existingId = id, packageName = "com.example.target", username = "alice2", password = "pw2".toCharArray(), label = "L2")
         advanceUntilIdle()
 
         assertThat(vm.state.value).isEqualTo(CredentialEditViewModel.State.Saved)
