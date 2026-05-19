@@ -7,12 +7,20 @@
 ## 1. 概要 / 全体像
 
 ### Purpose
-autofill caller アプリの application icon を `PackageManager.getApplicationIcon` で取得して `Bitmap` にラスタライズし、dataset popup（`RemoteViews`）と inline suggestion（`Slice`）の双方に同じ caller icon を表示する。icon 取得に失敗した場合は既存の `@drawable/ic_key_24` に fallback する（要件 1.3 / 確認事項 3-(a)）。
+autofill caller アプリの application icon を `PackageManager.getApplicationIcon` で取得して `Bitmap` にラスタライズし、dataset popup（`RemoteViews`）と inline suggestion（`Slice`）の双方に同じ caller icon を表示する。
+
+inline 経路は **現状 `setStartIcon` 未呼び出しで icon が一切表示されていない**（`DatasetPresentationFactory.buildInlineApiR` が `InlineSuggestionUi.newContentBuilder(...).setTitle(...).setSubtitle(...).build()` のみを呼び `setStartIcon` を呼んでいない、実機 GBoard で確認済み）ため、本設計では popup の icon 差し替えに加えて inline の `setStartIcon` 呼び出しを新規に追加する（要件 3.1）。
+
+icon 取得失敗時の fallback は経路ごとに異なる API を使う:
+
+- **Popup の fallback**: `loadFallbackBitmap()` が返す「blue tile + `@drawable/ic_key_24`」合成 `Bitmap` を `setImageViewBitmap` に渡す（要件 1.3 / 2.3）。
+- **Inline の fallback**: `Icon.createWithResource(context, R.drawable.ic_key_24)` を `setStartIcon` に渡す（要件 3.3）。blue tile は焼き込まず、IME suggestion strip の視覚仕様（chip は薄い背景上に小さな icon を載せる）に合わせる。
 
 ### Aim 3-4 行で
-- `DatasetPresentationFactory` に新たに `callerPackage: String?` を渡し、internally に新 util `AutofillIconRasterizer` を呼んで bitmap を作る。
+- `DatasetPresentationFactory` に新たに `callerPackage: String?` を渡し、internally に新 util `AutofillIconRasterizer` を呼んで bitmap / Icon を作る。
 - `FillResponseBuilder` が `FillRequest` 由来の caller `packageName`（`AssistStructure.activityComponent.packageName`）を伝搬する。
-- locked / unlocked dataset、popup / inline すべての経路で同じ caller icon が乗る（要件 4.2）。
+- locked / unlocked dataset、popup / inline すべての経路で同じ caller icon ソース（同一 `PackageManager.getApplicationIcon`）が乗る（要件 4.2）。
+- inline 経路では既存の「`setStartIcon` 未呼び出し」状態を解消する（新規 API 呼び出し追加、要件 3.1）。
 - 既存 View ID（`@+id/dataset_label` / `@+id/dataset_subtitle`）は不変。新規 ID のみ追加し layout 構造は維持する。
 
 ### アーキテクチャ図
@@ -99,8 +107,9 @@ flowchart LR
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `class AutofillIconRasterizer` | `constructor(context: Context)` | `PackageManager` / `Resources` は context から取得。テスト容易性のため `packageManager: PackageManager` を overload 引数として受け取れる secondary constructor を用意してもよい |
-| `loadCallerIconBitmap` | `fun loadCallerIconBitmap(callerPackage: String?, sizePx: Int = defaultSizePx): Bitmap` | 失敗時は fallback bitmap を返す（null は返さない）。サイズは density から計算する 48dp 相当（§3） |
-| `loadFallbackBitmap` | `fun loadFallbackBitmap(sizePx: Int = defaultSizePx): Bitmap` | `@drawable/ic_key_24` を blue tile 込みでラスタライズしたものを返す |
+| `loadCallerIconBitmap` | `fun loadCallerIconBitmap(callerPackage: String?, sizePx: Int = defaultSizePx): Bitmap` | 失敗時は popup 用 fallback bitmap（blue tile + key 合成）を返す（null は返さない）。サイズは density から計算する 48dp 相当（§3） |
+| `loadFallbackBitmap` | `fun loadFallbackBitmap(sizePx: Int = defaultSizePx): Bitmap` | popup 用。`@drawable/ic_key_24` を blue tile 込みでラスタライズしたものを返す |
+| `loadCallerIconForInline` | `fun loadCallerIconForInline(callerPackage: String?, sizePx: Int = defaultSizePx): Icon` | inline 用。正常系は caller の `Drawable` を bitmap 化して `Icon.createWithBitmap(...)` を返す。失敗 / null / blank 時は **`Icon.createWithResource(context, R.drawable.ic_key_24)`** を返す（blue tile を焼き込まない、要件 3.3） |
 
 > Note: 関数は context 化された Drawable → Bitmap 変換だけを行う。**キャッシュは持たない**（確認事項 4 採用方針）。
 
@@ -176,14 +185,16 @@ KeyNestAutofillService.onFillRequest
 
 ### 4.2 異常系
 
-| Trigger | 挙動 |
-|---------|------|
-| `callerPackage == null` または blank | 既存 `@drawable/ic_key_24` を維持（layout XML の初期 `src` を変更しない）。`AutofillIconRasterizer` は呼ばない |
-| `PackageManager.NameNotFoundException` | `loadFallbackBitmap()` を返す（blue tile + key icon の合成 bitmap）。warn ログは出さない（NFR 3.2） |
-| `RuntimeException`（`SecurityException` / `DeadObjectException` 等） | 同上。`loadFallbackBitmap()` で degrade。`IconLoader` の前例に倣い `Log.w` までは出さない |
-| `Drawable` が `AdaptiveIconDrawable` | `drawable.setBounds(0, 0, w, h) + drawable.draw(canvas)` 標準パターン（§5） |
-| `Drawable` が `BitmapDrawable` のみ | aspect-preserve fit + center crop で 48dp tile に揃える（§5） |
-| `Drawable` の `intrinsicWidth/Height <= 0` | フォールバックとして fixed sizePx で描く |
+経路ごとに fallback API が異なる点に注意（popup は合成 bitmap、inline は `Icon.createWithResource`）:
+
+| Trigger | Popup (`RemoteViews`) 挙動 | Inline (`Slice`) 挙動 |
+|---------|---------------------------|----------------------|
+| `callerPackage == null` または blank | 既存 `@drawable/ic_key_24` を維持（layout XML の初期 `src` を変更しない）。`AutofillIconRasterizer` は呼ばない | `loadCallerIconForInline(null)` → `Icon.createWithResource(context, R.drawable.ic_key_24)` を `setStartIcon` に渡す |
+| `PackageManager.NameNotFoundException` | `loadFallbackBitmap()` を返す（blue tile + key icon の合成 bitmap）。warn ログは出さない（NFR 3.2） | `Icon.createWithResource(context, R.drawable.ic_key_24)` を `setStartIcon` に渡す（要件 3.3） |
+| `RuntimeException`（`SecurityException` / `DeadObjectException` 等） | 同上。`loadFallbackBitmap()` で degrade。`IconLoader` の前例に倣い `Log.w` までは出さない | 同上。`Icon.createWithResource` で degrade |
+| `Drawable` が `AdaptiveIconDrawable` | `drawable.setBounds(0, 0, w, h) + drawable.draw(canvas)` 標準パターン（§5） | 同上で bitmap 化 → `Icon.createWithBitmap` |
+| `Drawable` が `BitmapDrawable` のみ | aspect-preserve fit + center crop で 48dp tile に揃える（§5） | 同上 |
+| `Drawable` の `intrinsicWidth/Height <= 0` | フォールバックとして fixed sizePx で描く | 同上 |
 
 ### 4.3 locked dataset vs unlocked dataset の挙動の同一性
 
@@ -221,25 +232,47 @@ drawable.draw(canvas)
 
 ### Slice での icon 設定
 
-現行の `buildInlineApiR` は `InlineSuggestionUi.newContentBuilder(pendingIntent).setTitle(label).setSubtitle(subtitle).build()` だけを呼んでいる。`androidx.autofill.inline.v1.InlineSuggestionUi.Content.Builder` には `setStartIcon(Icon)` API があるためそれを利用する：
+**現状（実機 GBoard で確認済み）**: `DatasetPresentationFactory.buildInlineApiR` は `InlineSuggestionUi.newContentBuilder(pendingIntent).setTitle(label).setSubtitle(subtitle).build()` だけを呼んでおり、**`setStartIcon` を呼んでいないため inline chip に icon が一切表示されていない**。
+
+`androidx.autofill.inline.v1.InlineSuggestionUi.Content.Builder` には `setStartIcon(Icon)` API があるため、本 Issue ではこれを利用して icon を表示する。正常系 / fallback 双方で **`build()` の前に必ず `setStartIcon` を呼ぶ** （要件 3.1）:
 
 ```
-val icon: Icon = Icon.createWithBitmap(bitmap)
+// 正常系: caller package が解決できた場合
+val icon: Icon = rasterizer.loadCallerIconForInline(callerPackage, sizePx)
+//   ↓ 内部実装の枝分かれ
+//   ├─ 正常系: Icon.createWithBitmap(bitmap)
+//   └─ 失敗 / null / blank: Icon.createWithResource(context, R.drawable.ic_key_24)
 val content = InlineSuggestionUi.newContentBuilder(pendingIntent)
-    .setStartIcon(icon)
+    .setStartIcon(icon)         // 要件 3.1: build() の前に必ず呼ぶ
     .setTitle(label)
     .setSubtitle(subtitle)
     .build()
 val slice = content.slice
 ```
 
+### Inline fallback と Popup fallback の差異（要件 3.3）
+
+inline 経路の fallback は popup と異なり、blue tile を焼き込まない:
+
+| 経路 | 正常系の Icon | Fallback 時の Icon |
+|------|--------------|-------------------|
+| Popup (`RemoteViews`) | `setImageViewBitmap(R.id.dataset_icon, callerBitmap)`（blue tile 上に caller icon を描いた合成 bitmap） | `setImageViewBitmap(R.id.dataset_icon, fallbackBitmap)`（blue tile + key icon の合成 bitmap） |
+| Inline (`Slice`) | `setStartIcon(Icon.createWithBitmap(callerBitmap))` | `setStartIcon(Icon.createWithResource(context, R.drawable.ic_key_24))` |
+
+理由:
+
+- IME suggestion strip の chip は薄背景（IME 側のテーマに合わせた色）上に小さな icon を載せる視覚仕様であり、blue tile を焼き込むと chip の見た目が浮く。
+- `Icon.createWithResource` は vector drawable を解像度に応じて適切にレンダリングしてくれるため、inline chip のサイズ制約に合わせやすい。
+- 正常系（`Icon.createWithBitmap`）でも blue tile を bitmap に焼き込まない選択肢はあるが、§3 で popup と同一 bitmap ソース（caller icon の上に blue tile を描いた合成）を作っているので、inline 正常系は同じ bitmap を流用するか、blue tile を焼き込まない caller-only bitmap を別途用意するかの選択肢がある（§10 確認事項に追加）。
+
 ### サイズ整合
 - `InlinePresentationSpec.maxSize: Size` を参照し、`sizePx = min(defaultSizePx, maxSize.width, maxSize.height)` で bitmap を作る。
 - `spec.maxSize` が `<= 0` の場合は `defaultSizePx` を使う（防御）。
+- fallback の `Icon.createWithResource` 経路では bitmap サイズの clip は不要（IME 側が vector を適切にスケールする）。
 
 ### API レベルガード
 - `InlinePresentation` 自体が API 30+。既存の `@RequiresApi(Build.VERSION_CODES.R)` で `buildInlineApiR` が分離されている境界をそのまま維持する。
-- `Icon.createWithBitmap` は API 23+ なので Android R では問題なし。
+- `Icon.createWithBitmap` / `Icon.createWithResource` ともに API 23+ なので Android R では問題なし。
 
 ## 7. テスト設計
 
@@ -262,13 +295,17 @@ val slice = content.slice
 | File | 検証観点 | 要件対応 |
 |------|---------|---------|
 | `AutofillIconRasterizerTest` | 正常系: mock PM が任意の `Drawable` を返したとき、`Bitmap` が正方形 `sizePx × sizePx` で返ること | 1.1 / 1.2 |
-| | `NameNotFoundException`: fallback bitmap が返ること（null ではないこと） | 1.3 |
+| | `NameNotFoundException`: popup 用 fallback bitmap が返ること（null ではないこと） | 1.3 |
 | | `RuntimeException`: 同上 | 1.3 |
 | | blank / null `callerPackage`: fallback bitmap が返ること | 4.x |
+| | `loadCallerIconForInline` 正常系: `Icon.createWithBitmap` 型の `Icon` が返ること | 3.2 |
+| | `loadCallerIconForInline` fallback: `Icon.createWithResource(R.drawable.ic_key_24)` が返ること（`NameNotFoundException` / `RuntimeException` / null / blank の各経路） | 3.3 |
 | `DatasetPresentationFactoryTest`（新規） | 正常系: `RemoteViews` が `dataset_icon` に bitmap を `setImageViewBitmap` していることを reflection or `RemoteViews.apply` で検証 | 2.1 / 5.1 |
 | | `NameNotFoundException` 経路で fallback bitmap が乗る | 5.2 |
-| | `buildInline` で slice の `startIcon` が設定される | 3.1 / 5.3 |
-| | `callerPackage == null` の場合は `setImageViewBitmap` を呼ばない（既存 `src` を残す） | 5.x（要件 4.x の null パス） |
+| | `buildInline` の **`setStartIcon` 呼び出しが必ず行われること**（現状未呼び出し状態の解消検証。`InlineSuggestionUi.Content` 構築結果の slice を検証する or rasterizer モック側で `loadCallerIconForInline` が呼ばれたかを検証する） | 3.1 / 5.3-(a) |
+| | `buildInline` 正常系で caller icon の `Icon.createWithBitmap` が `setStartIcon` に渡される | 3.2 / 5.3-(b) |
+| | `buildInline` fallback / null 経路で `Icon.createWithResource(R.drawable.ic_key_24)` が `setStartIcon` に渡される | 3.3 / 5.3-(c) |
+| | `callerPackage == null` の popup 経路では `setImageViewBitmap` を呼ばない（既存 `src` を残す） | 5.x（要件 4.x の null パス） |
 
 > Note: `RemoteViews` の inflate 内容を検証するのは Robolectric では難易度が高い。`RemoteViews` の `setBitmap` が記録した action を public API で取り出す経路が乏しいため、テストは「ビルダが例外なく完了する」「rasterizer モックが期待回数で呼ばれる」レベルで止める。bitmap が実 dataset_icon に乗ったかは `DatasetPresentationLayoutTokensTest` の View ID 存在チェックで担保する。
 
@@ -320,3 +357,13 @@ val slice = content.slice
 6. **`DatasetPresentationFactoryTest`（新規）の RemoteViews 検証手段**
    - 設計案: `RemoteViews.apply` を `ApplicationProvider` の Context で実行し、inflate 後の `ImageView.drawable` が `BitmapDrawable` であることを確認する経路を取る。
    - 確認: Robolectric 配下で `RemoteViews.apply` を呼ぶテスト経路は KeyNest 既存に前例がない。リフレクション / モックでも検証可能だが、可読性とのトレードオフは Developer 判断とする。
+
+7. **inline 正常系の bitmap ソース（blue tile 焼き込みの有無）**
+   - 設計案: inline 正常系の `Icon.createWithBitmap(callerBitmap)` に渡す `callerBitmap` を、popup と同一の「blue tile + caller icon 合成 bitmap」とするか、blue tile を焼き込まない caller-only bitmap とするかは Developer 判断とする。
+   - 比較: 合成 bitmap を使うと popup と視覚的に揃うが、IME chip 上で blue tile が浮く可能性がある。caller-only bitmap を使うと chip 内で自然に見えるが、popup と微妙に異なる見た目になる。
+   - 推奨初期実装: caller-only bitmap（blue tile を焼き込まない）。理由: IME chip の視覚仕様（薄背景）と整合し、fallback の `Icon.createWithResource` 経路の見た目（blue tile なし）とも一貫する。
+   - 実機検証で違和感があれば後続 Issue で調整する。
+
+8. **inline scope の妥当性（本 round で追加された論点）**
+   - PR #84 の review コメント（2026-05-19）で「inline は現状 `setStartIcon` 未呼び出しで icon が一切表示されていない」と確認され、Issue #80 のスコープに「inline 側の `setStartIcon` 新規追加」を統合した。
+   - 確認: 本 Issue で popup と inline の両方を同時にリリースする方針で問題ないか。inline の `setStartIcon` 新規追加は規模が小さく、popup の caller icon 機能と分離するメリットは薄いと判断したが、Reviewer / Developer 視点で異論があれば別 Issue 化を検討する。

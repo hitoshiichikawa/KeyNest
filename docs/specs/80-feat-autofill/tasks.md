@@ -62,20 +62,28 @@
 ## T-03: `DatasetPresentationFactory.buildInline` で `setStartIcon` 適用 + 単体テスト
 
 ### 概要
-`buildInline(label, subtitle, spec, callerPackage)` シグネチャに拡張し、`Icon.createWithBitmap(bitmap)` を `InlineSuggestionUi.newContentBuilder(...).setStartIcon(...)` 経由で slice に乗せる。`spec.maxSize` で bitmap サイズを clip する。
+**現状 `buildInlineApiR` は `setStartIcon` を呼んでおらず、inline chip に icon が一切表示されていない**（実機 GBoard で確認済み）。本タスクで `buildInline(label, subtitle, spec, callerPackage)` シグネチャに拡張し、`InlineSuggestionUi.newContentBuilder(...).build()` の前に必ず `setStartIcon(...)` を呼ぶ経路を新規追加する。
+
+- 正常系: `AutofillIconRasterizer.loadCallerIconForInline(callerPackage, sizePx)` が返す `Icon.createWithBitmap(callerBitmap)` を `setStartIcon` に渡す。`spec.maxSize` で bitmap サイズを clip する（`sizePx = min(defaultSizePx, spec.maxSize.width, spec.maxSize.height)`）。
+- Fallback: `NameNotFoundException` / `RuntimeException` / `callerPackage == null` / blank では `Icon.createWithResource(context, R.drawable.ic_key_24)` を `setStartIcon` に渡す（popup の blue tile 合成 bitmap とは別 API。設計 §6 Inline fallback と Popup fallback の差異 を参照）。
 
 ### 変更ファイル
 - 変更: `app/src/main/java/io/github/hitoshiichikawa/keynest/autofill/builder/DatasetPresentationFactory.kt`
 - 新規 or 拡張: `app/src/test/java/io/github/hitoshiichikawa/keynest/autofill/builder/DatasetPresentationFactoryTest.kt`
 
 ### 受入基準（要件対応）
-- 要件 3.1: `setStartIcon(Icon.createWithBitmap(bitmap))` で slice に icon を設定
-- 要件 3.2: 失敗時に fallback bitmap が使われる
-- 要件 3.3: `spec.maxSize` 制約に従う
+- 要件 3.1: `setStartIcon(...)` を **build() の前に必ず呼ぶ**（現状未呼び出し状態の解消）
+- 要件 3.2: 正常系で caller icon の `Icon.createWithBitmap(...)` が `setStartIcon` に渡される
+- 要件 3.3: 失敗 / null / blank 経路で `Icon.createWithResource(context, R.drawable.ic_key_24)` が `setStartIcon` に渡される
+- 要件 3.4: `spec.maxSize` 制約に従う
 
 ### 完了条件
 - `@RequiresApi(R)` 配下で実装され、API 30 未満端末では既存通り inline は無効
-- 単体テスト（正常系 / fallback / spec.maxSize 反映 / null callerPackage）が pass
+- 単体テストが pass:
+  - `setStartIcon` 呼び出し検証（現状未呼び出し状態の解消）
+  - 正常系で `Icon.createWithBitmap` 経路
+  - 失敗系 / null / blank で `Icon.createWithResource(R.drawable.ic_key_24)` 経路
+  - `spec.maxSize` 反映の検証
 
 ### 依存タスク
 - T-01（rasterizer）
@@ -146,7 +154,8 @@ dataset 行の icon `ImageView`（既存）に `android:id="@+id/dataset_icon"` 
 - `./gradlew :app:testDebugUnitTest` 全 pass
 - `./gradlew :app:lintDebug` 警告なし or 既存ベースライン内
 - 手動: 実機 / エミュレータで Twitter / Slack / GitHub など 2-3 アプリ別 caller で autofill を発火させ、dataset popup の各行に caller アプリの実 icon が表示されることを確認
-- 手動: Gboard など inline suggestion 対応 IME で chip 上に caller icon が表示されることを確認
+- 手動: Gboard など inline suggestion 対応 IME で chip 上に caller icon が表示されることを確認（**変更前は icon が一切表示されていなかった状態が解消されていることを実機で確認する**）
+- 手動: inline で caller package 解決失敗時に `R.drawable.ic_key_24`（鍵アイコン、blue tile なし）が chip 上に表示されることを確認
 - 手動: アンインストール済み / 取得失敗の package で fallback (鍵アイコン) が表示されることを確認
 - 手動: locked 状態で popup を開いて icon が caller アプリのものになっていることを確認
 - design.md §10 の「確認事項」を PR 本文に転記

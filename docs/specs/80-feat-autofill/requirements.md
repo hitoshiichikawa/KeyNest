@@ -5,24 +5,45 @@
 ### 概要
 
 KeyNest が autofill 対象アプリで提示するクレデンシャル候補リスト（Dataset popup
-+ Inline suggestion）の各 dataset 行に、現状は KeyNest 内蔵の鍵アイコン
-（`@drawable/ic_key_24`）を `kn_blue_500` の青タイル上に固定描画している。
-本 Issue (#80) は、この dataset 行のアイコンを **入力対象アプリ
-（autofill caller）の実 icon** に動的差し替えし、複数アプリで KeyNest を使う
-ユーザーが「どのアプリの credential か」を視覚的に識別しやすくすることを目的とする。
++ Inline suggestion）について、現状は以下の状態である:
 
-差し替えは popup `RemoteViews` 経由（`setImageViewBitmap`）と Inline suggestion
-の `Slice`（`setStartIcon(Icon.createWithBitmap(...))`）の両経路で行う。
-caller package の icon が `PackageManager` から取得できない場合は、既存の
-`@drawable/ic_key_24` を fallback として表示する。
+- **Popup (`RemoteViews`)**: KeyNest 内蔵の鍵アイコン（`@drawable/ic_key_24`）を
+  `kn_blue_500` の青タイル上に固定描画している。
+- **Inline (IME suggestion strip, GBoard 等)**: `DatasetPresentationFactory.
+  buildInlineApiR()` が `InlineSuggestionUi.newContentBuilder(pending).setTitle(...).
+  setSubtitle(...).build()` のみを呼んでおり、**`setStartIcon` を呼んでいないため
+  icon が一切表示されていない** 実機検証で確認済み）。
+
+本 Issue (#80) は、この dataset 行のアイコンを **入力対象アプリ（autofill caller）
+の実 icon** に動的差し替えする。具体的には:
+
+- **Popup**: 現行の鍵アイコン固定描画を caller アプリの実 icon の `Bitmap` に
+  差し替える（`RemoteViews.setImageViewBitmap`）。
+- **Inline**: `setStartIcon(Icon.createWithBitmap(...))` を新規に追加し、現状の
+  「icon 完全非表示」状態を解消する。表示する icon は popup と同じ caller アプリの
+  実 icon を bitmap 化したものとする。
+
+複数アプリで KeyNest を使うユーザーが「どのアプリの credential か」を視覚的に
+識別しやすくすることが本 Issue の目的である。
+
+caller package の icon が `PackageManager` から取得できない場合の fallback は
+経路ごとに異なる API を使う:
+
+- **Popup の fallback**: 既存と同等の「blue tile + `@drawable/ic_key_24`」合成
+  `Bitmap`（`setImageViewBitmap`）。
+- **Inline の fallback**: `Icon.createWithResource(context, R.drawable.ic_key_24)`
+  を `setStartIcon` に渡す（blue tile は焼き込まない。IME suggestion strip の
+  視覚仕様に合わせる）。
 
 ### Goal
 
 - Dataset popup の各 dataset 行（locked / unlocked dataset 両方）に、caller
   package の実 application icon を bitmap として表示する。
-- Inline suggestion の各 chip にも同じ caller package の icon を `setStartIcon`
-  で表示する。
-- icon 取得失敗時は `@drawable/ic_key_24` に静かに fallback し、UX を壊さない。
+- Inline suggestion の各 chip に対し、**現状 `setStartIcon` 未呼び出しで icon が
+  一切表示されていない状態を解消** し、popup と同じ caller package icon を
+  `setStartIcon(Icon.createWithBitmap(...))` で表示する。
+- icon 取得失敗時は popup / inline それぞれの API で `ic_key_24` 系 fallback に
+  静かに切り替え、UX を壊さない。
 
 ### Non-Goal (Out of Scope)
 
@@ -116,18 +137,26 @@ caller icon が描画されること, so that popup 表示時にアプリ識別�
 ### Requirement 3: Inline (IME suggestion) presentation 対応
 
 **Objective:** As an エンドユーザー, I want IME suggestion strip 上の chip にも
-caller icon が表示されること, so that inline suggestion 段階でも対象アプリを
-識別できる。
+caller icon が表示されること, so that 現状の「icon 完全非表示」状態を解消し、
+inline suggestion 段階でも対象アプリを識別できる。
 
 #### Acceptance Criteria
 
-3.1. When `buildInlinePresentation()` が呼ばれたとき, the slice shall
-`setStartIcon(Icon.createWithBitmap(bitmap))` を設定する
+3.1. The `DatasetPresentationFactory.buildInlineApiR` shall `InlineSuggestionUi.
+newContentBuilder(pending)...build()` の前に `setStartIcon(Icon.createWithBitmap(bitmap))`
+を呼ぶ（現状は `setStartIcon` 未呼び出しで icon が一切表示されていないため、
+本 AC を満たすには新規 API 呼び出しの追加が必要）
 
-3.2. If 同様の例外（`NameNotFoundException` / `RuntimeException`）が発生した
-とき, the slice shall 既存の KeyNest 既定 icon を fallback とする
+3.2. When `callerPackage` が解決できた場合, the slice shall popup と同一の caller
+package icon を bitmap 化したものを `setStartIcon` に渡す
 
-3.3. The inline icon size shall `InlinePresentationSpec` の `maxSize` 制約に従う
+3.3. If `NameNotFoundException` / `RuntimeException` / `callerPackage == null` /
+blank が発生したとき, the slice shall `Icon.createWithResource(context, R.drawable.
+ic_key_24)` を fallback として `setStartIcon` に渡す（popup の blue tile 合成 bitmap
+とは異なる API で、IME suggestion strip の視覚仕様に合わせる）
+
+3.4. The inline icon bitmap size shall `InlinePresentationSpec` の `maxSize` 制約に
+従う（`min(defaultSizePx, spec.maxSize.width, spec.maxSize.height)` で clip）
 
 ### Requirement 4: 呼び出し元の伝搬
 
@@ -157,8 +186,10 @@ fallback / inline presentation）が自動テストで検証されること, so 
 5.2. The `DatasetPresentationFactoryTest` shall `NameNotFoundException` 発生時に
 既存 `@drawable/ic_key_24` が fallback として使われることを検証する
 
-5.3. The `DatasetPresentationFactoryTest` shall `InlinePresentation` でも同様に
-icon が設定 / fallback されることを検証する
+5.3. The `DatasetPresentationFactoryTest` shall `InlinePresentation` 経路で以下を
+検証する: (a) `setStartIcon` が呼ばれること（現状未呼び出し状態の解消検証）, (b)
+正常系で caller icon bitmap が渡されること, (c) 失敗時 / null `callerPackage` 時
+に `Icon.createWithResource(R.drawable.ic_key_24)` が渡されること
 
 5.4. 既存テスト（Issue #34 Req 7 の View ID 不変、`FillResponseBuilderTest`,
 `LockedFillResponseSecurityTest` 等）shall 本 Issue の変更後に実行したとき
