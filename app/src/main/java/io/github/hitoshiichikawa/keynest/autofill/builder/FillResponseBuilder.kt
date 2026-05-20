@@ -102,6 +102,7 @@ class FillResponseBuilder(
             label = candidate.label,
             subtitle = candidate.username,
             spec = inlineSpec,
+            callerPackage = null,
         )
 
         val datasetBuilder = Dataset.Builder()
