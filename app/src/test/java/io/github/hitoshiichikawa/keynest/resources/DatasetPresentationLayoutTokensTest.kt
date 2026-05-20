@@ -91,6 +91,18 @@ class DatasetPresentationLayoutTokensTest {
     }
 
     @Test
+    fun layout_declaresDatasetIconViewIdForCallerIconRebinding() {
+        // Issue #80 Req 2.1 / 2.2: DatasetPresentationFactory.build must be
+        // able to setImageViewBitmap on the dataset row icon ImageView at
+        // runtime. The view existed in the layout already; this test pins
+        // the @+id/dataset_icon hook that the factory targets.
+        val xml = layoutFile.readText()
+        assertWithMessage("dataset_presentation.xml must declare @+id/dataset_icon " +
+            "(Issue #80 Req 2.1 / 2.2)")
+            .that(xml).contains("@+id/dataset_icon")
+    }
+
+    @Test
     fun layout_rootContainerUsesKnSurfaceBackground() {
         // Req 1.2 / 6.6: root must paint a deterministic background so the
         // host activity's color does not bleed through.
