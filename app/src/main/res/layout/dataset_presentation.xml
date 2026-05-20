@@ -156,6 +156,7 @@
             android:background="@drawable/kn_icon_tile_bg">
 
             <ImageView
+                android:id="@+id/dataset_icon"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:layout_gravity="center"

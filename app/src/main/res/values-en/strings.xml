@@ -53,7 +53,7 @@
     <string name="autofill_enable_step1_description">You will be taken to Android Settings</string>
     <string name="autofill_enable_step2_title">Choose "KeyNest"</string>
     <string name="autofill_enable_step2_description">Under Passwords &amp; accounts</string>
-    <string name="autofill_enable_step3_title">You're all set</string>
+    <string name="autofill_enable_step3_title">You\'re all set</string>
     <string name="autofill_enable_step3_description">Come back to start saving credentials</string>
 
     <!-- Autofill unlock -->

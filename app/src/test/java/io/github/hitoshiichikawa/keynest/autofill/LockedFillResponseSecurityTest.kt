@@ -88,6 +88,12 @@ class LockedFillResponseSecurityTest {
             candidates = listOf(candidate),
             usernameAutofillId = mockk(relaxed = true),
             passwordAutofillId = mockk(relaxed = true),
+            // Issue #80: package name is non-sensitive (it is the host
+            // activity component's identifier, derived by the framework
+            // before the request reaches us) and may legitimately appear
+            // in the parcel after this change; only the forbidden
+            // password sentinels are required to be absent.
+            callerPackage = "com.example.target",
         )!!
         val parcel = Parcel.obtain()
         try {
