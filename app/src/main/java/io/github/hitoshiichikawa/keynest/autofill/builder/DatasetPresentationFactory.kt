@@ -10,6 +10,7 @@ import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.RequiresApi
 import androidx.autofill.inline.v1.InlineSuggestionUi
 import io.github.hitoshiichikawa.keynest.R
+import io.github.hitoshiichikawa.keynest.autofill.icon.AutofillIconRasterizer
 
 /**
  * Builds the presentations the Autofill UI displays for each dataset.
@@ -22,10 +23,15 @@ import io.github.hitoshiichikawa.keynest.R
  *   Eliminates the visual conflict between the autofill popup and the
  *   keyboard reported by users.
  *
+ * Both surfaces share a single [AutofillIconRasterizer] so the caller
+ * application's icon resolves identically across popup and inline (Issue
+ * #80 / requirements §4.2).
+ *
  * Requirements: 3.3
  */
 class DatasetPresentationFactory(
     private val context: Context,
+    private val iconRasterizer: AutofillIconRasterizer = AutofillIconRasterizer(context),
 ) {
 
     /**
@@ -33,12 +39,27 @@ class DatasetPresentationFactory(
      *   credential).
      * @param subtitle Shown smaller (we use the username so the user can
      *   distinguish multiple credentials registered for the same app).
+     * @param callerPackage The autofill caller's package name (see
+     *   [io.github.hitoshiichikawa.keynest.autofill.KeyNestAutofillService.onFillRequest]).
+     *   When non-null / non-blank the dataset row's icon is rebound to the
+     *   caller application's icon via `setImageViewBitmap` (Issue #80
+     *   requirements §2.1). When null / blank the layout's default
+     *   `ic_key_24` rendering is left in place (existing behaviour).
      */
-    fun build(label: String, subtitle: String): RemoteViews {
+    fun build(label: String, subtitle: String, callerPackage: String?): RemoteViews {
         val packageName = context.packageName
         val views = RemoteViews(packageName, R.layout.dataset_presentation)
         views.setTextViewText(R.id.dataset_label, label)
         views.setTextViewText(R.id.dataset_subtitle, subtitle)
+        if (!callerPackage.isNullOrBlank()) {
+            // Resolve + composite onto the blue tile. The rasterizer
+            // returns a non-null bitmap on every code path (including
+            // PackageManager failures), so we always end up with a
+            // sensible visual — either the caller icon on the tile, or
+            // the fallback key icon on the tile.
+            val bitmap = iconRasterizer.loadCallerIconBitmap(callerPackage)
+            views.setImageViewBitmap(R.id.dataset_icon, bitmap)
+        }
         return views
     }
 

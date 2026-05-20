@@ -96,6 +96,7 @@ class FillResponseBuilder(
         val presentation = presentationFactory.build(
             label = candidate.label,
             subtitle = candidate.username,
+            callerPackage = null,
         )
         val inlinePresentation: InlinePresentation? = presentationFactory.buildInline(
             label = candidate.label,
