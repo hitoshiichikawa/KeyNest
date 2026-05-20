@@ -167,6 +167,13 @@ class KeyNestAutofillService : AutofillService() {
                     passwordAutofillId = parsed.passwordId,
                     customFieldCandidates = parsed.customFieldCandidates,
                     inlineSpecs = inlineSpecs,
+                    // Issue #80: feed the caller package down so each
+                    // dataset row's icon resolves to the host
+                    // application's actual icon (popup) / Slice Icon
+                    // (inline). Use the same `callerPackage` value that
+                    // already drives the candidate query above so we
+                    // can never disagree about who the request is for.
+                    callerPackage = callerPackage,
                 )
                 val elapsed = System.currentTimeMillis() - t0
                 // NFR 2.2 / Req 5.1: log counts only, never the underlying

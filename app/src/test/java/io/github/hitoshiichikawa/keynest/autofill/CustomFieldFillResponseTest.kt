@@ -59,6 +59,7 @@ class CustomFieldFillResponseTest {
             usernameAutofillId = usernameAutofillId,
             passwordAutofillId = passwordAutofillId,
             customFieldCandidates = listOf(cfCandidate),
+            callerPackage = "com.example.target",
         )
 
         // Smoke: response built without exception even when customField
@@ -96,6 +97,7 @@ class CustomFieldFillResponseTest {
             usernameAutofillId = usernameAutofillId,
             passwordAutofillId = passwordAutofillId,
             customFieldCandidates = listOf(cfCandidateSameAsUsername),
+            callerPackage = "com.example.target",
         )
 
         assertThat(response).isNotNull()

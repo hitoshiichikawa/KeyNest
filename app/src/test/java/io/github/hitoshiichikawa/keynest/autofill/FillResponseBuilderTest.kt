@@ -36,6 +36,7 @@ class FillResponseBuilderTest {
             candidates = emptyList(),
             usernameAutofillId = usernameAutofillId,
             passwordAutofillId = passwordAutofillId,
+            callerPackage = "com.example.target",
         )
         assertThat(response).isNull()
     }
@@ -46,6 +47,7 @@ class FillResponseBuilderTest {
             candidates = listOf(candidate("alice")),
             usernameAutofillId = null,
             passwordAutofillId = null,
+            callerPackage = "com.example.target",
         )
         assertThat(response).isNull()
     }
@@ -56,6 +58,7 @@ class FillResponseBuilderTest {
             candidates = listOf(candidate("alice")),
             usernameAutofillId = usernameAutofillId,
             passwordAutofillId = passwordAutofillId,
+            callerPackage = "com.example.target",
         )
         assertThat(response).isNotNull()
     }
@@ -66,6 +69,22 @@ class FillResponseBuilderTest {
             candidates = listOf(candidate("alice"), candidate("bob")),
             usernameAutofillId = usernameAutofillId,
             passwordAutofillId = passwordAutofillId,
+            callerPackage = "com.example.target",
+        )
+        assertThat(response).isNotNull()
+    }
+
+    @Test
+    fun buildLockedResponse_acceptsNullCallerPackage() {
+        // Issue #80: when caller package cannot be resolved the builder
+        // still succeeds and the factory falls back to the layout's
+        // default icon (the rasterizer is not consulted for popup, and
+        // the inline path returns the resource fallback).
+        val response = builder.buildLockedResponse(
+            candidates = listOf(candidate("alice")),
+            usernameAutofillId = usernameAutofillId,
+            passwordAutofillId = passwordAutofillId,
+            callerPackage = null,
         )
         assertThat(response).isNotNull()
     }

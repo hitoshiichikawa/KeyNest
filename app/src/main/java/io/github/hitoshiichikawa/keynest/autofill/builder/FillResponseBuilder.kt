@@ -64,6 +64,7 @@ class FillResponseBuilder(
         passwordAutofillId: AutofillId?,
         customFieldCandidates: List<CustomFieldCandidate> = emptyList(),
         inlineSpecs: List<InlinePresentationSpec> = emptyList(),
+        callerPackage: String? = null,
     ): FillResponse? {
         if (candidates.isEmpty()) return null
         if (usernameAutofillId == null && passwordAutofillId == null) return null
@@ -79,6 +80,7 @@ class FillResponseBuilder(
                 passwordAutofillId = passwordAutofillId,
                 customFieldCandidates = customFieldCandidates,
                 inlineSpec = spec,
+                callerPackage = callerPackage,
             )
             builder.addDataset(dataset)
         }
@@ -92,17 +94,22 @@ class FillResponseBuilder(
         passwordAutofillId: AutofillId?,
         customFieldCandidates: List<CustomFieldCandidate>,
         inlineSpec: InlinePresentationSpec?,
+        callerPackage: String?,
     ): Dataset {
+        // Issue #80 requirements §4.1 / §4.2: every dataset row built
+        // for one `FillResponse` shares the same caller package — both
+        // popup and inline surfaces consult the rasterizer with that
+        // single string so the user sees the same icon on every row.
         val presentation = presentationFactory.build(
             label = candidate.label,
             subtitle = candidate.username,
-            callerPackage = null,
+            callerPackage = callerPackage,
         )
         val inlinePresentation: InlinePresentation? = presentationFactory.buildInline(
             label = candidate.label,
             subtitle = candidate.username,
             spec = inlineSpec,
-            callerPackage = null,
+            callerPackage = callerPackage,
         )
 
         val datasetBuilder = Dataset.Builder()
