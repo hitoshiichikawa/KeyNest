@@ -105,7 +105,7 @@ requirements.md の 3.1 では `…/passkey/...` を仮置きしていたが、d
 
 後続 Issue では `BeginCreateCredentialResponse.Builder().addCreateEntry(...)` / `BeginGetCredentialResponse.Builder().addCredentialEntry(...)` でエントリを積み増す経路に差し替わる。本 Issue では `Builder()` をそのまま `build()` してエントリ 0 件のレスポンスを `outcome.onResult(...)` に渡す。
 
-`AAGUID` (`2a56cf86-8332-4829-9f2a-e9a4adbc7abe`) は本 Issue では **定数として予約しない**（保管モデル Issue / 登録セレモニー Issue で attestation を組み立てる際に置く方が責務が明確）。requirements.md NFR / Goal は「予約に留める」と書かれているが、未使用定数を本 Issue に置くと dead-code 扱いで lint 警告 / `@Suppress` が必要になるため、**定数の導入は登録セレモニー Issue (#89 分割案 3) に委ねる**。本 design.md §9 にこの判断を確認事項として記載する。
+`AAGUID` (`2a56cf86-8332-4829-9f2a-e9a4adbc7abe`) は本 Issue では **定数として定義しない**（**確定済み** / §9.1-6）。保管モデル Issue / 登録セレモニー Issue (#89 分割案 3) で attestation を組み立てる際に定数化する方が責務が明確。未使用定数を本 Issue に置くと dead-code 扱いで lint 警告 / `@Suppress` が必要になるため、**定数の導入は登録セレモニー Issue (#89 分割案 3) に委ねる**。
 
 ## 4. 公開 IF
 
@@ -179,6 +179,8 @@ class KeyNestCredentialProviderService : CredentialProviderService() {
 
 ### 4.2 `AndroidManifest.xml` への追記（確定形）
 
+> **本節の `<service>` ブロックは確定値**。`android:label` / `<meta-data android:name>` は §9.1-4 / 9.1-7（旧 §9.2 確認事項 D / E）で人間レビュアが確定済み。
+
 `<manifest>` ルートに `xmlns:tools` を追加し、`<application>` 配下に下記 `<service>` を追加する。既存 `<service>` / `<activity>` 宣言は **一切変更しない**（NFR 2.1）。
 
 ```xml
@@ -228,6 +230,8 @@ class KeyNestCredentialProviderService : CredentialProviderService() {
 
 ### 4.3 `res/xml/credential_provider.xml`（確定形）
 
+> **本節の xml は確定値**。`<credential-provider>` ルート要素と `<capabilities><capability>` 配下の `androidx.credentials.TYPE_PUBLIC_KEY_CREDENTIAL` 宣言は AOSP `CredentialProviderInfoFactory` 参照名と一致しており、§9.1-4 で人間レビュアが確定済み。
+
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <!--
@@ -276,17 +280,18 @@ credentials = "1.5.0"
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 ```
 
-**バージョン選定の根拠（requirements 確認事項 1 への回答）**:
+**バージョン選定（確定 / requirements 確認事項 1 への回答）**:
 
 - `androidx.credentials:credentials` の Maven Google 配信から確認できる安定版系統: `1.2.0` (2024-01), `1.3.0` (2024-09), `1.5.0` (2025-01), `1.6.0` (2025-07)。
-- **採用: `1.5.0` (stable)**。
+- **採用バージョン: `1.5.0` (stable) で固定**（§9.1-1 で人間レビュアが確定）。
 - 採用理由:
   - 1.5.0 は AGP 8.5.x / compileSdk 34 / Kotlin 1.9.x との互換性が確認されているライン（KeyNest 現行ビルド条件と一致）。
-  - 1.6.0 系は compileSdk 35 を要求する依存推移を含む可能性があり、本 Issue で `compileSdk` を上げないという NFR 2.2 に抵触するリスクがある。本 Issue では実 build で 1.5.0 が安全側。
-  - 1.3.0 / 1.2.x は古く、`BeginGetCredentialResponse.Builder` の API 安定性が 1.5.0 までに固まっている。
-  - 後続 Issue（登録 / 認証セレモニー）で 1.6.0 系 / `credentials-play-services-auth` が必要になれば、その Issue で再評価して上げる。本 Issue は最小投入。
-- **alpha / beta は採用しない**（requirements 4.1 の「安定版」default を踏襲）。
-- Developer が build 時に 1.5.0 でビルドエラーが出る場合（推移依存衝突等）は、design.md §9 の確認事項に従い 1.6.0 を試し、両方ダメな場合のみ最低 1.3.0 までフォールバックする運用とする。
+  - 1.5.0 で `BeginCreateCredentialResponse()` の no-arg constructor および `BeginGetCredentialResponse.Builder().build()` が安定提供されており、Phase 1 の空応答実装に必要な API が揃っている。
+- **不採用バージョン（参考）**:
+  - **1.6.0 系**: compileSdk 35 を要求する依存推移を含む可能性があり、本 Issue で `compileSdk` を上げないという NFR 2.2 に抵触するリスクがある。後続 Issue（登録 / 認証セレモニー）で `credentials-play-services-auth` 等の追加機能が必要になった時点で再評価する。
+  - **1.3.0 / 1.2.x**: 古く、`BeginGetCredentialResponse.Builder` の API 安定性が 1.5.0 までに固まっている。
+  - **alpha / beta**: 採用しない（requirements 4.1 の「安定版」default を踏襲）。
+- Developer は `1.5.0` を **そのまま固定で投入**する。仮に 1.5.0 で必要 API が欠落していると判明した場合（現状の認識では Phase 1 で問題なし）、`needs-decisions` で人間にエスカレーションすること（design レベルでのフォールバック手順は持たない）。
 
 ## 5. 処理フロー
 
@@ -343,7 +348,7 @@ sequenceDiagram
 
 ## 6. OS バージョンゲーティング戦略
 
-requirements 確認事項 2 への回答。**Manifest 側と Kotlin 側の二段構え**を採用する。
+requirements 確認事項 2 への回答。**Manifest 側 `tools:targetApi="34"` と Kotlin 側 `@RequiresApi(34)` の二段構え**を採用する（§9.1-2 で確定）。runtime SDK_INT ガードは callback 内に置かない（§6.2）。
 
 ### 6.1 Manifest 側ガード（一次防御 / OS 側で bind 制御）
 
@@ -361,7 +366,7 @@ requirements 確認事項 2 への回答。**Manifest 側と Kotlin 側の二段
 - **runtime SDK_INT ガードを各 callback 内に置くかどうか**: requirements 3.6 では「将来バックポート時の安全網として」設けるよう求めているが、design 段階での判断:
   - `@RequiresApi(34)` が class 全体に付いている時点で callback メソッドのシグネチャ自体が API 34+ 限定（`OutcomeReceiver<T,E>` が API 31+、`ProviderClearCredentialStateRequest` が androidx 内で API 34+ シンボル参照）になる。
   - したがって callback 内で `if (Build.VERSION.SDK_INT < 34) { callback.onError(...); return }` を入れても **論理的に到達不可能**（dead branch）になり、lint で `Condition always false` を出す可能性が高い。
-  - **採用方針: runtime SDK_INT ガードは callback 内に置かない**。`@RequiresApi(34)` のみで十分。requirements 3.6 の「防御層」要求は class 単位の `@RequiresApi` 注釈で吸収する（design レベルで合理化）。requirements を `@RequiresApi` のみで満たすという解釈を §9 確認事項に明記。
+  - **採用方針: runtime SDK_INT ガードは callback 内に置かない**。`@RequiresApi(34)` のみで十分。requirements 3.6 の「防御層」要求は class 単位の `@RequiresApi` 注釈で吸収する（design レベルで合理化）。requirements を `@RequiresApi` のみで満たすという解釈は §9.1-2 で確定済み。
 
 ### 6.3 テスト時の SDK ガード
 
@@ -433,44 +438,59 @@ requirements 確認事項 2 への回答。**Manifest 側と Kotlin 側の二段
 
 ## 9. リスク・代替案・確認事項
 
-### 9.1 確認事項（design レベルで解決し PR で人間レビュー）
+> **確認事項 A〜E は人間レビュアが確定済み（resolved）**。本節は確定値の根拠を残すリファレンス。本 Issue のスコープ外として carve out された案件は §9.4 に集約する。
 
-1. **`androidx.credentials` バージョン採用**: `1.5.0` (stable) を採用 (§4.5)。
-   - リスク: 1.5.0 が AGP 8.5.2 / compileSdk 34 で推移依存衝突を起こす可能性。Developer が `./gradlew :app:assembleDebug` で確認する（requirements 4.4）。
-   - 代替案: 衝突時は 1.6.0 → 1.3.0 の順でフォールバック。alpha / beta は採用しない。
+### 9.1 決定済み事項（resolved）
 
-2. **Kotlin 側 SDK ガードの方式**: `@RequiresApi(34)` のみで requirements 3.6 を満たす（§6.2）。runtime SDK_INT ガードは入れない（dead branch を作らない）。
+1. **`androidx.credentials` バージョン採用**: `1.5.0` (stable) で **確定**（§4.5）。
+   - 決定値: `1.5.0`（フォールバック手順は持たない。詳細は §4.5）。
+   - 不採用バージョン: 1.6.0（compileSdk 35 要求リスク）、1.3.0 / 1.2.x（古い）、alpha / beta（安定性なし）。
+   - 関連レビューコメント: 確認事項 **A**（resolved）。
+
+2. **Kotlin 側 SDK ガードの方式**: `@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)` (= 34) + Manifest `tools:targetApi="34"` の **二段構えで確定**（§6.1 / §6.2）。runtime SDK_INT ガードは callback 内に置かない（dead branch を作らない）。
    - リスク: 将来 minSdk を下げて API 33 以下に bind を試みる「バックポート」が発生した場合、防御層が無い。ただし Credential Manager Provider が API 34 で導入された仕様である以上、バックポート自体が不可能。本リスクは机上のみ。
 
 3. **テスト実行環境**: Robolectric `@Config(sdk = [34])` を採用 (§7.1)。Instrumentation test は `@Ignore` placeholder のみ配置 (§7.2)。
+   - CI に API 34 emulator を導入する作業は **#94 として別 Issue に carve out 済み**（§9.4 参照）。本 Issue (#90) のスコープからは除外。
    - リスク: Robolectric の API 34 shadow が `OutcomeReceiver` 周りで挙動差を起こす可能性。`mockk` で `OutcomeReceiver` を差し替えるため、Robolectric の shadow 実装に依存しない設計にする。
+   - 関連レビューコメント: 確認事項 **B**（resolved）。
 
-4. **`<meta-data android:name>` の正式値**: `android.credentials.provider` を採用 (§4.2)。
-   - リスク: 将来 AOSP が `androidx.credentials.provider.CREDENTIAL_PROVIDER` 等に rename する可能性。AOSP `CredentialProviderInfoFactory` 内部の文字列を current で確定。
+4. **`<meta-data android:name>` の正式値**: `android.credentials.provider` で **確定**（§4.2）。AOSP `CredentialProviderInfoFactory` の参照名と一致。
+   - 関連レビューコメント: 確認事項 **E**（resolved）。
 
 5. **package 配置**: `credentialprovider/`（hyphen / underscore なし、全小文字 1 単語）を採用 (§2)。
    - 代替案: `passkey/` (狭すぎる)、`credential/` (既存ドメインモデルと衝突)、`credentials/provider/` (深すぎる)。
 
-6. **`AAGUID` 定数の配置**: 本 Issue では **定数を追加しない**（§3）。登録セレモニー Issue (#89 分割案 3) で attestation 実装時に追加する。
+6. **`AAGUID` 定数の本 Issue での扱い**: 本 Issue では **定数を追加しない / 定義しない**（§3）。登録セレモニー Issue (#89 分割案 3) で attestation 実装時に追加する。
    - 理由: 未使用定数は dead-code / `@Suppress` 必要で、本 Issue のスコープを汚す。
    - リスク: 後続 Issue 担当者が requirements / umbrella を読まず定数を別 package に置く可能性。design.md §8 で配置先を明示してこのリスクを抑える。
+   - 関連レビューコメント: 確認事項 **C**（resolved）。
 
-7. **`<service>` の `android:label` 用 string resource**: 本 Issue では `@string/app_name` を流用 (§4.2)。
+7. **`<service>` の `android:label` 用 string resource**: `@string/app_name`（"KeyNest"）を流用で **確定**（§4.2）。他社プロバイダ (1Password / Bitwarden / Google) もアプリ名そのままを使う慣習に合わせる。
    - リスク: OS provider 一覧で「KeyNest」とそのまま表示されるが、umbrella #89 表記方針「PassKey」とは別軸（アプリ名）なので問題なし。
+   - 関連レビューコメント: 確認事項 **D**（resolved）。
 
-### 9.2 確認事項（要 reviewer 確認、PR 本文に転記）
+### 9.2 想定外事項（発生時のエスカレーション）
 
-- **A**: `androidx.credentials` のバージョンを `1.5.0` で固定する方針で良いか。1.6.0 を採用すべき強い理由（PassKey API の機能追加等）がある場合は事前に教えてほしい。
-- **B**: instrumentation test を `@Ignore` 付きで配置する方針で良いか。CI に API 34 emulator を入れる Issue を別途切るべきか。
-- **C**: `AAGUID` 定数の配置を本 Issue ではなく登録セレモニー Issue に委ねる方針で良いか。
-- **D**: `<service android:label>` を `@string/app_name`（"KeyNest"）で良いか、それとも別途「KeyNest PassKey」のような独立 label を立てるか。
+design 段階で確定済みだが、**実装フェーズで前提が崩れた場合**は Developer が `needs-decisions` で人間にエスカレーションすること。本節はそのトリガー条件のみを列挙する（design レベルではフォールバック手順を持たない）。
+
+- **`androidx.credentials` `1.5.0` 系で必要 API（`BeginCreateCredentialResponse()` の no-arg constructor / `BeginGetCredentialResponse.Builder().build()`）が欠落していると判明した場合**: 現状の認識では Phase 1 で困らないため発生しないが、万一発生したら `needs-decisions` で報告。
+- **AAGUID 定数の本 Issue 内定義が必要になった場合（例: `<meta-data>` で AAGUID を露出する必要が判明、等）**: 本 Issue のスコープ拡張になるため、commit する前に `needs-decisions` で人間にエスカレーション。
 
 ### 9.3 リスク（変更しない / Developer に注意喚起）
 
 | Risk | 影響 | 緩和策 |
 |------|------|--------|
-| `androidx.credentials` 1.5.0 が compileSdk 35 を強要する推移依存を含む | `:app:assembleDebug` が失敗 | Developer が build 確認時に検出。失敗時は §9.1-1 の代替案で 1.3.0 まで下げる |
+| `androidx.credentials` 1.5.0 が compileSdk 35 を強要する推移依存を含む | `:app:assembleDebug` が失敗 | Developer が build 確認時に検出。失敗時は §9.2 に従い `needs-decisions` でエスカレーション（design レベルではフォールバック先を持たない） |
 | Robolectric SDK 34 shadow で `OutcomeReceiver` 関連で `UnsupportedOperationException` | unit test が pass しない | mockk で差し替え済 (§7.1) のため shadow に依存しない |
 | `xmlns:tools` を `<manifest>` に追加することで既存 Manifest merger に副作用 | 既存 service / activity の表現が変わる | `tools:` 名前空間追加は無害（既に多くの layout XML で使用済み）。AGP がデフォルトで認識 |
 | OS の「パスワードと PassKey」一覧に表示されない（手動検証 NG） | requirements 5.1 未達 | `<intent-filter>` action / `<meta-data>` name / xml ルート要素のいずれかが誤っている可能性。tasks T-06 の手動検証で発覚した場合、§4.2 / §4.3 を再確認 |
 | `android:label="@string/app_name"` が OS 表示で長すぎ / 短すぎ | UX 違和感（機能には影響なし） | 後続 設定画面 Issue (#89 分割案 7) で再評価 |
+
+### 9.4 本 Issue から carve out された案件
+
+| 案件 | 行き先 | 本 Issue (#90) への影響 |
+|------|------|------------------------|
+| CI に API 34 emulator を導入し instrumentation test を実行可能にする | **#94**（人間が parallel で起票済み） | 本 Issue では instrumentation test を `@Ignore` placeholder で配置（§7.2）。`@Ignore` 解除は #94 完了後に行う |
+| AAGUID 定数の Kotlin 定義 + attestation 応答への埋め込み | 登録セレモニー Issue (#89 分割案 3) | 本 Issue では定数化しない（§9.1-6） |
+| `credentials-play-services-auth` 依存追加 | 必要が生じた時点で別 Issue（候補: 登録セレモニー Issue #89 分割案 3 / 認証セレモニー Issue #89 分割案 4） | 本 Issue では追加しない（requirements 4.3） |

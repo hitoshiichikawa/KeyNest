@@ -15,7 +15,7 @@
 
 ### 概要
 
-`gradle/libs.versions.toml` に `androidx.credentials:credentials` の安定版 (`1.5.0`) を追加し、`app/build.gradle.kts` の `dependencies` ブロックから `implementation` で参照する。`credentials-play-services-auth` は本 Issue では追加しない（req 4.3）。
+`gradle/libs.versions.toml` に `androidx.credentials:credentials` の **`1.5.0` (stable) を確定値**として追加し、`app/build.gradle.kts` の `dependencies` ブロックから `implementation` で参照する。`credentials-play-services-auth` は本 Issue では追加しない（req 4.3）。バージョンは design §4.5 / §9.1-1 で人間レビュアが確定済み。
 
 ### 変更ファイル
 
@@ -48,9 +48,10 @@
 
 - なし（先頭）
 
-### リスクと対応（design §9.3）
+### リスクと対応（design §9.3 / §9.2）
 
-- 1.5.0 が compileSdk 35 等を強要する推移依存を含む場合、1.6.0 → 1.3.0 の順でフォールバック。alpha/beta は採用しない。
+- `1.5.0` は **確定値であり、フォールバック手順を design レベルでは持たない**。
+- 想定外に 1.5.0 で必要 API が欠落していると判明した場合（現状の認識では Phase 1 で困らない）、または compileSdk 35 等を強要する推移依存衝突が起きた場合は、Developer はバージョンを勝手に変更せず `needs-decisions` で人間にエスカレーションすること（design §9.2 参照）。
 
 ---
 
@@ -251,7 +252,7 @@ class KeyNestCredentialProviderService : CredentialProviderService() {
 
 ### 概要
 
-CI で API 34 emulator が確保できるか未確認のため、本 Issue では instrumentation test を **`@Ignore` 付きの placeholder** として配置し、CI 緑を保つ（design §7.2 / requirements 確認事項 3）。後続 Issue で CI emulator を整備したタイミングで `@Ignore` を外す前提。
+CI に API 34 emulator を導入する作業は **#94 として別 Issue に carve out 済み**（design §9.4）。本 Issue では instrumentation test を **`@Ignore` 付きの placeholder** として配置し、CI 緑を保つ（design §7.2 / requirements 確認事項 3）。`@Ignore` は **#94 が完了して CI に API 34 emulator が組み込まれるまで維持**する。
 
 ### 変更ファイル
 
@@ -260,7 +261,7 @@ CI で API 34 emulator が確保できるか未確認のため、本 Issue で�
 ### 配置内容
 
 - クラスに `@RunWith(AndroidJUnit4::class)` および `@SdkSuppress(minSdkVersion = 34)` を付与
-- 各 `@Test` メソッドに `@Ignore("API 34 emulator が CI に組み込まれるまで手動実行。後続 Issue で gating 解除")` を付与
+- 各 `@Test` メソッドに `@Ignore("CI に API 34 emulator が組み込まれるまで手動実行。#94 で gating 解除")` を付与
 - テストメソッド本体は **空 or TODO コメントのみ**（後続 Issue で実装する Service binding 経由の検証 placeholder）:
   - `serviceBinding_returnsEmptyCreateResponse` (req 6.1 の instrumentation 版)
   - `serviceBinding_returnsEmptyGetResponse` (req 6.2 の instrumentation 版)
@@ -282,7 +283,7 @@ CI で API 34 emulator が確保できるか未確認のため、本 Issue で�
 
 ### 注意
 
-- 本タスクで instrumentation test を「実装」するのではなく「placeholder 配置」のみ。実装は後続 Issue または CI emulator 整備後の別 Issue で行う。
+- 本タスクで instrumentation test を「実装」するのではなく「placeholder 配置」のみ。実装は #94 で CI に API 34 emulator が組み込まれた後、後続セレモニー Issue (#89 分割案 3 / 4) の Developer が `@Ignore` を外して中身を埋める想定。
 
 ---
 
@@ -310,7 +311,7 @@ T-01 〜 T-05 が完了した状態で、全テスト pass / build 成功 / 既�
 - `./gradlew :app:lintDebug` が警告ゼロ or 既存ベースライン内
 - `./gradlew :app:assembleDebug` が成功
 - 手動検証（API 34 端末 + API 33 端末）のスクリーンショットを PR description に貼付
-- `design.md §9.2` の確認事項 A 〜 D を PR 本文に転記
+- `design.md §9.1` の決定済み事項（確認事項 A〜E が resolved である旨と、carve out 案件 #94）を PR 本文「確認事項」セクションに転記
 
 ### 依存タスク
 
