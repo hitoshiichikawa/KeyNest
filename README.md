@@ -33,6 +33,14 @@ Public-facing pages are hosted on GitHub Pages:
 
 Requires JDK 17 + Android SDK API 34. `minSdkVersion` is 26.
 
+## CI
+
+Non-draft PRs targeting `main` / `develop` run an Android 14 (API 34)
+emulator on GitHub Actions and execute `./gradlew connectedDebugAndroidTest`
+(see `.github/workflows/instrumentation-test.yml`). The emulator job is
+independent from any future unit-test / lint / build job so its failures
+do not mask other CI signal.
+
 ## Contributing
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
