@@ -1,5 +1,22 @@
 # Task Breakdown — Issue #91 / feat(passkey): Room migration + PasskeyEntity / DAO の追加
 
+> ## ⚠️ Scope 縮小通知 (2026-05-21)
+>
+> 本 tasks.md は当初 T-01〜T-11 の 11 タスクを Issue #91 で実装する想定だったが、
+> Developer エージェントの 60 turn budget を超過して失敗 (cost $8.25) したため
+> Issue を 2 本に分割した:
+>
+> | タスク範囲 | 担当 Issue |
+> |---|---|
+> | **T-01〜T-04** (データ層 scaffold) | **#91** (本 Issue) |
+> | **T-05〜T-11** (Repository + DI + Tests + 統合) | **#107** (継続 Issue) |
+>
+> **Developer が #91 を impl-resume するときは T-01〜T-04 のみ実装し、
+> T-05〜T-11 は手を付けないこと**。#107 は #91 の impl PR が merge された後に着手される。
+>
+> spec ファイル (`design.md` / `requirements.md` / `tasks.md`) は両 Issue で共有し、
+> 本ディレクトリ単体で full design を保持する (新規 spec dir は作らない)。
+
 > 関連: `requirements.md`, `design.md`（本ディレクトリ）
 >
 > 各タスクは独立コミット可能な粒度で、依存順に並べている。Developer はこの順番で実装する。
