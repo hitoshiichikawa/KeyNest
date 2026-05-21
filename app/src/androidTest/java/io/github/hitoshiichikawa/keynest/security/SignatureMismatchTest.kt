@@ -2,8 +2,10 @@ package io.github.hitoshiichikawa.keynest.security
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
+import io.github.hitoshiichikawa.keynest.domain.model.CredentialSortOrder
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
 import io.github.hitoshiichikawa.keynest.domain.model.SigningHash
+import io.github.hitoshiichikawa.keynest.domain.model.VaultMetadata
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.ResolveAutofillCandidatesUseCase
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
@@ -11,6 +13,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -85,5 +88,11 @@ class SignatureMismatchTest {
 
             override suspend fun findById(id: CredentialId): EncryptedCredentialRecord? = null
             override fun observeAll(): Flow<List<io.github.hitoshiichikawa.keynest.domain.model.Credential>> = flowOf(emptyList())
+            override fun observeBySort(order: CredentialSortOrder): Flow<List<io.github.hitoshiichikawa.keynest.domain.model.Credential>> = flowOf(emptyList())
+            override fun observeRecentlyUsed(limit: Int): Flow<List<io.github.hitoshiichikawa.keynest.domain.model.Credential>> = flowOf(emptyList())
+            override suspend fun markUsed(id: CredentialId, timestamp: Long) = error("n/a")
+            override suspend fun duplicate(sourceId: CredentialId, timestamp: Long): Result<CredentialId> = error("n/a")
+            override fun observeMetadata(): Flow<VaultMetadata> = emptyFlow()
+            override suspend fun clearAll() = error("n/a")
         }
 }
