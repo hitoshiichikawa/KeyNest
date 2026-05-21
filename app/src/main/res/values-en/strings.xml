@@ -24,11 +24,8 @@
     <string name="label_username">Username</string>
     <string name="label_password">Password</string>
     <string name="label_display_name">Display name</string>
-    <string name="label_display_name_help">Label shown in the autofill suggestion</string>
-    <string name="label_target_app">Target app</string>
     <string name="action_pick_installed_app">Change</string>
     <string name="action_save">Save</string>
-    <string name="action_delete_credential_destructive">Delete this credential</string>
     <string name="error_package_name_blank">App package name is required.</string>
     <string name="error_package_name_invalid">App package name format is invalid.</string>
     <string name="error_username_blank">Username is required.</string>
@@ -40,20 +37,18 @@
     <string name="message_signature_not_captured">Signature unavailable (app not installed). Candidates will not appear until you reinstall and re-save.</string>
     <string name="signature_match">Signature verified</string>
     <string name="signature_missing">Signature unavailable</string>
-    <string name="signature_captured_chip">Signature captured · SHA-256</string>
 
     <!-- Autofill enable -->
     <string name="autofill_enable_title">Switch Android Autofill to KeyNest</string>
     <string name="autofill_enable_description">To suggest saved credentials on login screens, set KeyNest as your device autofill service.</string>
     <string name="autofill_enable_action">Open Settings</string>
-    <string name="autofill_enable_dismiss">Later</string>
     <string name="autofill_enable_already_enabled">KeyNest is already set as your Autofill service.</string>
     <string name="autofill_enable_settings_unavailable">Autofill Settings screen is not available on this device.</string>
     <string name="autofill_enable_step1_title">Tap "Open Settings"</string>
     <string name="autofill_enable_step1_description">You will be taken to Android Settings</string>
     <string name="autofill_enable_step2_title">Choose "KeyNest"</string>
     <string name="autofill_enable_step2_description">Under Passwords &amp; accounts</string>
-    <string name="autofill_enable_step3_title">You're all set</string>
+    <string name="autofill_enable_step3_title">You\'re all set</string>
     <string name="autofill_enable_step3_description">Come back to start saving credentials</string>
 
     <!-- Autofill unlock -->
