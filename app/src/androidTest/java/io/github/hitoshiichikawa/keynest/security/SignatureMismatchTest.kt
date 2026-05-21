@@ -1,6 +1,7 @@
 package io.github.hitoshiichikawa.keynest.security
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialSortOrder
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
@@ -10,8 +11,6 @@ import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.ResolveAutofillCandidatesUseCase
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
 import com.google.common.truth.Truth.assertThat
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -42,9 +41,7 @@ class SignatureMismatchTest {
                 rec("bob", matching),
             ),
         )
-        val sigResolver = mockk<PackageSignatureResolver> {
-            every { resolveSha256("com.example.target") } returns matching
-        }
+        val sigResolver = stubResolver(matching)
         val useCase = ResolveAutofillCandidatesUseCase(repo, sigResolver)
 
         val candidates = useCase("com.example.target")
@@ -55,15 +52,21 @@ class SignatureMismatchTest {
     @Test
     fun candidateFilter_returnsEmpty_whenAllAreMismatched() = runBlocking {
         val repo = stubRepo(listOf(rec("imposter", different), rec("ghost", null)))
-        val sigResolver = mockk<PackageSignatureResolver> {
-            every { resolveSha256("com.example.target") } returns matching
-        }
+        val sigResolver = stubResolver(matching)
         val useCase = ResolveAutofillCandidatesUseCase(repo, sigResolver)
 
         val candidates = useCase("com.example.target")
 
         assertThat(candidates).isEmpty()
     }
+
+    private fun stubResolver(hash: SigningHash): PackageSignatureResolver =
+        object : PackageSignatureResolver(
+            InstrumentationRegistry.getInstrumentation().targetContext.packageManager,
+        ) {
+            override fun resolveSha256(packageName: String): SigningHash? =
+                if (packageName == "com.example.target") hash else null
+        }
 
     private fun rec(username: String, signature: SigningHash?) = EncryptedCredentialRecord(
         id = CredentialId(username.hashCode().toLong()),
