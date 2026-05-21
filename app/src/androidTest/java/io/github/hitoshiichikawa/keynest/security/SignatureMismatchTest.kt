@@ -32,32 +32,36 @@ class SignatureMismatchTest {
     private val different = SigningHash.ofSha256("DIFFERENT_CERT".toByteArray())
 
     @Test
-    fun candidateFilter_dropsMismatched_andRetainsMatched() = runBlocking {
-        val repo = stubRepo(
-            listOf(
-                rec("alice", matching),
-                rec("imposter", different),
-                rec("ghost", signature = null),
-                rec("bob", matching),
-            ),
-        )
-        val sigResolver = stubResolver(matching)
-        val useCase = ResolveAutofillCandidatesUseCase(repo, sigResolver)
+    fun candidateFilter_dropsMismatched_andRetainsMatched() {
+        runBlocking {
+            val repo = stubRepo(
+                listOf(
+                    rec("alice", matching),
+                    rec("imposter", different),
+                    rec("ghost", signature = null),
+                    rec("bob", matching),
+                ),
+            )
+            val sigResolver = stubResolver(matching)
+            val useCase = ResolveAutofillCandidatesUseCase(repo, sigResolver)
 
-        val candidates = useCase("com.example.target")
+            val candidates = useCase("com.example.target")
 
-        assertThat(candidates.map { it.username }).containsExactly("alice", "bob")
+            assertThat(candidates.map { it.username }).containsExactly("alice", "bob")
+        }
     }
 
     @Test
-    fun candidateFilter_returnsEmpty_whenAllAreMismatched() = runBlocking {
-        val repo = stubRepo(listOf(rec("imposter", different), rec("ghost", null)))
-        val sigResolver = stubResolver(matching)
-        val useCase = ResolveAutofillCandidatesUseCase(repo, sigResolver)
+    fun candidateFilter_returnsEmpty_whenAllAreMismatched() {
+        runBlocking {
+            val repo = stubRepo(listOf(rec("imposter", different), rec("ghost", null)))
+            val sigResolver = stubResolver(matching)
+            val useCase = ResolveAutofillCandidatesUseCase(repo, sigResolver)
 
-        val candidates = useCase("com.example.target")
+            val candidates = useCase("com.example.target")
 
-        assertThat(candidates).isEmpty()
+            assertThat(candidates).isEmpty()
+        }
     }
 
     private fun stubResolver(hash: SigningHash): PackageSignatureResolver =
