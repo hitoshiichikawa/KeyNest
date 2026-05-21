@@ -86,6 +86,7 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.autofill)
+    implementation(libs.androidx.credentials)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
