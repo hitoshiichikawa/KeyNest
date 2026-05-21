@@ -6,6 +6,9 @@ build/
 # Local configuration file (sdk path, etc)
 local.properties
 
+# Design source / Play Store release artifacts (kept outside the public repo)
+design/
+
 # Log/OS Files
 *.log
 
