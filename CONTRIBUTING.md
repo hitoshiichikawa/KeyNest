@@ -30,6 +30,15 @@ For security-sensitive reports, **do not** open a public Issue — see
 `main` is the release branch that is published to Google Play. PRs always
 target `develop`; the maintainer batches `develop → main` release PRs.
 
+### CI: instrumentation tests on Android 14 (API 34)
+
+Non-draft PRs targeting `main` / `develop` (and pushes to those branches)
+trigger the `Instrumentation Tests (Android 14 / API 34)` GitHub Actions
+workflow, which boots an API 34 emulator and runs
+`./gradlew connectedDebugAndroidTest`. Mark a PR as **draft** while it is
+still WIP to skip the emulator job; flipping it to **ready for review**
+re-triggers the workflow.
+
 ## Code style
 
 - **Kotlin**: official style (4-space indent, trailing commas allowed, no
