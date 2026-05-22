@@ -31,7 +31,7 @@ import javax.crypto.KeyGenerator
  *    (design §6.3 selection B). The AndroidKeyStore is therefore used only
  *    for the wrapping key, not the EC key itself.
  *  - Provision the AES-256-GCM **wrapping key** under alias
- *    `keynest_passkey_<credentialId>` (req 決定 2 / design §6.4). StrongBox
+ *    `passkey_<credentialId>` (#91 決定 3 / design §6.2 / §7.1). StrongBox
  *    is attempted first; `StrongBoxUnavailableException` /
  *    `ProviderException` falls back to non-StrongBox TEE Keystore
  *    (req 1.4 / 1.5).

@@ -396,7 +396,7 @@ class Migration_4_5_Test {
         // isDiscoverable / signCount intentionally omitted to exercise DEFAULT
         put("encryptedPrivateKey", ByteArray(48) { 0x66 })
         put("privateKeyIv", ByteArray(12) { 0x55 })
-        put("keyAlias", "keynest_passkey_$credentialId")
+        put("keyAlias", "passkey_$credentialId")
         putNull("displayName")
         put("createdAt", 1_700_000_000_000L)
         putNull("lastUsedAt")

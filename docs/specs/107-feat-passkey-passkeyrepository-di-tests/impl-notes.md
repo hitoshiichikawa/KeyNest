@@ -246,3 +246,198 @@ Issue 本文 (#107 本文) の表では `app/src/androidTest/...` パスが提�
    一貫性を優先した判断であり、design 通りの fake 実装が必要か確認願いたい。
 3. **AppInfoProviderTest の pre-existing failure** は本 Issue の scope 外。
    別 Issue で扱う必要がある。
+
+## Reviewer round=1 reject への是正 (2026-05-23)
+
+Reviewer round=1 が `STATUS: reject` を出し、以下 2 件の Finding を提示
+(`review-notes.md`)。両方とも spec 文言と実装の乖離を指摘するものであり、
+PjM 経由で「**spec を正として実装側を寄せる**」方針が確定したため、本セッションで
+是正実装を入れた。
+
+### Finding 1 への対応 — PasskeyRepository を design §6.1 シグネチャに揃える
+
+**変更内容**:
+
+1. `domain/model/Passkey.kt` を **新規追加**
+   - `credentialId` / `rpId` / `rpDisplayName` / `userHandle` /
+     `userName` / `userDisplayName` / `isDiscoverable` / `signCount` /
+     `displayName` / `createdAt` / `lastUsedAt` の 11 フィールドを保持
+   - `encryptedPrivateKey` / `privateKeyIv` / `keyAlias` は **意図的に
+     含めない** (NFR 2.2: 暗号文 / IV / wrapping-key alias を domain layer
+     に漏らさない / 上位レイヤは plaintext が必要なら
+     `loadPrivateKey(...)` を通す)
+   - `ByteArray` (userHandle) を含むため `equals` / `hashCode` /
+     `toString` を手書き。`toString` は `userHandle` をサイズ表記に
+     redact (NFR 2.2)
+2. `domain/repository/PasskeyRepository.kt` のシグネチャ更新
+   - `findByCredentialId(...): Passkey?` (旧: `PasskeyEntity?`)
+   - `findByRpIdAndUserHandle(...): Passkey?` (旧: `PasskeyEntity?`)
+   - `listDiscoverableByRpId(...): List<Passkey>` (旧: `List<PasskeyEntity>`)
+   - `listAllByRpId(rpId): List<Passkey>` を **新規追加** (design §6.1 必須)
+   - `incrementSignCount(credentialId, timestamp)` を **直接 expose**
+     (design §6.1) — caller は通常 `signWithIncrement` を使う想定だが、
+     design §6.1 と完全準拠を取るため直接 API も提供
+   - `loadPrivateKey(...): ByteArray?` (旧: non-nullable `ByteArray`) —
+     entity 不在時は `null` を返し、復号失敗 (auth tag 不整合等) は
+     例外伝播 (silent fail 禁止 / NFR 2.5)
+   - `signWithIncrement(credentialId) { signer }` は **互換 API として残置**
+     (理由は下記の「signWithIncrement の温存」参照)
+3. `data/repository/PasskeyRepositoryImpl.kt` の実装更新
+   - `private fun PasskeyEntity.toDomain(): Passkey` extension を
+     file-level で追加し、find / list 4 メソッドが entity を `toDomain()`
+     経由で返す
+   - `listAllByRpId` を `dao.listAllByRpId(rpId).map { it.toDomain() }` で
+     実装
+   - `incrementSignCount(credentialId, timestamp)` を新規実装
+     (DAO へ単純委譲)
+   - `loadPrivateKey(...)`: entity 不在時は `null` を返し、見つかった
+     場合のみ cipher decrypt を実行
+4. 呼び出し側 (caller) 追従更新
+   - `GetEntryBuilder.kt`: `PasskeyEntity` の import を `Passkey` に
+     置換し、`buildEntry(entity, ...)` を `buildEntry(passkey, ...)` に
+     リネーム。`Passkey` 型のフィールドアクセスはほぼ同一なので最小差分で
+     済む
+   - `PasskeyAuthActivity.kt`: `repository.findByCredentialId(...)` の
+     戻り値変数名を `entity` → `passkey` に変更 (シグネチャは
+     `Passkey?` でも `userHandle` アクセスは可)、`loadPrivateKey` の
+     nullable 化に伴い `?: throw GetCredentialUnknownException(...)`
+     ガードを追加
+   - `PasskeyCreateActivity.kt`: `findByRpIdAndUserHandle` の戻り値型
+     変更に対し `existing.credentialId` アクセスはそのまま動くため
+     **変更不要**
+   - `ExcludeCredentialDetector.kt`: `!= null` 判定のみのため
+     **変更不要**
+
+### Finding 2 への対応 — Keystore alias を `passkey_<credentialId>` に揃える
+
+**変更内容**:
+
+1. `PasskeyRepositoryImpl.aliasFor(credentialId)` を `"passkey_$credentialId"`
+   に書き換え (旧: `"keynest_passkey_$credentialId"`)
+2. KDoc コメント 2 箇所も spec 整合に修正:
+   - `PasskeyRepositoryImpl.kt` の `aliasFor` companion KDoc
+   - `PasskeyCreator.kt` のクラスレベル KDoc
+3. テストファイルの期待値を 5 ファイルで `keynest_passkey_` →
+   `passkey_` に一括置換:
+   - `PasskeyRepositoryTest.kt` (全面書き直し / 後述)
+   - `Migration_4_5_Test.kt` (1 箇所)
+   - `PasskeyDaoTest.kt` (1 箇所)
+   - `PasskeyAuthActivityTest.kt` (1 箇所)
+   - `PasskeyCreatorTest.kt` (`startsWith` assertion + 二重チェック追加:
+     `doesNotContain("keynest_passkey_")` で過去 prefix の再混入を防ぐ
+     リグレッション ガード)
+
+`PasskeyRepositoryTest.kt` は Finding 1 の戻り値型変更 (Passkey domain
+projection) に伴い entity 直 assert していた既存ケース 4 件 (`findByCredentialId_returns_dao_value` /
+`findByRpIdAndUserHandle_returns_dao_value` /
+`listDiscoverableByRpId_delegatesToDao` /
+`loadPrivateKey_throwsIllegalStateException_whenEntityMissing` →
+`loadPrivateKey_returnsNull_whenEntityMissing` に名称変更し null 返却
+仕様に合わせた) を Passkey domain 型 assert に書き換えた。また design §6.1
+の `listAllByRpId` / `incrementSignCount` 直接 expose の追加テストとして:
+
+- `listAllByRpId_includesDiscoverableAndNonDiscoverable_andProjectsToDomain`
+  (実際の Room DB + DAO を使い、isDiscoverable=true/false 両方 + 他 RP
+  の除外を 1 ケースで検証 / Req 3.5)
+- `incrementSignCount_delegatesToDao_withSuppliedTimestamp`
+  (新 API が DAO へ正しく委譲することを mock で検証 / design §6.1)
+- `listDiscoverableByRpId_delegatesToDao_andProjectsToDomain` の
+  assertion を domain projection 確認用に強化
+
+を追加した。合計 23 ケース (旧 21 + 新 2)。
+
+### `signWithIncrement` の温存判断
+
+design §6.1 には `signWithIncrement` メソッドは存在しないが、本 Issue では
+**互換 API として残置** した。理由:
+
+- `PasskeyAuthActivity` (Issue #100 で merge 済) が `signWithIncrement` を
+  唯一の signCount 操作経路として呼んでいる。当該 method を削除すると
+  認証 ceremony が機能停止する
+- design §6.1 案 C も「signer throw 時に signCount を rollback」する
+  ためのトランザクション wrapper が必要と認めており、`signWithIncrement`
+  はその要件を満たす実装の 1 形態に相当する
+- spec 「design §6.1 完全準拠」と「Req 2.2 既存テスト非破壊」の両立を
+  取る最小限の手段として、`incrementSignCount` を design §6.1 通りに
+  新規追加 + `signWithIncrement` を互換のため残す形を採った
+- 将来的に `PasskeyAuthActivity` 側で `database.withTransaction { ... }`
+  を直接呼び `incrementSignCount` に切り替えれば `signWithIncrement` は
+  削除可能 → これは別 Issue で扱う想定 (下記 round=2 引き継ぎ事項参照)
+
+### Keystore alias migration を本 Issue で実装しなかった理由
+
+合意済み (PjM 確認済み) として、既存 AndroidKeyStore に
+`keynest_passkey_*` で発番済みの alias を `passkey_*` にリネームする
+migration は **本 Issue では実装しない**。判断根拠:
+
+- Issue #99 / #100 が develop に merge 済みだが、**実際の PassKey 登録
+  フローが end-user に公開されたリリースは未だ存在しない** (Manifest 上の
+  CredentialProviderService 宣言と Service 配線は完了しているが、
+  end-user に「KeyNest が PassKey を発行できる」状態でリリースされた
+  バージョンは無い)
+- そのため既存 `keynest_passkey_*` alias を持つ端末は **開発端末のみ**で、
+  本 Issue の merge 時点では実害なし
+- 仮に将来 release 後に data migration が必要になった場合は別 Issue で
+  対応する (下記 round=2 引き継ぎ事項参照)
+
+### 影響を受けたファイル一覧 (round=1 reject 是正分)
+
+**新規作成**:
+- `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/model/Passkey.kt`
+
+**更新 (main / production code)**:
+- `app/src/main/java/io/github/hitoshiichikawa/keynest/domain/repository/PasskeyRepository.kt`
+- `app/src/main/java/io/github/hitoshiichikawa/keynest/data/repository/PasskeyRepositoryImpl.kt`
+- `app/src/main/java/io/github/hitoshiichikawa/keynest/credentialprovider/authentication/GetEntryBuilder.kt`
+- `app/src/main/java/io/github/hitoshiichikawa/keynest/credentialprovider/authentication/PasskeyAuthActivity.kt`
+- `app/src/main/java/io/github/hitoshiichikawa/keynest/credentialprovider/registration/PasskeyCreator.kt` (KDoc only)
+
+**更新 (test code)**:
+- `app/src/test/java/io/github/hitoshiichikawa/keynest/data/PasskeyRepositoryTest.kt` (全面書き直し: alias prefix + Passkey domain projection 反映 + 新規 2 ケース追加)
+- `app/src/test/java/io/github/hitoshiichikawa/keynest/data/Migration_4_5_Test.kt` (1 箇所)
+- `app/src/test/java/io/github/hitoshiichikawa/keynest/data/PasskeyDaoTest.kt` (1 箇所)
+- `app/src/test/java/io/github/hitoshiichikawa/keynest/credentialprovider/authentication/PasskeyAuthActivityTest.kt` (1 箇所)
+- `app/src/test/java/io/github/hitoshiichikawa/keynest/credentialprovider/authentication/GetEntryBuilderTest.kt` (PasskeyEntity → Passkey 型置換 + sampleEntity helper シグネチャ簡素化)
+- `app/src/test/java/io/github/hitoshiichikawa/keynest/credentialprovider/registration/PasskeyCreatorTest.kt` (`assignsAliasFollowingKeynestPasskeyPrefix` → `assignsAliasFollowingPasskeyPrefix` リネーム + `doesNotContain("keynest_passkey_")` 追加)
+
+### 検証結果 (round=1 reject 是正後)
+
+```
+:app:assembleDebug                                                 → BUILD SUCCESSFUL
+:app:testDebugUnitTest (全 815 ケース)                             → 1 fail (pre-existing AppInfoProviderTest), 814 pass
+:app:testDebugUnitTest (Passkey 関連のみ)
+  PasskeyRepositoryTest                                            : 23 / 23 pass
+  PasskeyDaoTest                                                   : 14 / 14 pass
+  Migration_4_5_Test                                               : 5 / 5 pass
+  GetEntryBuilderTest                                              : 8 / 8 pass
+  PasskeyAuthActivityTest                                          : 8 / 8 pass
+  PasskeyCreatorTest                                               : 15 / 15 pass
+  KeyNestCredentialProviderServiceTest                             : 13 / 13 pass
+  PasskeyAssertionTest                                             : pass
+  → Passkey 関連合計 86 / 86 pass
+
+:app:lintDebug                                                      → 153 errors / 150 warnings
+                                                                     (全て pre-existing baseline / 本 round=2 変更による新規警告は 0)
+```
+
+### Reviewer round=2 引き継ぎ事項
+
+1. **Keystore alias migration の将来必要性 (別 Issue 推奨)**:
+   現在は `passkey_<credentialId>` で確定済の正規 prefix を使うが、もし
+   将来 release 後に運用判断で「`keynest_*` prefix で揃えたい」となった
+   場合 (例: 端末上の AndroidKeyStore alias 一覧で KeyNest 由来の鍵を
+   prefix で grep できる利便性) は別 Issue を切る必要がある。本 Issue
+   merge 時点では release 前提のため migration 不要。
+2. **`signWithIncrement` の整理 (別 Issue 推奨)**:
+   design §6.1 に存在しない `signWithIncrement` を残置した。当該 method
+   を削除して `PasskeyAuthActivity` 側で `database.withTransaction +
+   incrementSignCount` を直接呼ぶ形に整理する Issue を切ることで、
+   spec と実装の完全 1 対 1 対応に到達できる。本 Issue では既存
+   ceremony 側の修正範囲を最小化するため温存。
+3. **`incrementSignCount` 直接呼び出しの caller**:
+   現状 caller は `signWithIncrement` 経由のみ。`incrementSignCount` を
+   直接呼ぶケースは将来の管理 UI (deferrable) で発生する想定。本 Issue
+   の test では `incrementSignCount_delegatesToDao_withSuppliedTimestamp`
+   で API 契約のみ検証している。
+4. **AppInfoProviderTest の pre-existing failure** は本 Issue の scope
+   外 (Round=1 と同じ)。別 Issue で扱う必要がある。

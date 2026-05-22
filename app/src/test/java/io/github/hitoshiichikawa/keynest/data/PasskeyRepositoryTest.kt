@@ -8,6 +8,7 @@ import io.github.hitoshiichikawa.keynest.data.dao.PasskeyDao
 import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
 import io.github.hitoshiichikawa.keynest.data.repository.PasskeyRepositoryImpl
 import io.github.hitoshiichikawa.keynest.domain.model.DeletePasskeyResult
+import io.github.hitoshiichikawa.keynest.domain.model.Passkey
 import io.github.hitoshiichikawa.keynest.domain.model.SavePasskeyRequest
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
 import io.github.hitoshiichikawa.keynest.security.EncryptedBlob
@@ -32,28 +33,37 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * Unit tests for [PasskeyRepositoryImpl] (Issue #99 inline + Issue #100
- * authentication ceremony additions).
+ * Unit tests for [PasskeyRepositoryImpl] aligned with the shared #91
+ * design.md §6.1 contract (Issue #107 Reviewer round=2 reshape).
  *
- * Robolectric is required so the new Issue #100 `signWithIncrement` /
- * `loadPrivateKey` tests can spin up an in-memory `KeyNestDatabase` —
- * `withTransaction { ... }` needs a real `RoomDatabase`. The legacy #99
- * mock-based tests continue to pass because the new `database` constructor
- * arg accepts a relaxed mock when transaction wiring is not exercised.
+ * Robolectric is required so the `signWithIncrement` / round-trip tests
+ * can spin up an in-memory `KeyNestDatabase` — `withTransaction { ... }`
+ * needs a real `RoomDatabase`. The legacy mock-based tests continue to
+ * pass because the `database` constructor arg accepts a relaxed mock
+ * when transaction wiring is not exercised.
  *
  * Verifies:
- *  - the wrapping-key alias follows `keynest_passkey_<credentialId>` (T-08 +
- *    決定 2)
- *  - [PasskeyRepositoryImpl.save] encrypts via the injected cipher and never
- *    persists the plaintext private key on the entity
- *  - the lookup APIs forward to the DAO untouched
- *  - [PasskeyRepositoryImpl.delete] returns [DeletePasskeyResult.Success] on
- *    the happy path and [DeletePasskeyResult.KeystoreCleanupFailed] when the
- *    AndroidKeyStore delete raises a `KeyStoreException`
- *  - Issue #100: [PasskeyRepositoryImpl.listDiscoverableByRpId] delegates to
- *    the DAO; [PasskeyRepositoryImpl.loadPrivateKey] decrypts via the
- *    injected cipher; [PasskeyRepositoryImpl.signWithIncrement] runs the
- *    signer inside a Room transaction and rolls back when the signer throws.
+ *  - the wrapping-key alias follows `passkey_<credentialId>` (#91 決定 3 /
+ *    design §6.2 / §7.1)
+ *  - [PasskeyRepositoryImpl.save] encrypts via the injected cipher and
+ *    never persists the plaintext private key on the entity
+ *  - the lookup APIs project to [Passkey] domain aggregates (secret
+ *    material — ciphertext / IV / alias — is dropped at the boundary,
+ *    NFR 2.2)
+ *  - [PasskeyRepositoryImpl.listAllByRpId] forwards to the DAO and
+ *    projects to [Passkey]
+ *  - [PasskeyRepositoryImpl.incrementSignCount] is exposed directly per
+ *    design §6.1 and forwards to the DAO
+ *  - [PasskeyRepositoryImpl.loadPrivateKey] returns `null` when the row
+ *    is absent (no exception)
+ *  - [PasskeyRepositoryImpl.delete] returns [DeletePasskeyResult.Success]
+ *    on the happy path and [DeletePasskeyResult.KeystoreCleanupFailed]
+ *    when the AndroidKeyStore delete raises a `KeyStoreException`
+ *  - Issue #100: [PasskeyRepositoryImpl.listDiscoverableByRpId] projects
+ *    to [Passkey]; [PasskeyRepositoryImpl.loadPrivateKey] decrypts via
+ *    the injected cipher; [PasskeyRepositoryImpl.signWithIncrement] runs
+ *    the signer inside a Room transaction and rolls back when the signer
+ *    throws.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
@@ -92,8 +102,8 @@ class PasskeyRepositoryTest {
 
         repo.save(sampleSaveRequest(credentialId = "ABC"))
 
-        assertThat(entitySlot.captured.keyAlias).isEqualTo("keynest_passkey_ABC")
-        assertThat(capturedAliases).containsExactly("keynest_passkey_ABC")
+        assertThat(entitySlot.captured.keyAlias).isEqualTo("passkey_ABC")
+        assertThat(capturedAliases).containsExactly("passkey_ABC")
     }
 
     @Test
@@ -118,31 +128,40 @@ class PasskeyRepositoryTest {
     }
 
     @Test
-    fun findByCredentialId_returns_dao_value() = runTest {
+    fun findByCredentialId_returns_domain_passkey() = runTest {
         val entity = sampleEntity(credentialId = "lookup")
         coEvery { dao.findByCredentialId("lookup") } returns entity
 
         val result = repo.findByCredentialId("lookup")
 
-        assertThat(result).isEqualTo(entity)
+        // Result is a domain Passkey aggregate (NFR 2.2): metadata only,
+        // no ciphertext / IV / alias surfacing across the boundary.
+        assertThat(result).isNotNull()
+        assertThat(result!!.credentialId).isEqualTo("lookup")
+        assertThat(result.rpId).isEqualTo(entity.rpId)
+        assertThat(result.userHandle).isEqualTo(entity.userHandle)
+        assertThat(result.signCount).isEqualTo(entity.signCount)
     }
 
     @Test
-    fun findByRpIdAndUserHandle_returns_dao_value() = runTest {
+    fun findByRpIdAndUserHandle_returns_domain_passkey() = runTest {
         val entity = sampleEntity(credentialId = "byRp")
         val handle = ByteArray(16) { 0x77 }
         coEvery { dao.findByRpIdAndUserHandle("example.com", handle) } returns entity
 
         val result = repo.findByRpIdAndUserHandle("example.com", handle)
 
-        assertThat(result).isEqualTo(entity)
+        assertThat(result).isNotNull()
+        assertThat(result!!.credentialId).isEqualTo("byRp")
+        assertThat(result.rpId).isEqualTo("example.com")
+        assertThat(result.userHandle).isEqualTo(handle)
     }
 
     @Test
     fun delete_returns_Success_onCleanSuccess() = runTest {
         coEvery { dao.delete("toDelete") } returns Unit
-        every { keyStore.containsAlias("keynest_passkey_toDelete") } returns true
-        every { keyStore.deleteEntry("keynest_passkey_toDelete") } returns Unit
+        every { keyStore.containsAlias("passkey_toDelete") } returns true
+        every { keyStore.deleteEntry("passkey_toDelete") } returns Unit
 
         val result = repo.delete("toDelete")
 
@@ -153,7 +172,7 @@ class PasskeyRepositoryTest {
     @Test
     fun delete_returns_Success_whenAliasAbsent() = runTest {
         coEvery { dao.delete("toDelete") } returns Unit
-        every { keyStore.containsAlias("keynest_passkey_toDelete") } returns false
+        every { keyStore.containsAlias("passkey_toDelete") } returns false
 
         val result = repo.delete("toDelete")
 
@@ -163,9 +182,9 @@ class PasskeyRepositoryTest {
     @Test
     fun delete_returns_KeystoreCleanupFailed_onKeyStoreException() = runTest {
         coEvery { dao.delete("toDelete") } returns Unit
-        every { keyStore.containsAlias("keynest_passkey_toDelete") } returns true
+        every { keyStore.containsAlias("passkey_toDelete") } returns true
         val boom = KeyStoreException("simulated cleanup failure")
-        every { keyStore.deleteEntry("keynest_passkey_toDelete") } throws boom
+        every { keyStore.deleteEntry("passkey_toDelete") } throws boom
 
         val result = repo.delete("toDelete")
 
@@ -176,13 +195,20 @@ class PasskeyRepositoryTest {
     // ---- Issue #100 additions (delegation / decrypt) -------------------
 
     @Test
-    fun listDiscoverableByRpId_delegatesToDao() = runTest {
+    fun listDiscoverableByRpId_delegatesToDao_andProjectsToDomain() = runTest {
         val rows = listOf(sampleEntity("a"), sampleEntity("b"))
         coEvery { dao.listDiscoverableByRpId("example.com") } returns rows
 
         val result = repo.listDiscoverableByRpId("example.com")
 
-        assertThat(result).isEqualTo(rows)
+        assertThat(result).hasSize(2)
+        assertThat(result.map { it.credentialId }).containsExactly("a", "b").inOrder()
+        // Confirm domain projection: ensure the result type is Passkey
+        // (not PasskeyEntity) so secret material does not leak across
+        // the boundary (NFR 2.2).
+        result.forEach { passkey: Passkey ->
+            assertThat(passkey.rpId).isEqualTo("example.com")
+        }
         coVerify(exactly = 1) { dao.listDiscoverableByRpId("example.com") }
     }
 
@@ -209,19 +235,33 @@ class PasskeyRepositoryTest {
         val plaintext = repo.loadPrivateKey("ec-key")
 
         // Round-trip: PKCS#8 plaintext must be parseable as a P-256 EC private key.
+        assertThat(plaintext).isNotNull()
         val recovered = KeyFactory.getInstance("EC")
             .generatePrivate(PKCS8EncodedKeySpec(plaintext))
         assertThat(recovered.algorithm).isEqualTo("EC")
-        assertThat(capturedAliases).contains("keynest_passkey_ec-key")
+        assertThat(capturedAliases).contains("passkey_ec-key")
     }
 
     @Test
-    fun loadPrivateKey_throwsIllegalStateException_whenEntityMissing() = runTest {
+    fun loadPrivateKey_returnsNull_whenEntityMissing() = runTest {
         coEvery { dao.findByCredentialId("missing") } returns null
 
-        val ex = runCatching { repo.loadPrivateKey("missing") }.exceptionOrNull()
+        val result = repo.loadPrivateKey("missing")
 
-        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        // design §6.1: nullable signature is the contract. The repository
+        // must hand back null rather than throw IllegalStateException
+        // when the underlying row does not exist (#107 Reviewer round=2
+        // Finding 1 alignment).
+        assertThat(result).isNull()
+    }
+
+    // ---- design §6.1 — direct expose of incrementSignCount -------------
+
+    @Test
+    fun incrementSignCount_delegatesToDao_withSuppliedTimestamp() = runTest {
+        repo.incrementSignCount("c1", timestamp = 1_700_000_000_000L)
+
+        coVerify(exactly = 1) { dao.incrementSignCount("c1", 1_700_000_000_000L) }
     }
 
     // ---- Issue #100 signWithIncrement (Option A) -----------------------
@@ -261,6 +301,33 @@ class PasskeyRepositoryTest {
     @After
     fun tearDownRoom() {
         if (::roomDb.isInitialized) roomDb.close()
+    }
+
+    @Test
+    fun listAllByRpId_includesDiscoverableAndNonDiscoverable_andProjectsToDomain() = runTest {
+        // design §6.1 / Req 3.5: listAllByRpId returns BOTH discoverable
+        // and non-discoverable rows so the management UI can render the
+        // full per-RP set. Discoverable filtering belongs to
+        // listDiscoverableByRpId.
+        roomDao.insert(sampleEntity("a", rpId = "example.com").copy(isDiscoverable = true))
+        roomDao.insert(
+            sampleEntity("b", rpId = "example.com").copy(
+                isDiscoverable = false,
+                userHandle = ByteArray(16) { 0x11 },
+            ),
+        )
+        // Different RP — must NOT appear in example.com results.
+        roomDao.insert(sampleEntity("c", rpId = "other.example"))
+
+        val result = roomRepo.listAllByRpId("example.com")
+
+        assertThat(result.map { it.credentialId }).containsExactly("a", "b")
+        // Confirms the projection to domain Passkey (NFR 2.2): the
+        // returned objects are Passkey instances, not PasskeyEntity,
+        // so accessing ciphertext / IV is impossible by typing.
+        result.forEach { passkey: Passkey ->
+            assertThat(passkey.rpId).isEqualTo("example.com")
+        }
     }
 
     @Test
@@ -416,14 +483,14 @@ class PasskeyRepositoryTest {
         )
 
         assertThat(aliasLog).containsExactly(
-            "keynest_passkey_id-A",
-            "keynest_passkey_id-B",
+            "passkey_id-A",
+            "passkey_id-B",
         ).inOrder()
         // And the persisted rows carry the matching aliases:
         assertThat(roomDao.findByCredentialId("id-A")?.keyAlias)
-            .isEqualTo("keynest_passkey_id-A")
+            .isEqualTo("passkey_id-A")
         assertThat(roomDao.findByCredentialId("id-B")?.keyAlias)
-            .isEqualTo("keynest_passkey_id-B")
+            .isEqualTo("passkey_id-B")
     }
 
     @Test
@@ -463,7 +530,7 @@ class PasskeyRepositoryTest {
         // Spec §T-10 #9.4.2 case 4: pre-existing mock-based tests only
         // verified the DeletePasskeyResult; this gap proves the row really
         // disappears from the DAO afterwards and that the keystore alias
-        // delete is attempted with the keynest_passkey_<id> alias.
+        // delete is attempted with the passkey_<id> alias.
         val deletedAliases = mutableListOf<String>()
         val mockKs = mockk<KeyStore>()
         every { mockKs.containsAlias(any()) } returns true
@@ -486,7 +553,7 @@ class PasskeyRepositoryTest {
 
         assertThat(result).isEqualTo(DeletePasskeyResult.Success)
         assertThat(roomDao.findByCredentialId("to-drop")).isNull()
-        assertThat(deletedAliases).containsExactly("keynest_passkey_to-drop")
+        assertThat(deletedAliases).containsExactly("passkey_to-drop")
     }
 
     // ---- helpers --------------------------------------------------------
@@ -508,9 +575,12 @@ class PasskeyRepositoryTest {
         createdAt = 1_700_000_000_000L,
     )
 
-    private fun sampleEntity(credentialId: String) = PasskeyEntity(
+    private fun sampleEntity(
+        credentialId: String,
+        rpId: String = "example.com",
+    ) = PasskeyEntity(
         credentialId = credentialId,
-        rpId = "example.com",
+        rpId = rpId,
         rpDisplayName = "Example",
         userHandle = ByteArray(16) { 0x77 },
         userName = "alice@example.com",
@@ -518,7 +588,7 @@ class PasskeyRepositoryTest {
         isDiscoverable = true,
         encryptedPrivateKey = ByteArray(48) { 0x66 },
         privateKeyIv = ByteArray(12) { 0x55 },
-        keyAlias = "keynest_passkey_$credentialId",
+        keyAlias = "passkey_$credentialId",
         signCount = 0L,
         displayName = null,
         createdAt = 1_700_000_000_000L,

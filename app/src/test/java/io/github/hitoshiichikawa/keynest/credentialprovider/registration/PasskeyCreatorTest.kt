@@ -64,7 +64,7 @@ class PasskeyCreatorTest {
     }
 
     @Test
-    fun create_assignsAliasFollowingKeynestPasskeyPrefix() {
+    fun create_assignsAliasFollowingPasskeyPrefix() {
         val creator = PasskeyCreator(
             secureRandom = fixedSecureRandom(byteFill = 0x42),
             wrappingKeyProvisioner = { _, _ -> },
@@ -74,8 +74,10 @@ class PasskeyCreatorTest {
 
         // The repository alias derives from the credentialId. Same formula used
         // by both PasskeyCreator (via provisioner seam) and PasskeyRepositoryImpl.
+        // #91 design §6.2 / §7.1 / 決定 3 settled on the bare `passkey_` prefix.
         val expectedAlias = PasskeyRepositoryImpl.aliasFor(result.credentialId)
-        assertThat(expectedAlias).startsWith("keynest_passkey_")
+        assertThat(expectedAlias).startsWith("passkey_")
+        assertThat(expectedAlias).doesNotContain("keynest_passkey_")
         assertThat(result.credentialId).isEqualTo(
             Base64.encodeToString(
                 ByteArray(32) { 0x42 },

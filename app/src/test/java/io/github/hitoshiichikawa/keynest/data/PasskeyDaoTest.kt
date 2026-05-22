@@ -408,7 +408,7 @@ class PasskeyDaoTest {
         isDiscoverable: Boolean = true,
         encryptedPrivateKey: ByteArray = ByteArray(48) { 0x66 },
         privateKeyIv: ByteArray = ByteArray(12) { 0x55 },
-        keyAlias: String = "keynest_passkey_$credentialId",
+        keyAlias: String = "passkey_$credentialId",
         signCount: Long = 0L,
         displayName: String? = null,
         createdAt: Long = 1_700_000_000_000L,
