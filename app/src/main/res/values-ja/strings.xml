@@ -131,4 +131,16 @@
     <string name="autofill_dataset_create_new">+ 新しいクレデンシャル</string>
     <string name="autofill_dataset_brand_mark_a11y">KeyNest</string>
     <string name="autofill_dataset_row_lock_a11y">ロック中、生体認証が必要</string>
+
+    <!-- Issue #99 / Parent #89: PassKey 登録セレモニー。
+         NFR 6.1 により表記は「PassKey」固定 (「パスキー」「passkey」表記禁止)。
+         OS シート上の CreateEntry、PasskeyCreateActivity の確認画面、
+         BiometricPrompt 文言で使用される。 -->
+    <string name="passkey_create_entry_account_name">KeyNest に保存</string>
+    <string name="passkey_create_entry_description">PassKey として保存します</string>
+    <string name="passkey_create_confirm_title">この PassKey を保存しますか？</string>
+    <string name="passkey_create_confirm_save_button">保存</string>
+    <string name="passkey_create_confirm_cancel_button">キャンセル</string>
+    <string name="passkey_biometric_prompt_title">PassKey を保存</string>
+    <string name="passkey_biometric_prompt_subtitle">本人確認をしてください</string>
 </resources>

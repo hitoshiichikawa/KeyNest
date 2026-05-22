@@ -261,4 +261,17 @@
     <string name="autofill_dataset_create_new">+ New credential</string>
     <string name="autofill_dataset_brand_mark_a11y">KeyNest</string>
     <string name="autofill_dataset_row_lock_a11y">Locked, biometric authentication required</string>
+
+    <!-- Issue #99 / Parent #89: PassKey registration ceremony.
+         NFR 6.1 mandates the "PassKey" spelling (no "passkey" lowercase, no
+         "パスキー" katakana). Strings cover the CreateEntry shown in the OS
+         sheet, the confirmation screen inside PasskeyCreateActivity, and the
+         BiometricPrompt title/subtitle. -->
+    <string name="passkey_create_entry_account_name">Save to KeyNest</string>
+    <string name="passkey_create_entry_description">Save as a PassKey</string>
+    <string name="passkey_create_confirm_title">Save this PassKey?</string>
+    <string name="passkey_create_confirm_save_button">Save</string>
+    <string name="passkey_create_confirm_cancel_button">Cancel</string>
+    <string name="passkey_biometric_prompt_title">Save PassKey</string>
+    <string name="passkey_biometric_prompt_subtitle">Confirm your identity</string>
 </resources>
