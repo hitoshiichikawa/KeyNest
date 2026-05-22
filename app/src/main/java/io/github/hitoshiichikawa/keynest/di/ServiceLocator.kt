@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
+import io.github.hitoshiichikawa.keynest.credentialprovider.authentication.GetEntryBuilder
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.CreateEntryBuilder
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.ExcludeCredentialDetector
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.PasskeyCreator
@@ -129,6 +130,19 @@ object ServiceLocator {
      */
     internal val excludeCredentialDetector: ExcludeCredentialDetector by lazy {
         ExcludeCredentialDetector(passkeyRepository)
+    }
+
+    /**
+     * Issue #100: builds the [androidx.credentials.provider.PublicKeyCredentialEntry]
+     * list shown in the OS sheet from a single
+     * `BeginGetPublicKeyCredentialOption`. Resolves only from API 34+ code
+     * paths (KeyNestCredentialProviderService.onBeginGetCredentialRequest
+     * is `@RequiresApi(34)`).
+     */
+    @get:RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @delegate:SuppressLint("NewApi")
+    internal val getEntryBuilder: GetEntryBuilder by lazy {
+        GetEntryBuilder(requireAppContext(), passkeyRepository)
     }
 
     val keystoreKeyProvider: KeystoreKeyProvider by lazy { KeystoreKeyProvider() }
