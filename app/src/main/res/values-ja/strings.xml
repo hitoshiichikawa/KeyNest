@@ -143,4 +143,11 @@
     <string name="passkey_create_confirm_cancel_button">キャンセル</string>
     <string name="passkey_biometric_prompt_title">PassKey を保存</string>
     <string name="passkey_biometric_prompt_subtitle">本人確認をしてください</string>
+
+    <!-- Issue #100 / Parent #89: PassKey 認証セレモニー。
+         NFR 6.1 により表記は「PassKey」固定 (「パスキー」「passkey」表記禁止)。
+         PasskeyAuthActivity が PublicKeyCredentialEntry のタップ後に表示する
+         BiometricPrompt の文言。 -->
+    <string name="passkey_auth_prompt_title">PassKey で認証</string>
+    <string name="passkey_auth_prompt_subtitle">本人確認をしてください</string>
 </resources>
