@@ -283,11 +283,10 @@ class PasskeyCreateActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "KeyNest.PasskeyCreate"
 
-        @VisibleForTesting internal const val INTENT_DATA_SCHEME = "keynest"
-        @VisibleForTesting internal const val INTENT_DATA_AUTHORITY = "passkey"
-        @VisibleForTesting internal const val INTENT_DATA_PATH_PREFIX = "/create/"
+        internal const val INTENT_DATA_SCHEME = "keynest"
+        internal const val INTENT_DATA_AUTHORITY = "passkey"
+        internal const val INTENT_DATA_PATH_PREFIX = "/create/"
 
-        @VisibleForTesting
         internal fun intent(context: Context, requestToken: Int): Intent =
             Intent(context, PasskeyCreateActivity::class.java).apply {
                 data = Uri.Builder()

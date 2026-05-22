@@ -1,10 +1,12 @@
 package io.github.hitoshiichikawa.keynest.di
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.CreateEntryBuilder
+import io.github.hitoshiichikawa.keynest.credentialprovider.registration.ExcludeCredentialDetector
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.PasskeyCreator
 import io.github.hitoshiichikawa.keynest.data.KeyNestDatabase
 import io.github.hitoshiichikawa.keynest.data.repository.CredentialRepositoryImpl
@@ -100,7 +102,13 @@ object ServiceLocator {
      * `SavePasskeyRequest` carrying the plaintext private key for the
      * caller to wipe after `PasskeyRepository.save(...)`.
      */
+    // SuppressLint: the lazy initializer body is only ever executed via the
+    // @get:RequiresApi(34) accessor, but lint does not propagate the
+    // RequiresApi annotation through the lazy lambda. Suppressing here is
+    // safe because the only call sites — KeyNestCredentialProviderService
+    // and PasskeyCreateActivity — are themselves @RequiresApi(34).
     @get:RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @delegate:SuppressLint("NewApi")
     internal val passkeyCreator: PasskeyCreator by lazy { PasskeyCreator() }
 
     /**
@@ -108,7 +116,20 @@ object ServiceLocator {
      * pending intent that launches `PasskeyCreateActivity`.
      */
     @get:RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    internal val createEntryBuilder: CreateEntryBuilder by lazy { CreateEntryBuilder(requireAppContext()) }
+    @delegate:SuppressLint("NewApi")
+    internal val createEntryBuilder: CreateEntryBuilder by lazy {
+        CreateEntryBuilder(requireAppContext())
+    }
+
+    /**
+     * Issue #99: synchronous helper around
+     * `PasskeyRepository.findByCredentialId(...)` used by
+     * `KeyNestCredentialProviderService.onBeginCreateCredentialRequest`
+     * to short-circuit excludeCredentials before the OS sheet renders.
+     */
+    internal val excludeCredentialDetector: ExcludeCredentialDetector by lazy {
+        ExcludeCredentialDetector(passkeyRepository)
+    }
 
     val keystoreKeyProvider: KeystoreKeyProvider by lazy { KeystoreKeyProvider() }
 
