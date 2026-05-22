@@ -17,6 +17,9 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.verify
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -222,6 +225,30 @@ class PasskeyRepositoryTest {
         val ex = runCatching { repo.loadPrivateKey("missing") }.exceptionOrNull()
 
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+    }
+
+    // ---- Issue #101 additions (listAll delegate) ----------------------
+
+    @Test
+    fun listAll_delegatesToDao() = runTest {
+        val rows = listOf(sampleEntity("a"), sampleEntity("b"))
+        every { dao.listAll() } returns flowOf(rows)
+
+        val emitted = repo.listAll().first()
+
+        assertThat(emitted).containsExactly(*rows.toTypedArray()).inOrder()
+        verify(exactly = 1) { dao.listAll() }
+    }
+
+    @Test
+    fun listAll_emitsEmptyList_whenDaoEmits_empty() = runTest {
+        // R4.11 (b): empty table surfaces as an empty list (not null, not
+        // exception). The UI relies on this to compute EmptyKind.Initial.
+        every { dao.listAll() } returns flowOf(emptyList())
+
+        val emitted = repo.listAll().first()
+
+        assertThat(emitted).isEmpty()
     }
 
     // ---- Issue #100 signWithIncrement (Option A) -----------------------

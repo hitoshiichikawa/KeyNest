@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Room DAO for [PasskeyEntity]. Issue #91 (parent #89) — Phase 1 data layer
@@ -117,4 +118,28 @@ interface PasskeyDao {
             "WHERE credentialId = :credentialId",
     )
     suspend fun incrementSignCount(credentialId: String, timestamp: Long)
+
+    /**
+     * Observer-style list of every PassKey stored in KeyNest, ordered to match
+     * the existing per-RP queries (`listAllByRpId` / `listDiscoverableByRpId`):
+     * `lastUsedAt DESC` with NULL values pushed to the tail, then `createdAt
+     * DESC` as a stable tiebreaker.
+     *
+     * Issue #101 (Phase 4 of umbrella #89) — backs the merged
+     * password+PassKey RecyclerView in `CredentialListActivity`. Returning a
+     * [Flow] (instead of a `suspend` snapshot) means Room's invalidation
+     * tracker re-emits the list whenever the registration ceremony (#99) or
+     * the authentication ceremony (#100) writes to the `passkeys` table, so
+     * the credential list refreshes automatically without the Activity
+     * having to re-query.
+     *
+     * The result includes both discoverable (`isDiscoverable = 1`) and
+     * non-discoverable rows — the credential list shows every stored
+     * PassKey regardless of resident-key flag (umbrella #89 確定事項 D-7).
+     */
+    @Query(
+        "SELECT * FROM passkeys " +
+            "ORDER BY (lastUsedAt IS NULL) ASC, lastUsedAt DESC, createdAt DESC",
+    )
+    fun listAll(): Flow<List<PasskeyEntity>>
 }
