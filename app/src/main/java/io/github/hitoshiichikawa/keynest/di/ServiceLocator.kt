@@ -5,8 +5,10 @@ import androidx.biometric.BiometricManager
 import io.github.hitoshiichikawa.keynest.data.KeyNestDatabase
 import io.github.hitoshiichikawa.keynest.data.repository.CredentialRepositoryImpl
 import io.github.hitoshiichikawa.keynest.data.repository.DetectedFieldRepositoryImpl
+import io.github.hitoshiichikawa.keynest.data.repository.PasskeyRepositoryImpl
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.repository.DetectedFieldRepository
+import io.github.hitoshiichikawa.keynest.domain.repository.PasskeyRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.ClearVaultUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DuplicateCredentialUseCase
@@ -69,6 +71,17 @@ object ServiceLocator {
      */
     val detectedFieldRepository: DetectedFieldRepository by lazy {
         DetectedFieldRepositoryImpl(database.detectedFieldDao())
+    }
+
+    /**
+     * Issue #99 (parent #89) — registration ceremony backing store.
+     * Inlined ahead of the umbrella `PasskeyRepository` Issue (#107) so the
+     * PassKey provider Service / `PasskeyCreateActivity` have a real
+     * persistence boundary. Shape mirrors #107 design.md §6.x for a
+     * conflict-free merge when #107 lands.
+     */
+    val passkeyRepository: PasskeyRepository by lazy {
+        PasskeyRepositoryImpl(database.passkeyDao())
     }
 
     val keystoreKeyProvider: KeystoreKeyProvider by lazy { KeystoreKeyProvider() }
