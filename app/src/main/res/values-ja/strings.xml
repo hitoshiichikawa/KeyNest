@@ -150,4 +150,13 @@
          BiometricPrompt の文言。 -->
     <string name="passkey_auth_prompt_title">PassKey で認証</string>
     <string name="passkey_auth_prompt_subtitle">本人確認をしてください</string>
+
+    <!-- Issue #101 / Parent #89: 統合 credential 一覧画面の PassKey 行関連。
+         NFR 6.1 / D-1 により「PassKey」表記固定 (「passkey」「パスキー」
+         「Passkey」表記は禁止)。 -->
+    <string name="credential_list_passkey_kind_label">PassKey</string>
+    <string name="credential_list_password_kind_label">パスワード</string>
+    <string name="credential_list_passkey_unknown_user">(ユーザー名なし)</string>
+    <string name="credential_list_passkey_tap_v1_message">PassKey の個別管理は今後のアップデートで提供予定です。</string>
+    <string name="credential_list_passkey_a11y_icon">PassKey</string>
 </resources>

@@ -76,4 +76,13 @@
     <string name="passkey_create_confirm_cancel_button">Cancel</string>
     <string name="passkey_biometric_prompt_title">Save PassKey</string>
     <string name="passkey_biometric_prompt_subtitle">Confirm your identity</string>
+
+    <!-- Issue #101 / Parent #89: integrated credential list — PassKey
+         row strings (en override). NFR 6.1 / D-1 mandates the "PassKey"
+         spelling. -->
+    <string name="credential_list_passkey_kind_label">PassKey</string>
+    <string name="credential_list_password_kind_label">Password</string>
+    <string name="credential_list_passkey_unknown_user">(no user)</string>
+    <string name="credential_list_passkey_tap_v1_message">PassKey management is coming in a later release.</string>
+    <string name="credential_list_passkey_a11y_icon">PassKey</string>
 </resources>
