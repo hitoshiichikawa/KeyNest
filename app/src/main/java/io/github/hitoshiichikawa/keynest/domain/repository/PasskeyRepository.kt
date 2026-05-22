@@ -39,4 +39,54 @@ interface PasskeyRepository {
      * (`SQLiteException`) propagate to the caller.
      */
     suspend fun delete(credentialId: String): DeletePasskeyResult
+
+    // ---- Issue #100 (authentication ceremony) additions ----------------
+    //
+    // Backward-compatible — existing call sites (PasskeyCreateActivity /
+    // KeyNestCredentialProviderService.onBeginCreateCredentialRequest) are
+    // unaffected. design §4.5 / §6 covers the contract; the implementations
+    // live in PasskeyRepositoryImpl.
+
+    /**
+     * Discoverable PassKey の一覧を rpId で抽出する (usernameless login 経路 /
+     * Issue #100 R1.1 / design §4.5.1). 並び順は DAO の `listDiscoverableByRpId`
+     * の契約 (lastUsedAt DESC nulls last, createdAt DESC) に従う。
+     */
+    suspend fun listDiscoverableByRpId(rpId: String): List<PasskeyEntity>
+
+    /**
+     * `(privateKeyIv, encryptedPrivateKey)` を `keynest_passkey_<credentialId>`
+     * alias の `KeystoreKeyProvider` + `AesGcmCipher` で AES-GCM 復号して
+     * **平文 PKCS#8** byte 配列を返す (Issue #100 R3.1 / design §4.5.1).
+     *
+     * 呼び出し側 (`PasskeyAuthActivity`) は使用直後に `ByteArray.fill(0)` で
+     * wipe する責務を負う (NFR 1.1).
+     *
+     * @throws IllegalStateException 該当 credentialId が存在しない場合
+     * @throws javax.crypto.AEADBadTagException ciphertext / IV の改竄を GCM auth tag が検出した場合
+     */
+    suspend fun loadPrivateKey(credentialId: String): ByteArray
+
+    /**
+     * Option A (Issue #100 決定 3) を **Repository 内で原子化** するための
+     * 高階関数 API (design §4.5.1 / §6.1 案 C).
+     *
+     * フロー:
+     *  1. Room transaction を開始する。
+     *  2. DAO の `incrementSignCount(credentialId, nowMillis())` を呼んで signCount を +1。
+     *  3. 新 signCount を SELECT で取得し [signer] に渡す。
+     *  4. [signer] が結果を返したら transaction を commit してその戻り値を返す。
+     *  5. [signer] が throw / cancel したら transaction を rollback して例外を伝播する
+     *     (signCount は元値に戻る)。
+     *
+     * 失敗時ロールバックを呼び出し側で書き忘れるリスクをなくすため、高階関数
+     * 形式 (案 C) を採用した (design §6.1)。
+     *
+     * @param signer 新 signCount を受け取って assertion bytes (任意の戻り値) を生成するブロック。
+     * @return [signer] の戻り値。例外時は [signer] が投げた例外をそのまま伝播。
+     */
+    suspend fun <T> signWithIncrement(
+        credentialId: String,
+        signer: suspend (newSignCount: Long) -> T,
+    ): T
 }

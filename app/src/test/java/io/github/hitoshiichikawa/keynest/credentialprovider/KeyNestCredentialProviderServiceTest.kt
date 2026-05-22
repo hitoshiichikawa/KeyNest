@@ -22,6 +22,9 @@ import androidx.credentials.provider.ProviderClearCredentialStateRequest
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
+import androidx.credentials.provider.BeginGetPublicKeyCredentialOption
+import androidx.credentials.provider.PublicKeyCredentialEntry
+import io.github.hitoshiichikawa.keynest.credentialprovider.authentication.GetEntryBuilder
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.CreateEntryBuilder
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.ExcludeCredentialDetector
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
@@ -62,6 +65,7 @@ class KeyNestCredentialProviderServiceTest {
 
     private val detector = mockk<ExcludeCredentialDetector>()
     private val createEntryBuilder = mockk<CreateEntryBuilder>()
+    private val getEntryBuilder = mockk<GetEntryBuilder>()
 
     @Before
     fun setUp() {
@@ -72,8 +76,10 @@ class KeyNestCredentialProviderServiceTest {
         every { ServiceLocator.initialize(any()) } returns Unit
         every { ServiceLocator.excludeCredentialDetector } returns detector
         every { ServiceLocator.createEntryBuilder } returns createEntryBuilder
+        every { ServiceLocator.getEntryBuilder } returns getEntryBuilder
         every { createEntryBuilder.build(any()) } returns fakeCreateEntry()
         every { detector.containsAny(any()) } returns false
+        every { getEntryBuilder.build(any()) } returns emptyList()
     }
 
     @After
@@ -198,11 +204,12 @@ class KeyNestCredentialProviderServiceTest {
         verify(exactly = 0) { createEntryBuilder.build(any()) }
     }
 
-    // ---- #90 stubs preserved ---------------------------------------------
+    // ---- #100 onBeginGetCredentialRequest --------------------------------
 
     @Test
-    fun onBeginGetCredentialRequest_stillReturnsEmptyResponse() {
+    fun onBeginGetCredentialRequest_noPublicKeyOption_returnsEmptyResponse() {
         val request = mockk<BeginGetCredentialRequest>(relaxed = true)
+        every { request.beginGetCredentialOptions } returns emptyList()
         val callback = mockk<OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>>(relaxed = true)
         val resultSlot = slot<BeginGetCredentialResponse>()
 
@@ -214,7 +221,108 @@ class KeyNestCredentialProviderServiceTest {
         assertThat(resultSlot.captured.actions).isEmpty()
         assertThat(resultSlot.captured.authenticationActions).isEmpty()
         assertThat(resultSlot.captured.remoteEntry).isNull()
+        verify(exactly = 0) { getEntryBuilder.build(any()) }
     }
+
+    @Test
+    fun onBeginGetCredentialRequest_publicKeyAllowCredentialsEmpty_returnsDiscoverableEntries() {
+        val option = publicKeyGetOption(allowCredentials = emptyList())
+        val request = mockk<BeginGetCredentialRequest>(relaxed = true)
+        every { request.beginGetCredentialOptions } returns listOf(option)
+        // Return 3 entries to mimic listDiscoverableByRpId hitting 3 rows.
+        every { getEntryBuilder.build(option) } returns listOf(
+            fakePublicKeyEntry(option, "id1"),
+            fakePublicKeyEntry(option, "id2"),
+            fakePublicKeyEntry(option, "id3"),
+        )
+        val callback = mockk<OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>>(relaxed = true)
+        val resultSlot = slot<BeginGetCredentialResponse>()
+
+        service.onBeginGetCredentialRequest(request, CancellationSignal(), callback)
+
+        verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
+        verify(exactly = 0) { callback.onError(any()) }
+        assertThat(resultSlot.captured.credentialEntries).hasSize(3)
+        verify(exactly = 1) { getEntryBuilder.build(option) }
+    }
+
+    @Test
+    fun onBeginGetCredentialRequest_publicKeyAllowCredentialsSpecified_returnsExistingMatches() {
+        val option = publicKeyGetOption(allowCredentials = listOf("id1", "id2", "id3"))
+        val request = mockk<BeginGetCredentialRequest>(relaxed = true)
+        every { request.beginGetCredentialOptions } returns listOf(option)
+        // Mimic GetEntryBuilder returning only the 2 ids that existed.
+        every { getEntryBuilder.build(option) } returns listOf(
+            fakePublicKeyEntry(option, "id1"),
+            fakePublicKeyEntry(option, "id3"),
+        )
+        val callback = mockk<OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>>(relaxed = true)
+        val resultSlot = slot<BeginGetCredentialResponse>()
+
+        service.onBeginGetCredentialRequest(request, CancellationSignal(), callback)
+
+        verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
+        verify(exactly = 0) { callback.onError(any()) }
+        assertThat(resultSlot.captured.credentialEntries).hasSize(2)
+    }
+
+    @Test
+    fun onBeginGetCredentialRequest_publicKeyZeroCandidates_returnsEmptyResponse() {
+        val option = publicKeyGetOption(allowCredentials = emptyList())
+        val request = mockk<BeginGetCredentialRequest>(relaxed = true)
+        every { request.beginGetCredentialOptions } returns listOf(option)
+        every { getEntryBuilder.build(option) } returns emptyList()
+        val callback = mockk<OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>>(relaxed = true)
+        val resultSlot = slot<BeginGetCredentialResponse>()
+
+        service.onBeginGetCredentialRequest(request, CancellationSignal(), callback)
+
+        verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
+        verify(exactly = 0) { callback.onError(any()) }
+        assertThat(resultSlot.captured.credentialEntries).isEmpty()
+    }
+
+    @Test
+    fun onBeginGetCredentialRequest_passwordOptionOnly_returnsEmptyResponse_andDoesNotCallGetEntryBuilder() {
+        // A non-PublicKey option list (simulated by an empty filterIsInstance result)
+        // must result in an empty response without invoking GetEntryBuilder.
+        val request = mockk<BeginGetCredentialRequest>(relaxed = true)
+        every { request.beginGetCredentialOptions } returns emptyList()
+        val callback = mockk<OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>>(relaxed = true)
+        val resultSlot = slot<BeginGetCredentialResponse>()
+
+        service.onBeginGetCredentialRequest(request, CancellationSignal(), callback)
+
+        verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
+        assertThat(resultSlot.captured.credentialEntries).isEmpty()
+        verify(exactly = 0) { getEntryBuilder.build(any()) }
+    }
+
+    @Test
+    fun onBeginGetCredentialRequest_multiplePublicKeyOptions_aggregatesEntries() {
+        val optionA = publicKeyGetOption(allowCredentials = listOf("a"))
+        val optionB = publicKeyGetOption(allowCredentials = listOf("b1", "b2"))
+        val request = mockk<BeginGetCredentialRequest>(relaxed = true)
+        every { request.beginGetCredentialOptions } returns listOf(optionA, optionB)
+        every { getEntryBuilder.build(optionA) } returns listOf(
+            fakePublicKeyEntry(optionA, "a"),
+        )
+        every { getEntryBuilder.build(optionB) } returns listOf(
+            fakePublicKeyEntry(optionB, "b1"),
+            fakePublicKeyEntry(optionB, "b2"),
+        )
+        val callback = mockk<OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>>(relaxed = true)
+        val resultSlot = slot<BeginGetCredentialResponse>()
+
+        service.onBeginGetCredentialRequest(request, CancellationSignal(), callback)
+
+        verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
+        assertThat(resultSlot.captured.credentialEntries).hasSize(3)
+        verify(exactly = 1) { getEntryBuilder.build(optionA) }
+        verify(exactly = 1) { getEntryBuilder.build(optionB) }
+    }
+
+    // ---- #90 stubs preserved ---------------------------------------------
 
     @Test
     fun onClearCredentialStateRequest_stillReturnsNull() {
@@ -271,6 +379,53 @@ class KeyNestCredentialProviderServiceTest {
         )
         return CreateEntry.Builder("KeyNest", pendingIntent)
             .setDescription("test entry")
+            .build()
+    }
+
+    private fun publicKeyGetOption(
+        allowCredentials: List<String>,
+        rpId: String = "example.com",
+    ): BeginGetPublicKeyCredentialOption {
+        val allow = if (allowCredentials.isEmpty()) {
+            ""
+        } else {
+            val items = allowCredentials.joinToString(",") {
+                "{\"type\":\"public-key\",\"id\":\"$it\"}"
+            }
+            ",\"allowCredentials\":[$items]"
+        }
+        val json = """
+            {
+              "rpId":"$rpId",
+              "challenge":"Y2hhbGxlbmdl"
+              $allow
+            }
+        """.trimIndent()
+        return BeginGetPublicKeyCredentialOption(
+            candidateQueryData = Bundle(),
+            id = "publicKey:test",
+            requestJson = json,
+            clientDataHash = null,
+        )
+    }
+
+    private fun fakePublicKeyEntry(
+        option: BeginGetPublicKeyCredentialOption,
+        credentialId: String,
+    ): PublicKeyCredentialEntry {
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            credentialId.hashCode(),
+            Intent(),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+        return PublicKeyCredentialEntry.Builder(
+            context,
+            "alice@example.com ($credentialId)",
+            pendingIntent,
+            option,
+        )
+            .setDisplayName("Example")
             .build()
     }
 }
