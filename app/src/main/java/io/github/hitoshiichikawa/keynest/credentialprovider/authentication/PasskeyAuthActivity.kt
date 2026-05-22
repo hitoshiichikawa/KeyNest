@@ -301,8 +301,11 @@ class PasskeyAuthActivity : AppCompatActivity() {
          * encoded in the data Uri (`keynest://passkey/auth/<credentialId>`).
          * Mirrors `PasskeyCreateActivity.intent(...)` so concurrent entries
          * stay binder-distinct under `FLAG_UPDATE_CURRENT`.
+         *
+         * Called from production code ([GetEntryBuilder.build]) and tests
+         * — kept `internal` for module visibility but no longer marked
+         * `@VisibleForTesting`.
          */
-        @VisibleForTesting
         internal fun intent(context: Context, credentialId: String): Intent =
             Intent(context, PasskeyAuthActivity::class.java).apply {
                 data = Uri.Builder()
@@ -313,7 +316,6 @@ class PasskeyAuthActivity : AppCompatActivity() {
             }
 
         /** PendingIntent factory used by [GetEntryBuilder]. */
-        @VisibleForTesting
         internal fun pendingIntent(context: Context, credentialId: String): PendingIntent =
             PendingIntent.getActivity(
                 context,
