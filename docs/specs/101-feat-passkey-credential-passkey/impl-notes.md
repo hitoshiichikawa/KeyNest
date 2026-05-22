@@ -11,7 +11,7 @@
 | Task | commit | 主成果 |
 |---|---|---|
 | T-01 | 6a396cd | DAO + Repository `listAll()` + 単体テスト |
-| T-02 | dde0937 | sealed `CredentialListItem` + `PasskeyDisplayModel` + `KindFilter` + Sorting + UseCase |
+| T-02 | 9288a55 | sealed `CredentialListItem` + `PasskeyDisplayModel` + `KindFilter` + Sorting + UseCase |
 | T-03〜T-07 | dde0937 | ViewModel/UiState 拡張 + Adapter multi-viewType + Activity wire-up + drawable / strings |
 | T-08 + T-10 | ceae157 | 新規 ViewModel/Mapper/Sort テスト + 既存テスト型追従 |
 | T-09 | 981f3ba | Adapter Robolectric Test（15 ケース） |
@@ -75,7 +75,7 @@ checkbox を **タスク見出し側に持たない**。書き換え禁止領域
 - テスト: T-08 で集約（T-02 単体ではコンパイル確認のみ）
 - 設計との差分: なし
 - 確認事項: なし
-- commit: dde0937（T-03〜T-07 と統合）
+- commit: 9288a55
 
 ## Task T-03〜T-07: ViewModel/UiState/Adapter/Activity/ServiceLocator + drawable + strings
 
