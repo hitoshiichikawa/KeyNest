@@ -103,6 +103,21 @@
             android:parentActivityName=".ui.settings.SettingsActivity" />
 
         <!--
+            Issue #99 / Parent #89:
+            PassKey 登録セレモニーで CreateEntry の pending intent から起動される
+            Activity。OS Credential Manager から呼ばれる前提のため exported=false。
+            recents から除外し、透過テーマで既存 AutofillUnlockActivity と同等の
+            UX を取る。@RequiresApi(34) なクラスのため tools:targetApi も付与。
+        -->
+        <activity
+            android:name=".credentialprovider.registration.PasskeyCreateActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.KeyNest.Translucent"
+            tools:targetApi="34" />
+
+        <!--
             Issue #90 / Parent #89:
             CredentialProviderService の最小骨格。Android 14 (API 34) 以降の OS
             の「パスワードと PassKey」設定画面に KeyNest を PassKey プロバイダ

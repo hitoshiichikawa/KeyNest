@@ -6,31 +6,45 @@ import android.os.OutcomeReceiver
 import androidx.annotation.RequiresApi
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.CreateCredentialException
+import androidx.credentials.exceptions.CreateCredentialNoCreateOptionException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.provider.BeginCreateCredentialRequest
 import androidx.credentials.provider.BeginCreateCredentialResponse
+import androidx.credentials.provider.BeginCreatePublicKeyCredentialRequest
 import androidx.credentials.provider.BeginGetCredentialRequest
 import androidx.credentials.provider.BeginGetCredentialResponse
 import androidx.credentials.provider.CredentialProviderService
 import androidx.credentials.provider.ProviderClearCredentialStateRequest
+import io.github.hitoshiichikawa.keynest.di.ServiceLocator
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * KeyNest の PassKey プロバイダ実装 (Phase 1 骨格 / Issue #90).
+ * KeyNest の PassKey プロバイダ実装。
  *
- * 本 Issue (#90) ではすべての callback がエントリ 0 件の成功応答を返す。
- * 登録 / 認証セレモニーの実体は後続 Issue (#89 分割案 3 / 4) で
- * `onBeginCreateCredentialRequest` / `onBeginGetCredentialRequest` を差し替える形で
- * 実装される。
+ * Issue #99 (parent #89) — registration ceremony implementation. The
+ * `onBeginCreateCredentialRequest` callback now:
+ *  1. returns an empty response for non-PublicKey requests (password etc.
+ *     stay on the autofill route);
+ *  2. parses `excludeCredentials` from `requestJson` and answers
+ *     `CreateCredentialNoCreateOptionException` if any id is already in
+ *     the KeyNest vault (req 5.2 / 5.3 / 決定 3);
+ *  3. otherwise builds a single [androidx.credentials.provider.CreateEntry]
+ *     whose pending intent launches `PasskeyCreateActivity`.
  *
- * OS は Android 14 (API 34) 以降でのみ本 Service を bind する。class 全体に
- * `@RequiresApi(34)` を付与し、API 33 以下での誤参照を lint で検知可能にする
- * (design §6.2 / NFR 4.2)。runtime SDK_INT ガードは追加しない (design §6.2 で
- * dead-branch を作らない方針を確定)。
+ * `onBeginGetCredentialRequest` / `onClearCredentialStateRequest` are
+ * intentionally left at the #90 stub — the authentication ceremony / state
+ * APIs live behind the umbrella #89 分割案 4 / 7 Issues.
  *
- * NFR 1.3: callback が受け取る `BeginCreateCredentialRequest` /
- * `BeginGetCredentialRequest` / `ProviderClearCredentialStateRequest` 内の
- * 呼び出し元 package / origin を Logcat に出力しない。本実装はそもそも一切ログ
- * 出力しないため自動的に成立する。
+ * NFR 5.3: the callback returns synchronously without blocking on long
+ * crypto operations — heavy lifting (keypair generation) lives in
+ * `PasskeyCreateActivity`. The repository lookup that backs
+ * `excludeCredentials` is bounded (point lookup × small N) so the
+ * `runBlocking(IO)` inside [io.github.hitoshiichikawa.keynest.credentialprovider.registration.ExcludeCredentialDetector]
+ * stays well within ANR limits (design §4.1.1).
  */
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 class KeyNestCredentialProviderService : CredentialProviderService() {
@@ -40,10 +54,32 @@ class KeyNestCredentialProviderService : CredentialProviderService() {
         cancellationSignal: CancellationSignal,
         callback: OutcomeReceiver<BeginCreateCredentialResponse, CreateCredentialException>,
     ) {
-        // Phase 1 (req 3.2): エントリ 0 件の成功応答を返す。
-        // 後続 Issue (#89 分割案 3) で BeginCreateCredentialResponse.Builder().addCreateEntry(...)
-        // 経由の応答に差し替える。
-        callback.onResult(BeginCreateCredentialResponse())
+        // (a) Defensive ServiceLocator init — the framework may bind the
+        // Service before Application.onCreate completes on a hostile boot.
+        ServiceLocator.initialize(applicationContext)
+
+        // (b) PublicKey 以外は本 Issue では非対応 — 空応答で返す
+        val publicKeyRequest = request as? BeginCreatePublicKeyCredentialRequest
+            ?: return callback.onResult(BeginCreateCredentialResponse())
+
+        // (c) excludeCredentials を生体認証より前にチェック (Req 5.3)
+        val excludeIds = extractExcludeCredentialIds(publicKeyRequest.requestJson)
+        if (excludeIds.isNotEmpty() &&
+            ServiceLocator.excludeCredentialDetector.containsAny(excludeIds)
+        ) {
+            callback.onError(
+                CreateCredentialNoCreateOptionException(
+                    "PassKey for one of the supplied credential ids already exists in KeyNest",
+                ),
+            )
+            return
+        }
+
+        // (d) CreateEntry を 1 件構築して返す
+        val response = BeginCreateCredentialResponse.Builder()
+            .addCreateEntry(ServiceLocator.createEntryBuilder.build(publicKeyRequest))
+            .build()
+        callback.onResult(response)
     }
 
     override fun onBeginGetCredentialRequest(
@@ -51,9 +87,7 @@ class KeyNestCredentialProviderService : CredentialProviderService() {
         cancellationSignal: CancellationSignal,
         callback: OutcomeReceiver<BeginGetCredentialResponse, GetCredentialException>,
     ) {
-        // Phase 1 (req 3.3): credentialEntries / authenticationActions / actions / remoteEntry
-        // をすべて空のまま build。後続 Issue (#89 分割案 4) で addCredentialEntry(...) 経由の
-        // 応答に差し替える。
+        // #90 stub retained — authentication ceremony is #89 分割案 4.
         callback.onResult(BeginGetCredentialResponse.Builder().build())
     }
 
@@ -62,7 +96,28 @@ class KeyNestCredentialProviderService : CredentialProviderService() {
         cancellationSignal: CancellationSignal,
         callback: OutcomeReceiver<Void?, ClearCredentialException>,
     ) {
-        // Phase 1 (req 3.4): 状態を持たないため何も変更せず正常終了応答を返す。
+        // #90 stub retained — clear-state is owned by the settings Issue.
         callback.onResult(null)
+    }
+
+    private fun extractExcludeCredentialIds(requestJson: String): List<String> {
+        return try {
+            val root = json.parseToJsonElement(requestJson).jsonObject
+            val excludeArr = root["excludeCredentials"]?.jsonArray ?: return emptyList()
+            excludeArr.mapNotNull { element ->
+                element.jsonObject["id"]?.jsonPrimitive?.contentOrNull
+            }
+        } catch (_: Throwable) {
+            // Defensive: a malformed requestJson should NOT block registration.
+            // Fall through and let the rest of the callback proceed.
+            emptyList()
+        }
+    }
+
+    companion object {
+        private val json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
     }
 }

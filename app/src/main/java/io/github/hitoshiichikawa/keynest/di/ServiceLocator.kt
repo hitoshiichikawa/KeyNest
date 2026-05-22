@@ -1,12 +1,20 @@
 package io.github.hitoshiichikawa.keynest.di
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
+import io.github.hitoshiichikawa.keynest.credentialprovider.registration.CreateEntryBuilder
+import io.github.hitoshiichikawa.keynest.credentialprovider.registration.ExcludeCredentialDetector
+import io.github.hitoshiichikawa.keynest.credentialprovider.registration.PasskeyCreator
 import io.github.hitoshiichikawa.keynest.data.KeyNestDatabase
 import io.github.hitoshiichikawa.keynest.data.repository.CredentialRepositoryImpl
 import io.github.hitoshiichikawa.keynest.data.repository.DetectedFieldRepositoryImpl
+import io.github.hitoshiichikawa.keynest.data.repository.PasskeyRepositoryImpl
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.repository.DetectedFieldRepository
+import io.github.hitoshiichikawa.keynest.domain.repository.PasskeyRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.ClearVaultUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DuplicateCredentialUseCase
@@ -69,6 +77,58 @@ object ServiceLocator {
      */
     val detectedFieldRepository: DetectedFieldRepository by lazy {
         DetectedFieldRepositoryImpl(database.detectedFieldDao())
+    }
+
+    /**
+     * Issue #99 (parent #89) — registration ceremony backing store.
+     * Inlined ahead of the umbrella `PasskeyRepository` Issue (#107) so the
+     * PassKey provider Service / `PasskeyCreateActivity` have a real
+     * persistence boundary. Shape mirrors #107 design.md §6.x for a
+     * conflict-free merge when #107 lands.
+     */
+    val passkeyRepository: PasskeyRepository by lazy {
+        PasskeyRepositoryImpl(database.passkeyDao())
+    }
+
+    // ---- Issue #99 PassKey registration ceremony singletons -----------
+    //
+    // These are only resolved from API 34+ code paths
+    // (KeyNestCredentialProviderService / PasskeyCreateActivity, both
+    // `@RequiresApi(34)`), so the lazy fields themselves are gated.
+
+    /**
+     * Issue #99: core of the WebAuthn registration ceremony — generates the
+     * ES256 keypair, COSE_Key, attestationObject and the
+     * `SavePasskeyRequest` carrying the plaintext private key for the
+     * caller to wipe after `PasskeyRepository.save(...)`.
+     */
+    // SuppressLint: the lazy initializer body is only ever executed via the
+    // @get:RequiresApi(34) accessor, but lint does not propagate the
+    // RequiresApi annotation through the lazy lambda. Suppressing here is
+    // safe because the only call sites — KeyNestCredentialProviderService
+    // and PasskeyCreateActivity — are themselves @RequiresApi(34).
+    @get:RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @delegate:SuppressLint("NewApi")
+    internal val passkeyCreator: PasskeyCreator by lazy { PasskeyCreator() }
+
+    /**
+     * Issue #99: builds the `CreateEntry` shown in the OS sheet and the
+     * pending intent that launches `PasskeyCreateActivity`.
+     */
+    @get:RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @delegate:SuppressLint("NewApi")
+    internal val createEntryBuilder: CreateEntryBuilder by lazy {
+        CreateEntryBuilder(requireAppContext())
+    }
+
+    /**
+     * Issue #99: synchronous helper around
+     * `PasskeyRepository.findByCredentialId(...)` used by
+     * `KeyNestCredentialProviderService.onBeginCreateCredentialRequest`
+     * to short-circuit excludeCredentials before the OS sheet renders.
+     */
+    internal val excludeCredentialDetector: ExcludeCredentialDetector by lazy {
+        ExcludeCredentialDetector(passkeyRepository)
     }
 
     val keystoreKeyProvider: KeystoreKeyProvider by lazy { KeystoreKeyProvider() }
