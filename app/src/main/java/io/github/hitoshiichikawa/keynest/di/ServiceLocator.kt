@@ -87,7 +87,7 @@ object ServiceLocator {
      * conflict-free merge when #107 lands.
      */
     val passkeyRepository: PasskeyRepository by lazy {
-        PasskeyRepositoryImpl(database.passkeyDao())
+        PasskeyRepositoryImpl(database.passkeyDao(), database)
     }
 
     // ---- Issue #99 PassKey registration ceremony singletons -----------
