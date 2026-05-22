@@ -340,6 +340,155 @@ class PasskeyRepositoryTest {
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
     }
 
+    // ---- Issue #107 T-10 spec gap closes -------------------------------
+    //
+    // The cases below complete tasks.md §T-10 (design.md §9.4.2) by covering
+    // the four scenarios the legacy #99 / #100 test fixture did not assert
+    // on directly:
+    //
+    //   - save_thenLoadPrivateKey_roundTripsPlaintext
+    //     (#9.4.2 case 1)
+    //   - save_multipleCredentialIds_usesDistinctAliases
+    //     (#9.4.2 case 7)
+    //   - findByCredentialId_returnsNull_whenAbsent (#9.4.2 case 8)
+    //   - loadPrivateKey_throwsAEADBadTagException_whenCiphertextTampered
+    //     (#9.4.2 case 6 — req 5.10 / NFR 2.5: silent fail禁止)
+    //   - save_thenDelete_removesRowFromDao_andTouchesKeystore
+    //     (#9.4.2 case 4 — pre-existing tests verified the result type only)
+
+    @Test
+    fun save_thenLoadPrivateKey_roundTripsPlaintext() = runTest {
+        // Spec §T-10 #9.4.2 case 1: full encrypt → decrypt loop preserves
+        // the plaintext private key. We drive both ends with a real
+        // in-memory DAO so the entity ciphertext/IV round-trip is end to end;
+        // the cipher itself is replaced with an identity stand-in (cipherFactory
+        // returns a cipher that echoes the plaintext) so the test does NOT
+        // depend on AndroidKeyStore.
+        val plaintext = ByteArray(64) { (it * 17).toByte() }
+        val identityCipher = object : AesGcmCipher(roomProvider) {
+            override fun encrypt(plaintext: ByteArray): EncryptedBlob =
+                EncryptedBlob(iv = ByteArray(12) { 0x42 }, ciphertext = plaintext.copyOf())
+            override fun decrypt(blob: EncryptedBlob): ByteArray = blob.ciphertext.copyOf()
+        }
+        val rtRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { identityCipher },
+            keyStoreLoader = { roomKeyStore },
+            nowMillisProvider = { roomNow },
+        )
+
+        rtRepo.save(sampleSaveRequest(credentialId = "rt-1", privateKey = plaintext))
+        val decrypted = rtRepo.loadPrivateKey("rt-1")
+
+        assertThat(decrypted).isEqualTo(plaintext)
+    }
+
+    @Test
+    fun save_multipleCredentialIds_usesDistinctAliases() = runTest {
+        // Spec §T-10 #9.4.2 case 7: every save must request a fresh
+        // KeystoreKeyProvider keyed by its own alias. We collect the
+        // alias strings via a real factory wrapper and assert two
+        // independent saves produce two distinct entries.
+        val aliasLog = mutableListOf<String>()
+        val multiRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { alias ->
+                aliasLog += alias
+                roomProvider
+            },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { roomKeyStore },
+            nowMillisProvider = { roomNow },
+        )
+        every { roomCipher.encrypt(any()) } returns
+            EncryptedBlob(iv = ByteArray(12) { 0x00 }, ciphertext = ByteArray(48) { 0x00 })
+
+        multiRepo.save(sampleSaveRequest(credentialId = "id-A"))
+        multiRepo.save(
+            // Different userHandle so the (rpId, userHandle) UNIQUE index
+            // does not fire on the second insert.
+            sampleSaveRequest(credentialId = "id-B").copy(
+                userHandle = ByteArray(16) { 0x11 },
+            ),
+        )
+
+        assertThat(aliasLog).containsExactly(
+            "keynest_passkey_id-A",
+            "keynest_passkey_id-B",
+        ).inOrder()
+        // And the persisted rows carry the matching aliases:
+        assertThat(roomDao.findByCredentialId("id-A")?.keyAlias)
+            .isEqualTo("keynest_passkey_id-A")
+        assertThat(roomDao.findByCredentialId("id-B")?.keyAlias)
+            .isEqualTo("keynest_passkey_id-B")
+    }
+
+    @Test
+    fun findByCredentialId_returnsNull_whenAbsent() = runTest {
+        // Spec §T-10 #9.4.2 case 8: lookup miss must surface as null, not
+        // an exception. The mock-based fixture already verifies the
+        // happy path; this gap covers the negative branch through the real
+        // DAO so the contract holds end to end.
+        val result = roomRepo.findByCredentialId("does-not-exist")
+
+        assertThat(result).isNull()
+    }
+
+    @Test
+    fun loadPrivateKey_propagatesAeadBadTag_whenCiphertextTampered() = runTest {
+        // Spec §T-10 #9.4.2 case 6 / req 5.10: the cipher's auth-tag
+        // verification failure MUST propagate to the caller (silent fail
+        // returning null is forbidden — design §6.4 / NFR 2.5).
+        //
+        // We do not exercise the real AEADBadTagException here because the
+        // identity-cipher used elsewhere in this file is intentionally not
+        // tied to AndroidKeyStore; instead we mock the cipher.decrypt() call
+        // to throw the exact JCE exception the production stack would emit
+        // when a tampered ciphertext fails GCM auth.
+        roomDao.insert(sampleEntity("tampered"))
+        val bad = javax.crypto.AEADBadTagException("tag mismatch")
+        every { roomCipher.decrypt(any()) } throws bad
+
+        val ex = runCatching { roomRepo.loadPrivateKey("tampered") }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(javax.crypto.AEADBadTagException::class.java)
+        assertThat(ex).isSameInstanceAs(bad)
+    }
+
+    @Test
+    fun delete_removesRow_fromUnderlyingDao_andTouchesKeystoreAlias() = runTest {
+        // Spec §T-10 #9.4.2 case 4: pre-existing mock-based tests only
+        // verified the DeletePasskeyResult; this gap proves the row really
+        // disappears from the DAO afterwards and that the keystore alias
+        // delete is attempted with the keynest_passkey_<id> alias.
+        val deletedAliases = mutableListOf<String>()
+        val mockKs = mockk<KeyStore>()
+        every { mockKs.containsAlias(any()) } returns true
+        every { mockKs.deleteEntry(any()) } answers {
+            deletedAliases += firstArg<String>()
+            Unit
+        }
+        val delRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { mockKs },
+            nowMillisProvider = { roomNow },
+        )
+        roomDao.insert(sampleEntity("to-drop"))
+        assertThat(roomDao.findByCredentialId("to-drop")).isNotNull()
+
+        val result = delRepo.delete("to-drop")
+
+        assertThat(result).isEqualTo(DeletePasskeyResult.Success)
+        assertThat(roomDao.findByCredentialId("to-drop")).isNull()
+        assertThat(deletedAliases).containsExactly("keynest_passkey_to-drop")
+    }
+
     // ---- helpers --------------------------------------------------------
 
     private fun sampleSaveRequest(
