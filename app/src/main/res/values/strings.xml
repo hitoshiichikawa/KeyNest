@@ -282,6 +282,17 @@
     <string name="passkey_auth_prompt_title">Sign in with PassKey</string>
     <string name="passkey_auth_prompt_subtitle">Confirm your identity</string>
 
+    <!-- Issue #101 / Parent #89: integrated credential list — PassKey
+         row strings. NFR 6.1 / D-1 mandates the "PassKey" spelling
+         (no "passkey" lowercase, no "パスキー" katakana, no "Passkey"
+         camelCase). values/ (default) carries the JP wording; values-en
+         and values-ja override per-locale where the wording differs. -->
+    <string name="credential_list_passkey_kind_label">PassKey</string>
+    <string name="credential_list_password_kind_label">パスワード</string>
+    <string name="credential_list_passkey_unknown_user">(ユーザー名なし)</string>
+    <string name="credential_list_passkey_tap_v1_message">PassKey の個別管理は今後のアップデートで提供予定です。</string>
+    <string name="credential_list_passkey_a11y_icon">PassKey</string>
+
     <!-- Issue #103 / Parent #89: PassKey provider section on the Settings
          screen. NFR 3.1 mandates the "PassKey" spelling (no lowercase
          "passkey", no Japanese katakana). Strings back:

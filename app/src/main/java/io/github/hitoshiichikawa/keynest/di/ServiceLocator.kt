@@ -22,6 +22,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.DuplicateCredentialUseCa
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetDeviceLockStatusUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ListCredentialsUseCase
+import io.github.hitoshiichikawa.keynest.domain.usecase.ListPasskeysUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.MarkCredentialUsedUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentlyUsedUseCase
@@ -192,6 +193,16 @@ object ServiceLocator {
 
     val listCredentialsUseCase: ListCredentialsUseCase by lazy {
         ListCredentialsUseCase(credentialRepository)
+    }
+
+    /**
+     * Issue #101 (Phase 4 of umbrella #89): Flow source for the merged
+     * password+PassKey credential list. Delegates `PasskeyRepository.listAll()`
+     * and maps PasskeyEntity to the UI-safe `PasskeyDisplayModel` so the
+     * sensitive entity columns never reach the ViewModel layer (NFR 2.2).
+     */
+    val listPasskeysUseCase: ListPasskeysUseCase by lazy {
+        ListPasskeysUseCase(passkeyRepository)
     }
 
     val resolveAutofillCandidatesUseCase: ResolveAutofillCandidatesUseCase by lazy {

@@ -1,8 +1,10 @@
 package io.github.hitoshiichikawa.keynest.domain.repository
 
+import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
 import io.github.hitoshiichikawa.keynest.domain.model.DeletePasskeyResult
 import io.github.hitoshiichikawa.keynest.domain.model.Passkey
 import io.github.hitoshiichikawa.keynest.domain.model.SavePasskeyRequest
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Domain port for PassKey persistence (Issue #91 design §6.1 / #107).
@@ -129,4 +131,22 @@ interface PasskeyRepository {
         credentialId: String,
         signer: suspend (newSignCount: Long) -> T,
     ): T
+
+    // ---- Issue #101 (Phase 4 of umbrella #89) -------------------------
+    //
+    // Backs the merged password+PassKey credential list. Pure additive
+    // change — existing call sites are unaffected.
+
+    /**
+     * Observer-style list of every PassKey stored in KeyNest. The returned
+     * Flow is wired straight to Room's invalidation tracker so the
+     * credential list refreshes whenever the registration / authentication
+     * ceremonies (#99 / #100) write to the `passkeys` table.
+     *
+     * Ordering matches the existing per-RP DAO queries:
+     * `lastUsedAt DESC` (NULL last), then `createdAt DESC` as a stable
+     * tiebreaker. Discoverable / non-discoverable rows are both included
+     * (umbrella #89 確定事項 D-7).
+     */
+    fun listAll(): Flow<List<PasskeyEntity>>
 }
