@@ -2,16 +2,24 @@ package io.github.hitoshiichikawa.keynest.domain.repository
 
 import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
 import io.github.hitoshiichikawa.keynest.domain.model.DeletePasskeyResult
+import io.github.hitoshiichikawa.keynest.domain.model.Passkey
 import io.github.hitoshiichikawa.keynest.domain.model.SavePasskeyRequest
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Domain port for PassKey persistence (Issue #99 / parent #89).
+ * Domain port for PassKey persistence (Issue #91 design §6.1 / #107).
  *
- * Inlined into this PR ahead of the umbrella `PasskeyRepository` Issue
- * (#107) so that Issue #99 (registration ceremony) can be reviewed
- * end-to-end. Shape mirrors what #107 design.md §6.x specifies so a
- * later #107 merge can collapse to a no-op rename.
+ * The interface is aligned with the shared design.md §6.1 shape:
+ *  - lookup / list APIs return [Passkey] domain aggregates rather than
+ *    persistence-layer entities so that the AES-GCM ciphertext, GCM IV
+ *    and AndroidKeyStore wrapping-key alias never leak across the
+ *    repository boundary (NFR 2.2).
+ *  - [incrementSignCount] is exposed directly to mirror design §6.1.
+ *  - [loadPrivateKey] returns `ByteArray?` — `null` when the underlying
+ *    row is absent. Decryption failure is propagated as an exception
+ *    (no silent fail / NFR 2.5).
+ *  - [listAllByRpId] is added so the future management UI can list
+ *    non-discoverable rows alongside discoverable ones.
  *
  * Encryption boundary: implementations own the AES-GCM encryption of
  * [SavePasskeyRequest.privateKey] (the plaintext PKCS#8 byte array)
@@ -27,11 +35,62 @@ interface PasskeyRepository {
      */
     suspend fun save(request: SavePasskeyRequest)
 
-    /** Look up a PassKey by its WebAuthn credentialId. Used by excludeCredentials checks. */
-    suspend fun findByCredentialId(credentialId: String): PasskeyEntity?
+    /**
+     * Look up a PassKey by its WebAuthn credentialId. Returns `null` when
+     * no row matches. Used by excludeCredentials checks and by the
+     * authentication ceremony's `allowCredentials` path.
+     */
+    suspend fun findByCredentialId(credentialId: String): Passkey?
 
-    /** Look up a PassKey by `(rpId, userHandle)`. Returns 0 or 1 row (UNIQUE). */
-    suspend fun findByRpIdAndUserHandle(rpId: String, userHandle: ByteArray): PasskeyEntity?
+    /**
+     * Look up a PassKey by `(rpId, userHandle)`. Returns 0 or 1 row
+     * because the pair carries a UNIQUE index (Issue #91 決定 2).
+     */
+    suspend fun findByRpIdAndUserHandle(rpId: String, userHandle: ByteArray): Passkey?
+
+    /**
+     * Discoverable PassKeys for the given `rpId` (usernameless login
+     * route / Issue #100 R1.1 / design §4.5.1). Ordering follows the DAO
+     * contract (`lastUsedAt DESC nulls last`, then `createdAt DESC`).
+     */
+    suspend fun listDiscoverableByRpId(rpId: String): List<Passkey>
+
+    /**
+     * All PassKeys (discoverable + non-discoverable) for the given
+     * `rpId`. Powers the in-app management UI; design §6.1 / Req 3.5.
+     * Ordering matches [listDiscoverableByRpId].
+     */
+    suspend fun listAllByRpId(rpId: String): List<Passkey>
+
+    /**
+     * Atomically increment the persisted `signCount` by one and stamp
+     * `lastUsedAt` with the supplied [timestamp]. Direct expose of the
+     * DAO contract (design §6.1). Silent no-op when [credentialId] does
+     * not match a row (mirrors `PasskeyDao.incrementSignCount`).
+     *
+     * Most authentication ceremonies should prefer [signWithIncrement]
+     * which wraps the increment in a `withTransaction { ... }` so the
+     * counter rolls back if the signer block throws.
+     */
+    suspend fun incrementSignCount(credentialId: String, timestamp: Long)
+
+    /**
+     * Decrypts `(privateKeyIv, encryptedPrivateKey)` for [credentialId]
+     * with the `passkey_<credentialId>` wrapping-key alias and returns
+     * the **plaintext PKCS#8** private-key bytes (Issue #100 R3.1).
+     *
+     * Returns `null` when no row matches the credentialId. Decryption
+     * failures (e.g. ciphertext tampering) propagate as exceptions —
+     * the AES-GCM auth tag mismatch surfaces as
+     * `javax.crypto.AEADBadTagException` per design §6.4 / NFR 2.5
+     * (silent fail forbidden).
+     *
+     * The caller (`PasskeyAuthActivity`) wipes the returned array via
+     * `ByteArray.fill(0)` immediately after use (NFR 1.1).
+     *
+     * @throws javax.crypto.AEADBadTagException ciphertext / IV tampering detected
+     */
+    suspend fun loadPrivateKey(credentialId: String): ByteArray?
 
     /**
      * Delete the PassKey row and its wrapping key alias. Surfaces a
@@ -41,50 +100,32 @@ interface PasskeyRepository {
      */
     suspend fun delete(credentialId: String): DeletePasskeyResult
 
-    // ---- Issue #100 (authentication ceremony) additions ----------------
+    // ---- Issue #100 (authentication ceremony) compatibility API --------
     //
-    // Backward-compatible — existing call sites (PasskeyCreateActivity /
-    // KeyNestCredentialProviderService.onBeginCreateCredentialRequest) are
-    // unaffected. design §4.5 / §6 covers the contract; the implementations
-    // live in PasskeyRepositoryImpl.
+    // NOTE: [signWithIncrement] is **not** part of design §6.1; it was
+    // added by Issue #100 to atomize the `incrementSignCount + signer`
+    // sequence under a single Room transaction so the counter rolls back
+    // automatically when the signer throws or the coroutine is
+    // cancelled. We keep it on the interface (rather than dropping it in
+    // favour of the pure §6.1 shape) so existing callers
+    // (`PasskeyAuthActivity`) continue to compile without rewrite — see
+    // impl-notes "Reviewer round=2 引き継ぎ事項" for the suggestion to
+    // remove this method via a follow-up Issue once the call site can
+    // wrap the transaction itself.
 
     /**
-     * Discoverable PassKey の一覧を rpId で抽出する (usernameless login 経路 /
-     * Issue #100 R1.1 / design §4.5.1). 並び順は DAO の `listDiscoverableByRpId`
-     * の契約 (lastUsedAt DESC nulls last, createdAt DESC) に従う。
-     */
-    suspend fun listDiscoverableByRpId(rpId: String): List<PasskeyEntity>
-
-    /**
-     * `(privateKeyIv, encryptedPrivateKey)` を `keynest_passkey_<credentialId>`
-     * alias の `KeystoreKeyProvider` + `AesGcmCipher` で AES-GCM 復号して
-     * **平文 PKCS#8** byte 配列を返す (Issue #100 R3.1 / design §4.5.1).
+     * Atomized variant of [incrementSignCount] (Issue #100 決定 3 /
+     * design §6.1 案 C). Opens a Room transaction, bumps `signCount`,
+     * passes the new value to [signer], commits on success, rolls back
+     * on throw / cancellation.
      *
-     * 呼び出し側 (`PasskeyAuthActivity`) は使用直後に `ByteArray.fill(0)` で
-     * wipe する責務を負う (NFR 1.1).
+     * Failure-rollback in [signer] is the reason this method exists —
+     * call sites would otherwise have to remember to undo the increment
+     * by hand, which is hazardous (#100 review feedback).
      *
-     * @throws IllegalStateException 該当 credentialId が存在しない場合
-     * @throws javax.crypto.AEADBadTagException ciphertext / IV の改竄を GCM auth tag が検出した場合
-     */
-    suspend fun loadPrivateKey(credentialId: String): ByteArray
-
-    /**
-     * Option A (Issue #100 決定 3) を **Repository 内で原子化** するための
-     * 高階関数 API (design §4.5.1 / §6.1 案 C).
-     *
-     * フロー:
-     *  1. Room transaction を開始する。
-     *  2. DAO の `incrementSignCount(credentialId, nowMillis())` を呼んで signCount を +1。
-     *  3. 新 signCount を SELECT で取得し [signer] に渡す。
-     *  4. [signer] が結果を返したら transaction を commit してその戻り値を返す。
-     *  5. [signer] が throw / cancel したら transaction を rollback して例外を伝播する
-     *     (signCount は元値に戻る)。
-     *
-     * 失敗時ロールバックを呼び出し側で書き忘れるリスクをなくすため、高階関数
-     * 形式 (案 C) を採用した (design §6.1)。
-     *
-     * @param signer 新 signCount を受け取って assertion bytes (任意の戻り値) を生成するブロック。
-     * @return [signer] の戻り値。例外時は [signer] が投げた例外をそのまま伝播。
+     * @param signer Receives the freshly-incremented signCount and
+     *   produces an arbitrary result (typically the assertion JSON).
+     * @return the value [signer] returns. Exceptions propagate verbatim.
      */
     suspend fun <T> signWithIncrement(
         credentialId: String,

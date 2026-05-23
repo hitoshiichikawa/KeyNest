@@ -8,6 +8,7 @@ import io.github.hitoshiichikawa.keynest.domain.model.SigningHash
 import io.github.hitoshiichikawa.keynest.domain.repository.PasskeyRepository
 import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
 import io.github.hitoshiichikawa.keynest.domain.model.DeletePasskeyResult
+import io.github.hitoshiichikawa.keynest.domain.model.Passkey
 import io.github.hitoshiichikawa.keynest.domain.model.SavePasskeyRequest
 import io.github.hitoshiichikawa.keynest.domain.usecase.DeleteCredentialUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.DuplicateCredentialUseCase
@@ -753,24 +754,32 @@ class CredentialListViewModelTest {
         // pipeline. Default unsupported implementations make sure a
         // future regression that calls them shows up as a clear
         // assertion failure instead of silently returning null.
+        //
+        // 戻り値の domain 型 (Passkey) は Issue #107 reshape に追従。
         override suspend fun save(request: SavePasskeyRequest): Unit =
             throw UnsupportedOperationException()
 
-        override suspend fun findByCredentialId(credentialId: String): PasskeyEntity? =
+        override suspend fun findByCredentialId(credentialId: String): Passkey? =
             throw UnsupportedOperationException()
 
         override suspend fun findByRpIdAndUserHandle(
             rpId: String,
             userHandle: ByteArray,
-        ): PasskeyEntity? = throw UnsupportedOperationException()
+        ): Passkey? = throw UnsupportedOperationException()
+
+        override suspend fun listDiscoverableByRpId(rpId: String): List<Passkey> =
+            throw UnsupportedOperationException()
+
+        override suspend fun listAllByRpId(rpId: String): List<Passkey> =
+            throw UnsupportedOperationException()
+
+        override suspend fun incrementSignCount(credentialId: String, timestamp: Long): Unit =
+            throw UnsupportedOperationException()
+
+        override suspend fun loadPrivateKey(credentialId: String): ByteArray? =
+            throw UnsupportedOperationException()
 
         override suspend fun delete(credentialId: String): DeletePasskeyResult =
-            throw UnsupportedOperationException()
-
-        override suspend fun listDiscoverableByRpId(rpId: String): List<PasskeyEntity> =
-            throw UnsupportedOperationException()
-
-        override suspend fun loadPrivateKey(credentialId: String): ByteArray =
             throw UnsupportedOperationException()
 
         override suspend fun <T> signWithIncrement(

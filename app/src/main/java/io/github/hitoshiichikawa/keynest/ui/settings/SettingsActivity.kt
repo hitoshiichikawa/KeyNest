@@ -2,8 +2,10 @@ package io.github.hitoshiichikawa.keynest.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.text.format.Formatter
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -15,10 +17,12 @@ import io.github.hitoshiichikawa.keynest.databinding.SettingsActivityBinding
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.domain.model.AutofillStatus
 import io.github.hitoshiichikawa.keynest.domain.model.DeviceLockStatus
+import io.github.hitoshiichikawa.keynest.domain.model.PasskeyProviderStatus
 import io.github.hitoshiichikawa.keynest.ui.danger.DangerZoneActivity
 import io.github.hitoshiichikawa.keynest.ui.oss.OssLicensesActivity
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SystemSettingsIntents
+import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -60,6 +64,10 @@ class SettingsActivity : AppCompatActivity() {
             getStorage = ServiceLocator.getVaultStorageUsageUseCase,
             getLockStatus = ServiceLocator.getDeviceLockStatusUseCase,
             appInfoProvider = ServiceLocator.appInfoProvider,
+            // Issue #103: probe the OS Credential Manager registration state
+            // so the PassKey provider section renders Enabled / Disabled /
+            // Unsupported.
+            credentialProviderStatusChecker = ServiceLocator.credentialProviderStatusChecker,
         )
     }
 
@@ -67,6 +75,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = SettingsActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.applySystemBarsPadding()
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
@@ -92,6 +101,14 @@ class SettingsActivity : AppCompatActivity() {
                 showIntentUnavailableSnackbar()
             }
         }
+        // Issue #103 Req 2.3 / 2.5: open the OS Credential Manager
+        // settings screen, falling back to the shared Snackbar UX if
+        // even ACTION_SETTINGS cannot be resolved.
+        binding.btnOpenPasskeySettings.setOnClickListener {
+            SystemSettingsIntents.openPasskeyProviderSettings(this).onFailure {
+                showIntentUnavailableSnackbar()
+            }
+        }
         binding.btnOssLicenses.setOnClickListener {
             startActivity(OssLicensesActivity.newIntent(this))
         }
@@ -110,9 +127,47 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun bind(state: SettingsUiState) {
         bindAutofill(state.autofillStatus)
+        bindPasskeyProvider(state.passkeyProviderStatus)
         bindLockStatus(state.lockStatus)
         bindVault(state.metadata, state.storageBytes)
         bindAbout(state)
+    }
+
+    /**
+     * Issue #103 Req 1.4 / 1.5 / 1.6 / 2.1 / 2.2 / 2.7.
+     *
+     * Renders the PassKey provider section based on the 3-valued
+     * [PasskeyProviderStatus]:
+     *
+     * - status text comes from `R.string.settings_passkey_provider_status_*`
+     *   (always one of enabled / disabled / unsupported)
+     * - the "Open PassKey settings" button is `GONE` on the Unsupported
+     *   branch (Req 2.2 — API 33 and below), and `VISIBLE` for both
+     *   Enabled and Disabled (Req 2.7 — users may want to inspect the
+     *   OS Credential Manager settings even when KeyNest is already
+     *   selected).
+     *
+     * Defensive SDK_INT guard: when the checker incorrectly reports
+     * Enabled or Disabled on API 33 (should never happen — the checker
+     * runtime-checks SDK_INT itself), we still hide the button so the
+     * intent helper is never invoked on a surface that cannot resolve
+     * the primary action. This is belt-and-suspenders for NFR 4.3.
+     */
+    private fun bindPasskeyProvider(status: PasskeyProviderStatus) {
+        val statusTextResId = when (status) {
+            PasskeyProviderStatus.Enabled ->
+                R.string.settings_passkey_provider_status_enabled
+            PasskeyProviderStatus.Disabled ->
+                R.string.settings_passkey_provider_status_disabled
+            PasskeyProviderStatus.Unsupported ->
+                R.string.settings_passkey_provider_status_unsupported
+        }
+        binding.textPasskeyProviderStatus.setText(statusTextResId)
+
+        val showButton = status != PasskeyProviderStatus.Unsupported &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        binding.btnOpenPasskeySettings.visibility =
+            if (showButton) View.VISIBLE else View.GONE
     }
 
     /**

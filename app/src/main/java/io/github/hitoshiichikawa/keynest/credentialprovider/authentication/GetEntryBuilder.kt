@@ -5,7 +5,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.credentials.provider.BeginGetPublicKeyCredentialOption
 import androidx.credentials.provider.PublicKeyCredentialEntry
-import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
+import io.github.hitoshiichikawa.keynest.domain.model.Passkey
 import io.github.hitoshiichikawa.keynest.domain.repository.PasskeyRepository
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import java.security.SecureRandom
@@ -49,7 +49,7 @@ internal class GetEntryBuilder(
 
         val allowCredentialIds = AllowCredentialsParser.parseAllowCredentialIds(requestJson)
 
-        val candidates: List<PasskeyEntity> = runBlocking(Dispatchers.IO) {
+        val candidates: List<Passkey> = runBlocking(Dispatchers.IO) {
             if (allowCredentialIds.isEmpty()) {
                 // Usernameless login — discoverable credentials only.
                 repository.listDiscoverableByRpId(rpId)
@@ -62,24 +62,24 @@ internal class GetEntryBuilder(
             }
         }
 
-        return candidates.map { entity -> buildEntry(entity, option) }
+        return candidates.map { passkey -> buildEntry(passkey, option) }
     }
 
     private fun buildEntry(
-        entity: PasskeyEntity,
+        passkey: Passkey,
         option: BeginGetPublicKeyCredentialOption,
     ): PublicKeyCredentialEntry {
         // accountName / displayName fallback order per design §4.4 + req 1.6:
         //   accountName  = userDisplayName ?: userName ?: rpId
         //   displayName  = rpDisplayName ?: rpId
-        val accountName = entity.userDisplayName
+        val accountName = passkey.userDisplayName
             ?.takeIf { it.isNotBlank() }
-            ?: entity.userName?.takeIf { it.isNotBlank() }
-            ?: entity.rpId
+            ?: passkey.userName?.takeIf { it.isNotBlank() }
+            ?: passkey.rpId
 
-        val displayName = entity.rpDisplayName?.takeIf { it.isNotBlank() } ?: entity.rpId
+        val displayName = passkey.rpDisplayName?.takeIf { it.isNotBlank() } ?: passkey.rpId
 
-        val pendingIntent = PasskeyAuthActivity.pendingIntent(context, entity.credentialId)
+        val pendingIntent = PasskeyAuthActivity.pendingIntent(context, passkey.credentialId)
 
         return PublicKeyCredentialEntry.Builder(
             context,

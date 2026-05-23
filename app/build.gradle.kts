@@ -14,16 +14,29 @@ ksp {
     arg("room.schemaLocation", "${projectDir}/schemas")
 }
 
+// Release signing credentials.
+// Values are read from ~/.gradle/gradle.properties (user-level, never committed).
+// If any are missing, signing is skipped and release builds will be unsigned —
+// fine for local debug-style smoke tests, but they cannot be uploaded to Play.
+val keynestStoreFile = findProperty("KEYNEST_UPLOAD_STORE_FILE") as String?
+val keynestStorePassword = findProperty("KEYNEST_UPLOAD_STORE_PASSWORD") as String?
+val keynestKeyAlias = findProperty("KEYNEST_UPLOAD_KEY_ALIAS") as String?
+val keynestKeyPassword = findProperty("KEYNEST_UPLOAD_KEY_PASSWORD") as String?
+val keynestSigningReady = keynestStoreFile != null &&
+    keynestStorePassword != null &&
+    keynestKeyAlias != null &&
+    keynestKeyPassword != null
+
 android {
     namespace = "io.github.hitoshiichikawa.keynest"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "io.github.hitoshiichikawa.keynest"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -31,8 +44,22 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            if (keynestSigningReady) {
+                storeFile = file(keynestStoreFile!!)
+                storePassword = keynestStorePassword
+                keyAlias = keynestKeyAlias
+                keyPassword = keynestKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (keynestSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

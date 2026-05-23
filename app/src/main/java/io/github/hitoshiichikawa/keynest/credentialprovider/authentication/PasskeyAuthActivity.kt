@@ -171,14 +171,17 @@ class PasskeyAuthActivity : AppCompatActivity() {
 
             // Lookup userHandle eagerly so we can include it in the response
             // JSON regardless of the in-block ordering.
-            val entity = repository.findByCredentialId(credentialId)
+            val passkey = repository.findByCredentialId(credentialId)
                 ?: throw GetCredentialUnknownException(
-                    "PasskeyEntity not found for credentialId during assertion",
+                    "Passkey not found for credentialId during assertion",
                 )
-            val userHandle = entity.userHandle
+            val userHandle = passkey.userHandle
 
             val responseJson = repository.signWithIncrement(credentialId) { newSignCount ->
                 val plaintext = repository.loadPrivateKey(credentialId)
+                    ?: throw GetCredentialUnknownException(
+                        "loadPrivateKey returned null mid-transaction; row disappeared",
+                    )
                 wipeQueue.add(plaintext)
                 val assertion = PasskeyAssertion.sign(
                     PasskeyAssertionInput(

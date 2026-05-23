@@ -397,7 +397,7 @@ class PasskeyAuthActivityTest {
             isDiscoverable = true,
             encryptedPrivateKey = ByteArray(48) { 0x66 },
             privateKeyIv = ByteArray(12) { 0x55 },
-            keyAlias = "keynest_passkey_$credentialId",
+            keyAlias = "passkey_$credentialId",
             signCount = signCount,
             displayName = null,
             createdAt = 1_700_000_000_000L,

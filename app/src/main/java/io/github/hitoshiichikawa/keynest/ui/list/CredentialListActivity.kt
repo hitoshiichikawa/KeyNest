@@ -26,6 +26,7 @@ import io.github.hitoshiichikawa.keynest.ui.enable.AutofillEnableActivity
 import io.github.hitoshiichikawa.keynest.ui.settings.SettingsActivity
 import io.github.hitoshiichikawa.keynest.util.AutofillServiceStatus
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -71,6 +72,7 @@ class CredentialListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = CredentialListActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.applySystemBarsPadding()
         setSupportActionBar(binding.toolbar)
 
         setUpMainList()

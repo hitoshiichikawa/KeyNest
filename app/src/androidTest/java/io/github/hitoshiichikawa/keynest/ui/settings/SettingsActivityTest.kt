@@ -9,9 +9,12 @@ import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
+import androidx.test.espresso.matcher.ViewMatchers.Visibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
@@ -111,6 +114,47 @@ class SettingsActivityTest {
         ActivityScenario.launch(SettingsActivity::class.java).use {
             onView(withId(R.id.btn_open_danger_zone)).perform(click())
             onView(withText(R.string.danger_zone_title)).check(matches(isDisplayed()))
+        }
+    }
+
+    // ---- Issue #103: PassKey provider section --------------------------
+
+    @Test
+    @SdkSuppress(minSdkVersion = 34)
+    fun passkeyProviderButton_tap_dispatchesCredentialProviderIntent() {
+        // Issue #103 Req 6.5: on API 34+ devices, tapping the PassKey
+        // settings button dispatches the ACTION_CREDENTIAL_PROVIDER
+        // deep link.
+        ActivityScenario.launch(SettingsActivity::class.java).use {
+            onView(withId(R.id.btn_open_passkey_settings)).perform(click())
+            intended(hasAction("android.settings.CREDENTIAL_PROVIDER"))
+        }
+    }
+
+    @Test
+    @SdkSuppress(maxSdkVersion = 33)
+    fun passkeyProviderButton_isGone_onApi33() {
+        // Issue #103 Req 6.7: on API 33 or below the button must be
+        // GONE and the status text must read
+        // settings_passkey_provider_status_unsupported.
+        ActivityScenario.launch(SettingsActivity::class.java).use {
+            onView(withId(R.id.btn_open_passkey_settings))
+                .check(matches(withEffectiveVisibility(Visibility.GONE)))
+            onView(withId(R.id.text_passkey_provider_status))
+                .check(matches(withText(R.string.settings_passkey_provider_status_unsupported)))
+        }
+    }
+
+    @Test
+    fun passkeyProviderStatus_isDisplayed_withCorrectText_onResume() {
+        // Issue #103 Req 6.7 supplement: text_passkey_provider_status is
+        // visible after the first bind cycle. The exact text depends on
+        // the device — assert the View exists and is displayed without
+        // pinning a specific status (Enabled / Disabled / Unsupported)
+        // because instrumentation runs across SDK levels.
+        ActivityScenario.launch(SettingsActivity::class.java).use {
+            onView(withId(R.id.text_passkey_provider_status))
+                .check(matches(isDisplayed()))
         }
     }
 }

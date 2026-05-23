@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.AutofillEnableActivityBinding
 import io.github.hitoshiichikawa.keynest.util.AutofillServiceStatus
+import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import com.google.android.material.snackbar.Snackbar
 
 /**
@@ -43,6 +44,7 @@ class AutofillEnableActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = AutofillEnableActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.applySystemBarsPadding()
         binding.btnEnable.setOnClickListener { launchSettings() }
         binding.btnLater.setOnClickListener { finish() }
     }
