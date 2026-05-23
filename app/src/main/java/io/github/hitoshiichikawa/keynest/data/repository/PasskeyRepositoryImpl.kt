@@ -105,6 +105,19 @@ class PasskeyRepositoryImpl(
         dao.incrementSignCount(credentialId, timestamp)
     }
 
+    /**
+     * Issue #102: full-row update used by the PassKey detail UI to rename
+     * [PasskeyEntity.displayName]. Pure delegate to [PasskeyDao.update]
+     * (`@Update`) — no encryption, no Keystore alias touch.
+     *
+     * The caller is responsible for preserving every column other than the
+     * one being changed (typically by `findByCredentialId(id).copy(displayName = trimmed)`).
+     * See [PasskeyRepository.update] KDoc for the contract.
+     */
+    override suspend fun update(entity: PasskeyEntity) {
+        dao.update(entity)
+    }
+
     override suspend fun delete(credentialId: String): DeletePasskeyResult {
         dao.delete(credentialId)
         return try {
