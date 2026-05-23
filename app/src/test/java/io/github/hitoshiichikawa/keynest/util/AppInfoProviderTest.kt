@@ -26,9 +26,9 @@ class AppInfoProviderTest {
         // Act
         val info = provider.get()
 
-        // Assert: versionName from app/build.gradle.kts (currently "0.1.0").
-        assertThat(info.versionName).isEqualTo("0.1.0")
-        // versionCode currently 1.
-        assertThat(info.versionCode).isEqualTo(1L)
+        // Assert: versionName from app/build.gradle.kts (currently "1.0.1").
+        assertThat(info.versionName).isEqualTo("1.0.1")
+        // versionCode currently 2.
+        assertThat(info.versionCode).isEqualTo(2L)
     }
 }
