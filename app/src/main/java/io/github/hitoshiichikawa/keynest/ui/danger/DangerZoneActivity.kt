@@ -14,6 +14,7 @@ import io.github.hitoshiichikawa.keynest.auth.AuthResult
 import io.github.hitoshiichikawa.keynest.auth.BiometricAuthenticator
 import io.github.hitoshiichikawa.keynest.databinding.DangerZoneActivityBinding
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
+import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -57,6 +58,7 @@ class DangerZoneActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = DangerZoneActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.applySystemBarsPadding()
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
