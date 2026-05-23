@@ -49,7 +49,9 @@ interface CredentialProviderStatusChecker {
  * see `docs/specs/103-feat-passkey-passkey-os/poc-notes.md`).
  *
  * Algorithm (API 34+):
- *  1. `Settings.Secure.getString(resolver, "credential_service")`
+ *  1. Read `Settings.Secure.getString(resolver, "credential_service")`
+ *     via [credentialServiceReader] (injected for testability — the
+ *     production constructor wires the real [Settings.Secure] read).
  *  2. Split on `:` (each entry is "pkg/component" from
  *     `ComponentName.flattenToString()`).
  *  3. For each entry, take `substringBefore("/")` (package name) and
@@ -61,9 +63,20 @@ interface CredentialProviderStatusChecker {
  * public `Settings.Secure` constant), so we reference it as a string
  * literal. design.md §9.1-1 documents the reasoning and the fallback path
  * if OEMs strip / rename the key.
+ *
+ * Why the reader injection rather than `mockkStatic(Settings.Secure)`:
+ * JDK 17's instrumentation API refuses to retransform `Settings.Secure`'s
+ * static methods (`class redefinition failed: attempted to change the
+ * class modifiers`), so tests cannot mock the static call directly. A
+ * tiny reader lambda keeps the production call site identical (one
+ * statement) while letting tests inject a throwing / value-returning
+ * stub.
  */
-internal class DefaultCredentialProviderStatusChecker(
+internal class DefaultCredentialProviderStatusChecker @JvmOverloads constructor(
     private val context: Context,
+    private val credentialServiceReader: () -> String? = {
+        Settings.Secure.getString(context.contentResolver, CREDENTIAL_SERVICE_KEY)
+    },
 ) : CredentialProviderStatusChecker {
 
     override fun check(): PasskeyProviderStatus {
@@ -77,10 +90,7 @@ internal class DefaultCredentialProviderStatusChecker(
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun checkOnApi34Plus(): PasskeyProviderStatus {
         return try {
-            val raw = Settings.Secure.getString(
-                context.contentResolver,
-                CREDENTIAL_SERVICE_KEY,
-            )
+            val raw = credentialServiceReader.invoke()
             if (raw.isNullOrBlank()) {
                 PasskeyProviderStatus.Disabled
             } else {
@@ -107,15 +117,17 @@ internal class DefaultCredentialProviderStatusChecker(
         }
     }
 
-    private companion object {
+    internal companion object {
         private const val TAG = "PassKeyProviderStatus"
 
         /**
          * AOSP internal `Settings.Secure` key holding the Credential
          * Manager provider selection. Not a public constant — see
-         * design.md §9.1-1 and `poc-notes.md`.
+         * design.md §9.1-1 and `poc-notes.md`. Exposed at `internal`
+         * visibility so the unit test can reference the same literal
+         * when seeding `Settings.Secure` via Robolectric.
          */
-        private const val CREDENTIAL_SERVICE_KEY = "credential_service"
+        internal const val CREDENTIAL_SERVICE_KEY = "credential_service"
 
         /** ComponentName separator inside `credential_service`. */
         private const val SEPARATOR = ":"

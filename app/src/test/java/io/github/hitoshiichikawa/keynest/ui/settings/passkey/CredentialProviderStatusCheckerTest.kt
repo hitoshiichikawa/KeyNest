@@ -6,9 +6,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.hitoshiichikawa.keynest.domain.model.PasskeyProviderStatus
-import io.mockk.every
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -176,21 +173,18 @@ class CredentialProviderStatusCheckerTest {
         // Arrange: simulate a hostile OS surface that throws on any
         // Settings.Secure.getString call (some MDM-locked builds /
         // future OS versions where the key is access-restricted).
-        mockkStatic(Settings.Secure::class)
-        try {
-            every {
-                Settings.Secure.getString(any(), eq("credential_service"))
-            } throws SecurityException("denied by policy")
+        // We use the injectable reader rather than mockkStatic because
+        // JDK 17 refuses to retransform Settings.Secure (class
+        // redefinition failed: attempted to change the class modifiers).
+        val checker = DefaultCredentialProviderStatusChecker(
+            context = context,
+            credentialServiceReader = { throw SecurityException("denied by policy") },
+        )
 
-            val checker = DefaultCredentialProviderStatusChecker(context)
+        val result = checker.check()
 
-            val result = checker.check()
-
-            // Req 3.5: must NEVER falsely report Enabled on exception.
-            assertThat(result).isEqualTo(PasskeyProviderStatus.Disabled)
-        } finally {
-            unmockkStatic(Settings.Secure::class)
-        }
+        // Req 3.5: must NEVER falsely report Enabled on exception.
+        assertThat(result).isEqualTo(PasskeyProviderStatus.Disabled)
     }
 
     @Test
@@ -199,20 +193,14 @@ class CredentialProviderStatusCheckerTest {
         // Arrange: broader Throwable coverage — generic RuntimeException
         // also routes to Disabled (catch is on Throwable, not just
         // SecurityException).
-        mockkStatic(Settings.Secure::class)
-        try {
-            every {
-                Settings.Secure.getString(any(), eq("credential_service"))
-            } throws RuntimeException("boom")
+        val checker = DefaultCredentialProviderStatusChecker(
+            context = context,
+            credentialServiceReader = { throw RuntimeException("boom") },
+        )
 
-            val checker = DefaultCredentialProviderStatusChecker(context)
+        val result = checker.check()
 
-            val result = checker.check()
-
-            assertThat(result).isEqualTo(PasskeyProviderStatus.Disabled)
-        } finally {
-            unmockkStatic(Settings.Secure::class)
-        }
+        assertThat(result).isEqualTo(PasskeyProviderStatus.Disabled)
     }
 
     // ---- Req 3.8 / NFR 2.1: log suppression --------------------------
@@ -248,29 +236,26 @@ class CredentialProviderStatusCheckerTest {
     @Test
     @Config(sdk = [34])
     fun check_doesNotLogProviderPackageAtInfoLevel_onException() {
-        // Arrange: same assertion for the failure path.
+        // Arrange: same assertion for the failure path. We force the
+        // injected reader to throw, but the SecurityException message
+        // intentionally embeds a third-party provider package name so
+        // we can prove that path does not leak it via Log.i+.
         val sensitiveProviderPackage = "com.acme.thirdparty.provider"
-        Settings.Secure.putString(
-            context.contentResolver,
-            "credential_service",
-            "$sensitiveProviderPackage/x.S",
+        val checker = DefaultCredentialProviderStatusChecker(
+            context = context,
+            credentialServiceReader = {
+                throw SecurityException(
+                    "denied while reading $sensitiveProviderPackage/x.S",
+                )
+            },
         )
-        mockkStatic(Settings.Secure::class)
-        try {
-            every {
-                Settings.Secure.getString(any(), eq("credential_service"))
-            } throws SecurityException("denied")
-            val checker = DefaultCredentialProviderStatusChecker(context)
 
-            checker.check()
+        checker.check()
 
-            val infoOrAbove = ShadowLog.getLogs().filter { it.type >= android.util.Log.INFO }
-            infoOrAbove.forEach { item ->
-                assertThat(item.msg ?: "").doesNotContain(sensitiveProviderPackage)
-                assertThat(item.throwable?.message ?: "").doesNotContain(sensitiveProviderPackage)
-            }
-        } finally {
-            unmockkStatic(Settings.Secure::class)
+        val infoOrAbove = ShadowLog.getLogs().filter { it.type >= android.util.Log.INFO }
+        infoOrAbove.forEach { item ->
+            assertThat(item.msg ?: "").doesNotContain(sensitiveProviderPackage)
+            assertThat(item.throwable?.message ?: "").doesNotContain(sensitiveProviderPackage)
         }
     }
 }

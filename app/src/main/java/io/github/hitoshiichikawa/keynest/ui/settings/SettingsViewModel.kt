@@ -12,6 +12,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveVaultMetadataUseC
 import io.github.hitoshiichikawa.keynest.ui.settings.passkey.CredentialProviderStatusChecker
 import io.github.hitoshiichikawa.keynest.util.AppInfoProvider
 import io.github.hitoshiichikawa.keynest.util.AutofillServiceStatus
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -55,6 +56,15 @@ class SettingsViewModel(
     private val getLockStatus: GetDeviceLockStatusUseCase,
     private val appInfoProvider: AppInfoProvider,
     private val credentialProviderStatusChecker: CredentialProviderStatusChecker,
+    /**
+     * Issue #103: dispatcher used to hop off the main thread when calling
+     * [CredentialProviderStatusChecker.check] (which performs a potentially
+     * blocking `Settings.Secure.getString` IPC). Defaults to
+     * [Dispatchers.IO] in production; tests can pass an
+     * `UnconfinedTestDispatcher` or the shared test dispatcher so
+     * `advanceUntilIdle()` deterministically drains the probe.
+     */
+    private val passkeyProbeDispatcher: CoroutineContext = Dispatchers.IO,
 ) : ViewModel() {
 
     private val refreshTick = MutableStateFlow(0)
@@ -98,12 +108,29 @@ class SettingsViewModel(
     /**
      * Issue #103 Req 3.1 / 3.6: the checker call is wrapped in
      * `withContext(IO)` because `Settings.Secure.getString` can involve
-     * IPC and we must not block the main thread (NFR 1.1 / 1.2). The
-     * checker itself never throws — exceptions are caught internally and
-     * downgrade to [PasskeyProviderStatus.Disabled] (Req 3.5).
+     * IPC and we must not block the main thread (NFR 1.1 / 1.2).
+     *
+     * The production [DefaultCredentialProviderStatusChecker] catches all
+     * throwables internally and returns [PasskeyProviderStatus.Disabled]
+     * (Req 3.5). The defensive try/catch here is a belt-and-suspenders
+     * second layer that enforces the same Req 3.5 invariant even if a
+     * future checker implementation (or a test double) accidentally
+     * throws: the combine pipeline must never propagate the throw to
+     * `stateIn`, and the UI must never observe [Enabled] when probing
+     * failed.
      */
     private suspend fun resolvePasskeyProviderStatus(): PasskeyProviderStatus =
-        withContext(Dispatchers.IO) { credentialProviderStatusChecker.check() }
+        withContext(passkeyProbeDispatcher) {
+            try {
+                credentialProviderStatusChecker.check()
+            } catch (t: Throwable) {
+                // Req 3.5 invariant: never report Enabled on failure.
+                // Intentionally not logging here to avoid duplicating
+                // the DefaultCredentialProviderStatusChecker's already-
+                // suppressed log (NFR 2.1).
+                PasskeyProviderStatus.Disabled
+            }
+        }
 
     class Factory(
         private val appContext: Context,

@@ -258,16 +258,14 @@ class SettingsViewModelTest {
     @Test
     fun uiState_passkeyProvider_fallbackToDisabled_onCheckerException() =
         runTest(testDispatcher) {
-            // Req 6.4: defensive contract. Production
+            // Req 6.4: defensive contract. The production
             // DefaultCredentialProviderStatusChecker catches everything
-            // internally and returns Disabled, but if a future
-            // implementation accidentally throws, the ViewModel must NOT
-            // crash and must NOT propagate Enabled.
-            //
-            // We assert the ViewModel survives the throw — the StateFlow
-            // stays on its previous (initial Unsupported placeholder)
-            // value rather than transitioning to Enabled. We also assert
-            // no Enabled is observed.
+            // internally and returns Disabled (its own Req 3.5 guard).
+            // The ViewModel adds a belt-and-suspenders second guard so
+            // that even if a future checker implementation accidentally
+            // throws past its internal catch block, the combine pipeline
+            // does NOT crash and the UI is never told the provider is
+            // Enabled.
             val checker = FakeCredentialProviderStatusChecker(
                 value = PasskeyProviderStatus.Enabled, // would-be-wrong value
                 throwError = RuntimeException("simulated checker bug"),
@@ -275,10 +273,12 @@ class SettingsViewModelTest {
             val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
             try {
                 advanceUntilIdle()
-                // Critical: must NOT be Enabled (Req 3.5 invariant —
-                // never falsely report Enabled on exception).
+                // The ViewModel-level fallback (SettingsViewModel.resolvePasskeyProviderStatus)
+                // catches the throw and forces Disabled — the strongest form of
+                // the Req 3.5 invariant ("never falsely report Enabled on
+                // exception").
                 assertThat(vm.uiState.value.passkeyProviderStatus)
-                    .isNotEqualTo(PasskeyProviderStatus.Enabled)
+                    .isEqualTo(PasskeyProviderStatus.Disabled)
             } finally {
                 job.cancel()
             }
@@ -352,6 +352,11 @@ class SettingsViewModelTest {
                 override fun get(): AppInfo = appInfo
             },
             credentialProviderStatusChecker = passkeyChecker,
+            // Issue #103: route the PassKey probe through the same test
+            // dispatcher as Main so advanceUntilIdle() drains it
+            // deterministically. Production passes Dispatchers.IO by
+            // default (constructor default).
+            passkeyProbeDispatcher = testDispatcher,
         )
         // Drain uiState so the SharingStarted.WhileSubscribed pipeline
         // stays live for the duration of the test.
