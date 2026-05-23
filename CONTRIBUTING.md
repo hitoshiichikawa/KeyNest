@@ -53,6 +53,18 @@ re-triggers the workflow.
   test (`InternetPermissionAbsenceTest`). Any change that requires network
   IO will be rejected at review
 
+## PassKey development
+
+- **Android 14 (API 34) or newer** is required for the PassKey provider
+  feature, which builds on the Android Credential Manager API. Testing
+  PassKey changes on a physical device running Android 14+ is recommended.
+- **No network IO for PassKeys either** — PassKey-related changes must not
+  add the `INTERNET` permission or introduce any network IO. Like the rest
+  of KeyNest, PassKey storage stays entirely on-device, and this offline
+  boundary is enforced by the same instrumentation test noted above.
+- **Spelling**: write the term as **PassKey** (capital P, capital K) in both
+  code and documentation. Do not use "passkey" or "Passkey" in new content.
+
 ## Sensitive data handling
 
 - Never log credential values (use `SafeLogger`; there is a static audit
