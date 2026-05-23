@@ -4,7 +4,7 @@ title: Privacy Policy
 
 # Privacy Policy
 
-Last updated: May 18, 2026
+Last updated: May 23, 2026
 
 This Privacy Policy describes how KeyNest ("the App") handles user data.
 KeyNest is an Android application developed by Hitoshi Ichikawa.
@@ -34,6 +34,20 @@ the Android platform whenever available.
 
 Because data never leaves the device, KeyNest does not maintain any
 server-side storage or backup of user data.
+
+## PassKeys
+
+KeyNest can act as a PassKey provider through the Android Credential Manager
+API. The private key material for each PassKey is encrypted on the device
+using AES-GCM, and the encryption key is generated and stored in the Android
+Keystore system, exactly like the rest of your credentials.
+
+PassKey data — including private keys — never leaves your device. It is not
+transmitted or uploaded to the developer or to any third party.
+
+KeyNest does not provide any export or backup function for PassKeys. This
+matches the export-prohibited policy applied to all other credentials, so
+there is no way to copy your PassKeys off the device.
 
 ## Children's Privacy
 
