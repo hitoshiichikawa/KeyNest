@@ -8,7 +8,7 @@ import androidx.credentials.provider.CallingAppInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
-import io.github.hitoshiichikawa.keynest.data.entity.PasskeyEntity
+import io.github.hitoshiichikawa.keynest.domain.model.Passkey
 import io.github.hitoshiichikawa.keynest.domain.repository.PasskeyRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -80,10 +80,10 @@ class GetEntryBuilderTest {
 
     @Test
     fun build_filtersOutEntriesWithMismatchedRpId() {
-        // Returned entity claims rpId = attacker.example so it must be dropped
+        // Returned passkey claims rpId = attacker.example so it must be dropped
         // even though the credentialId matched.
         coEvery { repository.findByCredentialId("spoofed") } returns
-            sampleEntity("spoofed").copy(rpId = "attacker.example")
+            sampleEntity("spoofed", rpId = "attacker.example")
 
         val entries = builder.build(option(requestJson(allowCredentials = listOf("spoofed"))))
 
@@ -102,15 +102,18 @@ class GetEntryBuilderTest {
     @Test
     fun build_entryAccountName_fallsBackThroughDisplayNameThenUserNameThenRpId() {
         coEvery { repository.listDiscoverableByRpId("example.com") } returns listOf(
-            sampleEntity("withDisplay").copy(
+            sampleEntity(
+                "withDisplay",
                 userDisplayName = "Alice",
                 userName = "alice@example.com",
             ),
-            sampleEntity("noDisplay").copy(
+            sampleEntity(
+                "noDisplay",
                 userDisplayName = null,
                 userName = "bob@example.com",
             ),
-            sampleEntity("onlyRpId").copy(
+            sampleEntity(
+                "onlyRpId",
                 userDisplayName = null,
                 userName = null,
             ),
@@ -195,17 +198,19 @@ class GetEntryBuilderTest {
             signingInfo = android.content.pm.SigningInfo(),
         )
 
-    private fun sampleEntity(credentialId: String): PasskeyEntity = PasskeyEntity(
+    private fun sampleEntity(
+        credentialId: String,
+        rpId: String = "example.com",
+        userName: String? = "alice@example.com",
+        userDisplayName: String? = "Alice",
+    ): Passkey = Passkey(
         credentialId = credentialId,
-        rpId = "example.com",
+        rpId = rpId,
         rpDisplayName = "Example",
         userHandle = ByteArray(16) { 0x77 },
-        userName = "alice@example.com",
-        userDisplayName = "Alice",
+        userName = userName,
+        userDisplayName = userDisplayName,
         isDiscoverable = true,
-        encryptedPrivateKey = ByteArray(48) { 0x66 },
-        privateKeyIv = ByteArray(12) { 0x55 },
-        keyAlias = "keynest_passkey_$credentialId",
         signCount = 0L,
         displayName = null,
         createdAt = 1_700_000_000_000L,
