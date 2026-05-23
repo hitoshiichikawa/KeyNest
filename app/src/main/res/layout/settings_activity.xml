@@ -50,7 +50,6 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="?android:attr/colorBackground"
             app:navigationContentDescription="@string/settings_back_a11y"
             app:navigationIcon="?attr/homeAsUpIndicator"
             app:title="@string/settings_title"
