@@ -28,6 +28,7 @@ import java.security.KeyStoreException
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -160,39 +161,97 @@ class PasskeyRepositoryTest {
         assertThat(result.userHandle).isEqualTo(handle)
     }
 
+    // ---- delete() — happy & alias-absent paths (real Room) ------------
+    //
+    // Issue #102 §4.4 reshaped PasskeyRepositoryImpl.delete to run inside
+    // database.withTransaction { ... } so DB and AndroidKeyStore are
+    // atomized. The Room withTransaction extension dispatches through
+    // the database's internal coroutine context and therefore cannot run
+    // against a relaxed mock<KeyNestDatabase> (the relaxed mock provides
+    // no transaction executor and the coroutine never completes —
+    // observed as UncompletedCoroutinesError). The cases below are
+    // restructured to use the existing in-memory `roomDb` fixture so
+    // the wiring is exercised end-to-end. The original assertion intents
+    // (Success on clean path / Success when alias absent / DAO delete
+    // invoked) are preserved, with the Success path additionally
+    // verifying the row is actually gone from the DAO (assertion
+    // strengthening per design §7.4 / tasks.md 1.3).
+
     @Test
     fun delete_returns_Success_onCleanSuccess() = runTest {
-        coEvery { dao.delete("toDelete") } returns Unit
-        every { keyStore.containsAlias("passkey_toDelete") } returns true
-        every { keyStore.deleteEntry("passkey_toDelete") } returns Unit
+        val successKs = mockk<KeyStore>()
+        every { successKs.containsAlias("passkey_toDelete") } returns true
+        every { successKs.deleteEntry("passkey_toDelete") } returns Unit
+        val successRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { successKs },
+            nowMillisProvider = { roomNow },
+        )
+        roomDao.insert(sampleEntity("toDelete"))
 
-        val result = repo.delete("toDelete")
+        val result = successRepo.delete("toDelete")
 
         assertThat(result).isEqualTo(DeletePasskeyResult.Success)
-        coVerify(exactly = 1) { dao.delete("toDelete") }
+        // Assertion strengthening (design §7.4 / tasks.md 1.3): the row
+        // is actually gone after withTransaction commits.
+        assertThat(roomDao.findByCredentialId("toDelete")).isNull()
+        verify(exactly = 1) { successKs.deleteEntry("passkey_toDelete") }
     }
 
     @Test
     fun delete_returns_Success_whenAliasAbsent() = runTest {
-        coEvery { dao.delete("toDelete") } returns Unit
-        every { keyStore.containsAlias("passkey_toDelete") } returns false
+        val absentAliasKs = mockk<KeyStore>()
+        every { absentAliasKs.containsAlias("passkey_toDelete") } returns false
+        val absentAliasRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { absentAliasKs },
+            nowMillisProvider = { roomNow },
+        )
+        roomDao.insert(sampleEntity("toDelete"))
 
-        val result = repo.delete("toDelete")
+        val result = absentAliasRepo.delete("toDelete")
 
         assertThat(result).isEqualTo(DeletePasskeyResult.Success)
+        // The DAO row still got removed even though the alias was absent.
+        assertThat(roomDao.findByCredentialId("toDelete")).isNull()
+        // deleteEntry MUST NOT be called when containsAlias returned false.
+        verify(exactly = 0) { absentAliasKs.deleteEntry(any()) }
     }
 
     @Test
     fun delete_returns_KeystoreCleanupFailed_onKeyStoreException() = runTest {
-        coEvery { dao.delete("toDelete") } returns Unit
-        every { keyStore.containsAlias("passkey_toDelete") } returns true
         val boom = KeyStoreException("simulated cleanup failure")
-        every { keyStore.deleteEntry("passkey_toDelete") } throws boom
+        val failKs = mockk<KeyStore>()
+        every { failKs.containsAlias("passkey_toDelete") } returns true
+        every { failKs.deleteEntry("passkey_toDelete") } throws boom
+        val failRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { failKs },
+            nowMillisProvider = { roomNow },
+        )
+        roomDao.insert(sampleEntity("toDelete"))
 
-        val result = repo.delete("toDelete")
+        val result = failRepo.delete("toDelete")
 
         assertThat(result).isInstanceOf(DeletePasskeyResult.KeystoreCleanupFailed::class.java)
-        assertThat((result as DeletePasskeyResult.KeystoreCleanupFailed).cause).isSameInstanceAs(boom)
+        // Identity-equality of `cause` is not contractually stable because
+        // Room's withTransaction surfaces the original via the coroutine
+        // boundary (the production stack adds a fresh stack frame via
+        // CoroutineDebugging). Match on class + message instead — the
+        // same approach used by `signWithIncrement_rollsBackSignCount_whenSignerThrows`
+        // for the same reason.
+        val cause = (result as DeletePasskeyResult.KeystoreCleanupFailed).cause
+        assertThat(cause).isInstanceOf(KeyStoreException::class.java)
+        assertThat(cause.message).isEqualTo("simulated cleanup failure")
     }
 
     // ---- Issue #100 additions (delegation / decrypt) -------------------
@@ -550,6 +609,161 @@ class PasskeyRepositoryTest {
 
         assertThat(ex).isInstanceOf(javax.crypto.AEADBadTagException::class.java)
         assertThat(ex).isSameInstanceAs(bad)
+    }
+
+    // ---- Issue #102 (PassKey detail UI: rename / delete) --------------
+    //
+    // The cases below cover tasks.md §1.3:
+    //
+    //   - update_persistsEntity_andDoesNotChangeOtherFields
+    //     (Requirement 7.7: rename writes back only displayName)
+    //   - delete_returnsKeystoreCleanupFailed_andDbRowIsRestored_whenKeyStoreThrows
+    //     (Requirement 3.7 / 7.6: KeyStore.deleteEntry failure must roll
+    //      the Room transaction back so the DB row survives in its
+    //      pre-delete state)
+    //   - delete_callOrder_isDbFirstThenKeystore
+    //     (Requirement 7.5: under withTransaction the DAO row delete
+    //      precedes the KeyStore alias delete)
+    //
+    // All three drive a real in-memory KeyNestDatabase because
+    // withTransaction { ... } needs an actual RoomDatabase instance.
+
+    @Test
+    fun update_persistsEntity_andDoesNotChangeOtherFields() = runTest {
+        // Requirement 7.7: rename must touch only displayName. Insert a
+        // fully-populated row, read it back to capture the post-insert
+        // baseline, then update with copy(displayName = "renamed") and
+        // assert every other column is byte-identical.
+        val original = sampleEntity("rename-1").copy(
+            rpDisplayName = "Example RP",
+            userName = "alice@example.com",
+            userDisplayName = "Alice",
+            isDiscoverable = true,
+            encryptedPrivateKey = ByteArray(48) { 0x66 },
+            privateKeyIv = ByteArray(12) { 0x55 },
+            signCount = 7L,
+            displayName = "old-nickname",
+            createdAt = 1_700_000_000_000L,
+            lastUsedAt = 1_700_000_999_999L,
+        )
+        roomDao.insert(original)
+        val before = roomDao.findByCredentialId("rename-1")!!
+
+        roomRepo.update(before.copy(displayName = "renamed"))
+
+        val after = roomDao.findByCredentialId("rename-1")!!
+        assertThat(after.displayName).isEqualTo("renamed")
+        // Every other column must remain bit-for-bit identical to the
+        // pre-update entity (Requirement 2.10 / 7.7).
+        assertThat(after.credentialId).isEqualTo(before.credentialId)
+        assertThat(after.rpId).isEqualTo(before.rpId)
+        assertThat(after.rpDisplayName).isEqualTo(before.rpDisplayName)
+        assertThat(after.userHandle).isEqualTo(before.userHandle)
+        assertThat(after.userName).isEqualTo(before.userName)
+        assertThat(after.userDisplayName).isEqualTo(before.userDisplayName)
+        assertThat(after.isDiscoverable).isEqualTo(before.isDiscoverable)
+        assertThat(after.encryptedPrivateKey).isEqualTo(before.encryptedPrivateKey)
+        assertThat(after.privateKeyIv).isEqualTo(before.privateKeyIv)
+        assertThat(after.keyAlias).isEqualTo(before.keyAlias)
+        assertThat(after.signCount).isEqualTo(before.signCount)
+        assertThat(after.createdAt).isEqualTo(before.createdAt)
+        assertThat(after.lastUsedAt).isEqualTo(before.lastUsedAt)
+    }
+
+    @Test
+    fun delete_returnsKeystoreCleanupFailed_andDbRowIsRestored_whenKeyStoreThrows() = runTest {
+        // Requirement 3.7 / 7.6: when KeyStore.deleteEntry raises
+        // KeyStoreException inside withTransaction, Room must roll the
+        // DB delete back so the row is recoverable via findByCredentialId.
+        // The return value must still be KeystoreCleanupFailed so the
+        // caller (PasskeyDetailViewModel) can surface DeleteFailed to
+        // the UI (Requirement 3.9).
+        val boom = KeyStoreException("simulated KeyStore failure")
+        val failingKs = mockk<KeyStore>()
+        every { failingKs.containsAlias("passkey_rollback-1") } returns true
+        every { failingKs.deleteEntry("passkey_rollback-1") } throws boom
+        val rollbackRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { failingKs },
+            nowMillisProvider = { roomNow },
+        )
+        roomDao.insert(sampleEntity("rollback-1"))
+        // Sanity: the row exists going in.
+        assertThat(roomDao.findByCredentialId("rollback-1")).isNotNull()
+
+        val result = rollbackRepo.delete("rollback-1")
+
+        // Return shape: KeystoreCleanupFailed wrapping the cause
+        // (Requirement 6.4 / DeletePasskeyResult sealed contract). Match
+        // class + message rather than instance identity — Room's
+        // withTransaction surfaces the original via the coroutine
+        // boundary, so cause identity is not preserved (see the
+        // signWithIncrement_rollsBackSignCount_whenSignerThrows test for
+        // the same workaround).
+        assertThat(result).isInstanceOf(DeletePasskeyResult.KeystoreCleanupFailed::class.java)
+        val cause = (result as DeletePasskeyResult.KeystoreCleanupFailed).cause
+        assertThat(cause).isInstanceOf(KeyStoreException::class.java)
+        assertThat(cause.message).isEqualTo("simulated KeyStore failure")
+        // Rollback: the DB row must be restored to its pre-delete state.
+        // This is the core invariant Issue #102 introduces — the
+        // previous implementation deleted the row and left the alias
+        // orphaned (which Requirement 3.7 disallows).
+        val survivor = roomDao.findByCredentialId("rollback-1")
+        assertThat(survivor).isNotNull()
+        assertThat(survivor!!.credentialId).isEqualTo("rollback-1")
+    }
+
+    @Test
+    fun delete_callOrder_isDbFirstThenKeystore() = runTest {
+        // Requirement 7.5: under withTransaction, the DAO row delete
+        // happens BEFORE the KeyStore alias delete. We observe the
+        // order by capturing the moment KeyStore.deleteEntry is called
+        // and asserting the DB row has already vanished by then. This
+        // intentionally drives the assertion off the real Room DAO so
+        // we exercise the actual withTransaction wiring rather than a
+        // mock's verifyOrder (which would not prove the transaction is
+        // open).
+        val rowVisibilityWhenKsCalled = mutableListOf<Boolean>()
+        val orderingKs = mockk<KeyStore>()
+        every { orderingKs.containsAlias("passkey_order-1") } returns true
+        every { orderingKs.deleteEntry("passkey_order-1") } answers {
+            // Snapshot whether the DB row is still visible at the moment
+            // KeyStore.deleteEntry is invoked. With "DB first" semantics
+            // it MUST be absent already (the row delete ran first within
+            // the same Room transaction).
+            //
+            // The DAO query is suspend, so wrap in runBlocking — we are
+            // inside the withTransaction coroutine, but mockk's answers
+            // block itself is non-suspend. runBlocking here re-enters the
+            // same Room database off the transaction dispatcher; the row
+            // visibility we observe still reflects the in-flight
+            // transaction because Room uses a single-writer model and
+            // both calls execute through the database's IO queue.
+            val stillThere = runBlocking { roomDao.findByCredentialId("order-1") } != null
+            rowVisibilityWhenKsCalled += stillThere
+            Unit
+        }
+        val orderingRepo = PasskeyRepositoryImpl(
+            dao = roomDao,
+            database = roomDb,
+            keyProviderFactory = { roomProvider },
+            cipherFactory = { roomCipher },
+            keyStoreLoader = { orderingKs },
+            nowMillisProvider = { roomNow },
+        )
+        roomDao.insert(sampleEntity("order-1"))
+
+        val result = orderingRepo.delete("order-1")
+
+        assertThat(result).isEqualTo(DeletePasskeyResult.Success)
+        // KeyStore.deleteEntry was called exactly once and saw the row
+        // ALREADY deleted in the DAO (= DB-first ordering / Req 3.6 / 7.5).
+        assertThat(rowVisibilityWhenKsCalled).containsExactly(false)
+        // And the row really is gone after the transaction commits.
+        assertThat(roomDao.findByCredentialId("order-1")).isNull()
     }
 
     @Test

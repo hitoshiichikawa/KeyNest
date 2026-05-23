@@ -73,15 +73,15 @@ T-09 (QA checklist + 動作確認 + PR description 転記)
 
 ---
 
-- [ ] 1. データ層 (Repository) を rename / delete 用に整備する
-- [ ] 1.1 `PasskeyRepository.update(entity)` を interface に加法的追加 / `PasskeyRepositoryImpl` に実装
+- [x] 1. データ層 (Repository) を rename / delete 用に整備する
+- [x] 1.1 `PasskeyRepository.update(entity)` を interface に加法的追加 / `PasskeyRepositoryImpl` に実装
   - `domain/repository/PasskeyRepository.kt` に `suspend fun update(entity: PasskeyEntity)` を追加（既存 7 メソッドのシグネチャ不変）
   - `data/repository/PasskeyRepositoryImpl.kt` に `override suspend fun update(entity: PasskeyEntity) = dao.update(entity)` を実装
   - KDoc に「rename UI から呼ばれる / 呼び出し側が `copy(displayName = trimmed)` で他列を保持する責務」を明記（design §4.4）
   - _Requirements: 2.5, 2.10, 6.4_
   - _Boundary: PasskeyRepository, PasskeyRepositoryImpl_
 
-- [ ] 1.2 `PasskeyRepositoryImpl.delete(credentialId)` を `withTransaction` で囲い直す
+- [x] 1.2 `PasskeyRepositoryImpl.delete(credentialId)` を `withTransaction` で囲い直す
   - 現状の `dao.delete(...)` → `keyStore.deleteEntry(alias)` の 2 段呼び出しを `database.withTransaction { ... }` 内に内包
   - KeyStore.deleteEntry が `KeyStoreException` を投げると transaction 内で rethrow され Room が DB を rollback
   - 外側 try-catch で `KeyStoreException` を `DeletePasskeyResult.KeystoreCleanupFailed(cause)` に変換（戻り値型は変更しない / Req 6.4）
@@ -90,7 +90,7 @@ T-09 (QA checklist + 動作確認 + PR description 転記)
   - _Requirements: 3.6, 3.7, 6.4_
   - _Boundary: PasskeyRepositoryImpl_
 
-- [ ] 1.3 `PasskeyRepositoryTest` に update / delete rollback の検証ケースを追加
+- [x] 1.3 `PasskeyRepositoryTest` に update / delete rollback の検証ケースを追加
   - 既存 test file `app/src/test/java/.../data/PasskeyRepositoryTest.kt` を拡張
   - 新規ケース (a): `update_persistsEntity_andDoesNotChangeOtherFields` — `PasskeyEntity` の全 14 列を pre-update entity と比較し `displayName` のみ差分があることを assert
   - 新規ケース (b): `delete_returnsKeystoreCleanupFailed_andDbRowIsRestored_whenKeyStoreThrows` — fake `KeyStore` で `deleteEntry` が `KeyStoreException` を投げるとき、戻り値が `KeystoreCleanupFailed` かつ `dao.findByCredentialId(credentialId)` が non-null（= DB rollback された）ことを検証

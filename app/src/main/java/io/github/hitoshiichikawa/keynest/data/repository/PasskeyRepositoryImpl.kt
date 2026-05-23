@@ -106,13 +106,53 @@ class PasskeyRepositoryImpl(
         dao.incrementSignCount(credentialId, timestamp)
     }
 
+    /**
+     * Issue #102: full-row update used by the PassKey detail UI to rename
+     * [PasskeyEntity.displayName]. Pure delegate to [PasskeyDao.update]
+     * (`@Update`) — no encryption, no Keystore alias touch.
+     *
+     * The caller is responsible for preserving every column other than the
+     * one being changed (typically by `findByCredentialId(id).copy(displayName = trimmed)`).
+     * See [PasskeyRepository.update] KDoc for the contract.
+     */
+    override suspend fun update(entity: PasskeyEntity) {
+        dao.update(entity)
+    }
+
+    /**
+     * Issue #102 §4.4 / §5.3: atomize "DB row delete → AndroidKeyStore
+     * alias delete" so the DB row and the wrapping key are guaranteed to
+     * be in one of two states only — **both deleted** or **both
+     * untouched**. The previous implementation deleted the DB row first
+     * and then attempted the alias cleanup outside any transaction, which
+     * left the system in a "row gone, alias orphaned" state when the
+     * KeyStore delete raised.
+     *
+     * Implementation:
+     *  1. Open a Room transaction via [KeyNestDatabase.withTransaction].
+     *  2. Inside the transaction, run [PasskeyDao.delete] then
+     *     [KeyStore.deleteEntry] (guarded by [KeyStore.containsAlias] so
+     *     a missing alias is a Success no-op, not a no-op-with-failure).
+     *  3. When [KeyStore.deleteEntry] raises [KeyStoreException], the
+     *     exception bubbles out of the `withTransaction { ... }` block,
+     *     which prompts Room to roll back the DB row delete. The outer
+     *     try-catch then converts the surfaced [KeyStoreException] to
+     *     [DeletePasskeyResult.KeystoreCleanupFailed], keeping the
+     *     historical return-shape (Requirement 6.4) intact for existing
+     *     callers (e.g. the authentication ceremony's anomaly path).
+     *  4. Any other exception (e.g. `SQLiteException`) is intentionally
+     *     not caught here so it propagates to the caller after the
+     *     transaction rolls back (design §9 risk 1 / Requirement 3.9).
+     */
     override suspend fun delete(credentialId: String): DeletePasskeyResult {
-        dao.delete(credentialId)
         return try {
-            val keyStore = keyStoreLoader()
-            val alias = aliasFor(credentialId)
-            if (keyStore.containsAlias(alias)) {
-                keyStore.deleteEntry(alias)
+            database.withTransaction {
+                dao.delete(credentialId)
+                val keyStore = keyStoreLoader()
+                val alias = aliasFor(credentialId)
+                if (keyStore.containsAlias(alias)) {
+                    keyStore.deleteEntry(alias)
+                }
             }
             DeletePasskeyResult.Success
         } catch (e: KeyStoreException) {

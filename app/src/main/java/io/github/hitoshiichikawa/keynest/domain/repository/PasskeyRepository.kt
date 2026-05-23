@@ -93,6 +93,28 @@ interface PasskeyRepository {
     suspend fun loadPrivateKey(credentialId: String): ByteArray?
 
     /**
+     * Persist a full-row update for an existing PassKey. Issue #102 added
+     * this API so the PassKey detail UI can rename
+     * [PasskeyEntity.displayName] without disturbing any other column.
+     *
+     * The implementation delegates to Room's `@Update` (full-row UPDATE
+     * keyed by [PasskeyEntity.credentialId]), so the caller MUST supply
+     * an [entity] that preserves every other field — typically by reading
+     * the row via [findByCredentialId] first and then applying
+     * `copy(displayName = trimmed)` (Issue #102 Requirement 2.10). Any
+     * column the caller fails to copy forward will be overwritten with
+     * whatever value [entity] carries.
+     *
+     * Out of scope: encryption / Keystore alias management. Callers that
+     * need to rotate the wrapping key or re-encrypt the private key must
+     * go through [save] / [delete], not this method.
+     *
+     * @throws android.database.sqlite.SQLiteException propagates DB
+     *   exceptions verbatim (e.g. constraint violation, IO failure).
+     */
+    suspend fun update(entity: PasskeyEntity)
+
+    /**
      * Delete the PassKey row and its wrapping key alias. Surfaces a
      * [DeletePasskeyResult.KeystoreCleanupFailed] when the row delete
      * succeeded but the AndroidKeyStore delete raised. DB exceptions
