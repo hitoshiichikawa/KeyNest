@@ -13,6 +13,7 @@ import io.github.hitoshiichikawa.keynest.security.EncryptedBlob
 import io.github.hitoshiichikawa.keynest.security.KeystoreKeyProvider
 import java.security.KeyStore
 import java.security.KeyStoreException
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Room-backed implementation of [PasskeyRepository] aligned with the
@@ -178,6 +179,16 @@ class PasskeyRepositoryImpl(
             ?: error("PasskeyEntity disappeared mid-transaction: credentialId=$credentialId")
         signer(newSignCount)
     }
+
+    // ---- Issue #101 (Phase 4 of umbrella #89) -------------------------
+
+    /**
+     * Pure DAO delegate — Entity → DisplayModel mapping happens one layer
+     * up in [io.github.hitoshiichikawa.keynest.domain.usecase.ListPasskeysUseCase]
+     * so sensitive entity columns (`userHandle`, `encryptedPrivateKey`,
+     * `privateKeyIv`, `keyAlias`, `signCount`) never reach the UI layer.
+     */
+    override fun listAll(): Flow<List<PasskeyEntity>> = dao.listAll()
 
     companion object {
         /**

@@ -22,6 +22,7 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.DuplicateCredentialUseCa
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetDeviceLockStatusUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ListCredentialsUseCase
+import io.github.hitoshiichikawa.keynest.domain.usecase.ListPasskeysUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.MarkCredentialUsedUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentDetectedFieldsUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveRecentlyUsedUseCase
@@ -34,6 +35,8 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
 import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.security.KeystoreKeyProvider
+import io.github.hitoshiichikawa.keynest.ui.settings.passkey.CredentialProviderStatusChecker
+import io.github.hitoshiichikawa.keynest.ui.settings.passkey.DefaultCredentialProviderStatusChecker
 import io.github.hitoshiichikawa.keynest.util.AppInfoProvider
 import io.github.hitoshiichikawa.keynest.util.IconLoader
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
@@ -192,6 +195,16 @@ object ServiceLocator {
         ListCredentialsUseCase(credentialRepository)
     }
 
+    /**
+     * Issue #101 (Phase 4 of umbrella #89): Flow source for the merged
+     * password+PassKey credential list. Delegates `PasskeyRepository.listAll()`
+     * and maps PasskeyEntity to the UI-safe `PasskeyDisplayModel` so the
+     * sensitive entity columns never reach the ViewModel layer (NFR 2.2).
+     */
+    val listPasskeysUseCase: ListPasskeysUseCase by lazy {
+        ListPasskeysUseCase(passkeyRepository)
+    }
+
     val resolveAutofillCandidatesUseCase: ResolveAutofillCandidatesUseCase by lazy {
         ResolveAutofillCandidatesUseCase(credentialRepository, packageSignatureResolver)
     }
@@ -298,6 +311,20 @@ object ServiceLocator {
 
     val clearVaultUseCase: ClearVaultUseCase by lazy {
         ClearVaultUseCase(credentialRepository, keystoreKeyProvider, detectedFieldRepository)
+    }
+
+    // ---- Issue #103 (Phase 6) PassKey provider settings ----------------
+
+    /**
+     * Issue #103: probes the OS Credential Manager registration state so
+     * the Settings screen can render Enabled / Disabled / Unsupported.
+     *
+     * Not gated by `@RequiresApi` — the checker itself runtime-checks
+     * `Build.VERSION.SDK_INT` and returns `Unsupported` on API 33-.
+     * This lets the lazy field resolve safely on API 26+ devices.
+     */
+    val credentialProviderStatusChecker: CredentialProviderStatusChecker by lazy {
+        DefaultCredentialProviderStatusChecker(requireAppContext())
     }
 
     // ---- bootstrap -------------------------------------------------------

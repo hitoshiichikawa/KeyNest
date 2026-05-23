@@ -136,7 +136,100 @@
             </LinearLayout>
 
             <!-- =================================================== -->
-            <!-- 2. Security group (Req 5). -->
+            <!-- 2. PassKey provider group (Issue #103 Req 1.x / 2.x). -->
+            <!--                                                       -->
+            <!-- 加法的に挿入 (Issue #10 Req 5.1 / 既存 5 セクションの順序   -->
+            <!-- 変更禁止に整合)。ステータス文言は SettingsActivity.bind- -->
+            <!-- PasskeyProvider() で 3 値 (Enabled / Disabled /         -->
+            <!-- Unsupported) のいずれかに切替え、OS 設定ボタンは API     -->
+            <!-- 34+ のみ VISIBLE (Req 2.1 / 2.2)。                       -->
+            <!-- =================================================== -->
+            <TextView
+                android:id="@+id/eyebrow_passkey_provider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_space_2"
+                android:accessibilityHeading="true"
+                android:paddingHorizontal="@dimen/kn_space_1"
+                android:text="@string/settings_passkey_provider_eyebrow"
+                android:textAppearance="@style/Text.KeyNest.Eyebrow"
+                android:textColor="@color/kn_text_3" />
+
+            <LinearLayout
+                android:id="@+id/group_passkey_provider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/kn_section_gap"
+                android:background="@drawable/kn_settings_group_bg"
+                android:divider="@drawable/kn_settings_row_divider"
+                android:orientation="vertical"
+                android:showDividers="middle">
+
+                <!-- Status row: icon tile + status text. Neutral tone -
+                     uses kn_text_2 like other SettingRow sub text (Req 1.7). -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_3">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/kn_icon_tile_sm"
+                        android:layout_height="@dimen/kn_icon_tile_sm"
+                        android:background="@drawable/kn_settings_row_icon_tile_bg"
+                        android:importantForAccessibility="no">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_key_24"
+                            app:tint="@color/kn_text_2" />
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/text_passkey_provider_status"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/kn_space_3"
+                        android:layout_weight="1"
+                        android:text="@string/settings_passkey_provider_status_unsupported"
+                        android:textAppearance="@style/Text.KeyNest.Body"
+                        android:textColor="@color/kn_text_2"
+                        tools:text="Enabled: KeyNest can save and use PassKeys" />
+                </LinearLayout>
+
+                <!-- CTA row: "Open PassKey settings" button. Gone on API 33-
+                     (Req 2.2); on API 34+ stays visible for both Enabled and
+                     Disabled status (Req 2.7 - users may want to inspect OS
+                     even when KeyNest is already active). -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/kn_space_3"
+                    android:paddingVertical="@dimen/kn_space_2">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_open_passkey_settings"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/settings_passkey_provider_open_settings_a11y_label"
+                        android:minWidth="48dp"
+                        android:minHeight="48dp"
+                        android:text="@string/settings_passkey_provider_open_settings_action"
+                        android:textAllCaps="false" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- =================================================== -->
+            <!-- 3. Security group (Req 5). -->
             <!-- =================================================== -->
             <TextView
                 android:id="@+id/eyebrow_security"

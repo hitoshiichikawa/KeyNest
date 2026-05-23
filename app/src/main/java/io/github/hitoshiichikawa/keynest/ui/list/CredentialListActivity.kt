@@ -64,6 +64,7 @@ class CredentialListActivity : AppCompatActivity() {
             ServiceLocator.observeRecentlyUsedUseCase,
             ServiceLocator.duplicateCredentialUseCase,
             ServiceLocator.deleteCredentialUseCase,
+            ServiceLocator.listPasskeysUseCase,
         )
     }
 
@@ -122,14 +123,53 @@ class CredentialListActivity : AppCompatActivity() {
     // ---- view setup --------------------------------------------------------
 
     private fun setUpMainList() {
+        // Issue #101 R5.1 / R5.2 / R5.3 / R5.4: callbacks dispatch on the
+        // sealed `CredentialListItem` variant. Password rows keep the
+        // existing Issue #9 / #29 behaviour; PassKey rows show a Snackbar
+        // (v1 only) and consume long-click + overflow events.
         adapter = CredentialListAdapter(
-            onItemClick = { startEdit(it) },
-            onItemLongClick = { promptDelete(it) },
-            onOverflowClick = { credential, anchor -> showRowOverflowMenu(credential, anchor) },
+            onItemClick = { item ->
+                when (item) {
+                    is CredentialListItem.Password -> startEdit(item.credential)
+                    is CredentialListItem.Passkey -> {
+                        viewModel.onPasskeyClicked(item.passkey)
+                        showPasskeyTapSnackbar()
+                    }
+                }
+            },
+            onItemLongClick = { item ->
+                when (item) {
+                    is CredentialListItem.Password -> promptDelete(item.credential)
+                    is CredentialListItem.Passkey -> Unit
+                }
+            },
+            onOverflowClick = { item, anchor ->
+                when (item) {
+                    is CredentialListItem.Password ->
+                        showRowOverflowMenu(item.credential, anchor)
+                    // PassKey rows hide the overflow button (R5.4) so this
+                    // branch is defensive — the click target is GONE.
+                    is CredentialListItem.Passkey -> Unit
+                }
+            },
             iconLoader = ServiceLocator.iconLoader,
         )
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
+    }
+
+    /**
+     * Issue #101 R5.1 / R5.2: Snackbar shown when the user taps a
+     * PassKey row. v1 does not navigate to a management screen — the
+     * follow-up Issue (#89 sub-plan 6) will swap this for an Activity
+     * launch.
+     */
+    private fun showPasskeyTapSnackbar() {
+        Snackbar.make(
+            binding.root,
+            R.string.credential_list_passkey_tap_v1_message,
+            Snackbar.LENGTH_SHORT,
+        ).show()
     }
 
     private fun setUpRecentCarousel() {
@@ -232,9 +272,12 @@ class CredentialListActivity : AppCompatActivity() {
      * logged here, never the raw query / username / packageName text.
      */
     private fun renderState(state: CredentialListUiState) {
+        // Issue #101 NFR 2.3: only counts / kinds are logged. No raw
+        // credentialId / rpId / userName / query bytes reach logcat.
         SafeLogger.info(
             tag = TAG,
             message = "ui emit size=${state.mainList.size} recent=${state.recentList.size} " +
+                "passkeyCount=${state.passkeyCount} " +
                 "filter=${state.filter.javaClass.simpleName} sort=${state.sort} " +
                 "emptyKind=${state.emptyKind}",
         )

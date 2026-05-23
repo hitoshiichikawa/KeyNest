@@ -8,11 +8,13 @@ import io.github.hitoshiichikawa.keynest.domain.model.AutofillStatus
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
 import io.github.hitoshiichikawa.keynest.domain.model.DeviceLockStatus
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
+import io.github.hitoshiichikawa.keynest.domain.model.PasskeyProviderStatus
 import io.github.hitoshiichikawa.keynest.domain.model.SigningHash
 import io.github.hitoshiichikawa.keynest.domain.usecase.FakeCredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetDeviceLockStatusUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveVaultMetadataUseCase
+import io.github.hitoshiichikawa.keynest.ui.settings.passkey.CredentialProviderStatusChecker
 import io.github.hitoshiichikawa.keynest.util.AppInfoProvider
 import io.github.hitoshiichikawa.keynest.util.VaultStorageMeasurer
 import com.google.common.truth.Truth.assertThat
@@ -199,6 +201,116 @@ class SettingsViewModelTest {
             }
         }
 
+    // ---- Issue #103: PassKey provider status ----------------------------
+
+    @Test
+    fun uiState_passkeyProvider_isEnabled_whenApi34AndKeyNestActive() =
+        runTest(testDispatcher) {
+            // Req 6.1: the fake checker reports Enabled, so uiState must
+            // propagate it.
+            val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Enabled)
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Enabled)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun uiState_passkeyProvider_isDisabled_whenApi34AndKeyNestInactive() =
+        runTest(testDispatcher) {
+            // Req 6.2: the fake checker reports Disabled (API 34+ but
+            // KeyNest not selected as Credential Manager provider).
+            val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Disabled)
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Disabled)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun uiState_passkeyProvider_isUnsupported_andCheckerCalledOnce_onApi33() =
+        runTest(testDispatcher) {
+            // Req 6.3: ViewModel does NOT inspect Build.VERSION itself —
+            // it delegates to the checker. On API 33 the checker returns
+            // Unsupported, but the ViewModel still invokes check() exactly
+            // once per refresh tick.
+            val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Unsupported)
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Unsupported)
+                // Exactly one call on the initial refreshTick = 0 emission.
+                assertThat(checker.callCount).isEqualTo(1)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun uiState_passkeyProvider_fallbackToDisabled_onCheckerException() =
+        runTest(testDispatcher) {
+            // Req 6.4: defensive contract. The production
+            // DefaultCredentialProviderStatusChecker catches everything
+            // internally and returns Disabled (its own Req 3.5 guard).
+            // The ViewModel adds a belt-and-suspenders second guard so
+            // that even if a future checker implementation accidentally
+            // throws past its internal catch block, the combine pipeline
+            // does NOT crash and the UI is never told the provider is
+            // Enabled.
+            val checker = FakeCredentialProviderStatusChecker(
+                value = PasskeyProviderStatus.Enabled, // would-be-wrong value
+                throwError = RuntimeException("simulated checker bug"),
+            )
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                // The ViewModel-level fallback (SettingsViewModel.resolvePasskeyProviderStatus)
+                // catches the throw and forces Disabled — the strongest form of
+                // the Req 3.5 invariant ("never falsely report Enabled on
+                // exception").
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Disabled)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun refresh_reReadsPasskeyProviderStatus() = runTest(testDispatcher) {
+        // Req 3.7 / 5.3: returning from the OS Credential Manager
+        // settings re-evaluates the PassKey provider status — same
+        // mechanism as autofill / lock / storage.
+        val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Disabled)
+        val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+        try {
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.passkeyProviderStatus)
+                .isEqualTo(PasskeyProviderStatus.Disabled)
+            val callsAfterInitial = checker.callCount
+
+            // Act: simulate user enabling KeyNest in OS settings then
+            // returning to KeyNest.
+            checker.value = PasskeyProviderStatus.Enabled
+            vm.refresh()
+            advanceUntilIdle()
+
+            assertThat(vm.uiState.value.passkeyProviderStatus)
+                .isEqualTo(PasskeyProviderStatus.Enabled)
+            assertThat(checker.callCount).isGreaterThan(callsAfterInitial)
+        } finally {
+            job.cancel()
+        }
+    }
+
     // ---- helpers --------------------------------------------------------
 
     /**
@@ -214,6 +326,8 @@ class SettingsViewModelTest {
         biometricStrongProvider: () -> Int = { biometricFor(lockStatus, strong = true) },
         biometricDeviceProvider: () -> Int = { biometricFor(lockStatus, strong = false) },
         storageBytesProvider: () -> Long = { storageBytes },
+        passkeyChecker: CredentialProviderStatusChecker =
+            FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Unsupported),
     ): Triple<SettingsViewModel, FakeCredentialRepository, Job> {
         val repo = FakeCredentialRepository()
         val biometric = mockk<BiometricManager>(relaxed = true)
@@ -237,11 +351,41 @@ class SettingsViewModelTest {
             appInfoProvider = object : AppInfoProvider(ctx) {
                 override fun get(): AppInfo = appInfo
             },
+            credentialProviderStatusChecker = passkeyChecker,
+            // Issue #103: route the PassKey probe through the same test
+            // dispatcher as Main so advanceUntilIdle() drains it
+            // deterministically. Production passes Dispatchers.IO by
+            // default (constructor default).
+            passkeyProbeDispatcher = testDispatcher,
         )
         // Drain uiState so the SharingStarted.WhileSubscribed pipeline
         // stays live for the duration of the test.
         val job = vm.uiState.onEach { /* keep alive */ }.launchIn(this)
         return Triple(vm, repo, job)
+    }
+
+    /**
+     * Issue #103: test double for [CredentialProviderStatusChecker]. Holds
+     * a mutable `value` so [refresh_reReadsPasskeyProviderStatus] can
+     * mutate the source between refresh ticks, and tracks `callCount` so
+     * tests assert that the checker is hit exactly once per refresh.
+     *
+     * If [throwError] is non-null the next [check] call throws it (used
+     * by the defensive `fallbackToDisabled_onCheckerException` case to
+     * prove the ViewModel does not crash even if the checker contract
+     * is somehow violated — production [DefaultCredentialProviderStatusChecker]
+     * already catches everything internally).
+     */
+    private class FakeCredentialProviderStatusChecker(
+        var value: PasskeyProviderStatus,
+        var throwError: Throwable? = null,
+    ) : CredentialProviderStatusChecker {
+        var callCount = 0
+        override fun check(): PasskeyProviderStatus {
+            callCount++
+            throwError?.let { throw it }
+            return value
+        }
     }
 
     private fun biometricFor(status: DeviceLockStatus, strong: Boolean): Int = when (status) {
