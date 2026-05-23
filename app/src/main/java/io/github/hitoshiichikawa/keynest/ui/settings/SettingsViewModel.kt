@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.github.hitoshiichikawa.keynest.domain.model.AutofillStatus
+import io.github.hitoshiichikawa.keynest.domain.model.PasskeyProviderStatus
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetDeviceLockStatusUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveVaultMetadataUseCase
@@ -60,6 +61,10 @@ class SettingsViewModel(
             metadata = metadata,
             storageBytes = storage,
             appInfo = appInfoProvider.get(),
+            // Issue #103 T-05 placeholder: real value is wired in T-06
+            // via CredentialProviderStatusChecker. Until then the field
+            // stays at the neutral default so existing tests keep passing.
+            passkeyProviderStatus = PasskeyProviderStatus.Unsupported,
         )
     }.stateIn(
         scope = viewModelScope,
