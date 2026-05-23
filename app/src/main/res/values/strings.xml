@@ -281,4 +281,19 @@
          after the user taps the PublicKeyCredentialEntry. -->
     <string name="passkey_auth_prompt_title">Sign in with PassKey</string>
     <string name="passkey_auth_prompt_subtitle">Confirm your identity</string>
+
+    <!-- Issue #103 / Parent #89: PassKey provider section on the Settings
+         screen. NFR 3.1 mandates the "PassKey" spelling (no lowercase
+         "passkey", no Japanese katakana). Strings back:
+         - Eyebrow header ("PASSKEY PROVIDER" — matches existing SECURITY /
+           VAULT / ABOUT / DANGER ZONE eyebrows; design.md §4.3 / §9.1-2)
+         - 3 status texts (Enabled / Disabled / Unsupported per Req 1.4-1.6)
+         - CTA label + a11y description for the "Open PassKey settings"
+           button (Req 2.1 / 2.6) -->
+    <string name="settings_passkey_provider_eyebrow">PASSKEY PROVIDER</string>
+    <string name="settings_passkey_provider_status_enabled">Enabled: KeyNest can save and use PassKeys</string>
+    <string name="settings_passkey_provider_status_disabled">Not set: Enable KeyNest from the button below</string>
+    <string name="settings_passkey_provider_status_unsupported">Requires Android 14 or later</string>
+    <string name="settings_passkey_provider_open_settings_action">Open PassKey settings</string>
+    <string name="settings_passkey_provider_open_settings_a11y_label">Open PassKey settings, opens Android Credential Manager settings</string>
 </resources>

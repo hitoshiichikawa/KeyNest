@@ -98,4 +98,75 @@ class SystemSettingsIntentsTest {
         assertThat(result.isFailure).isTrue()
         assertThat(result.exceptionOrNull()).isInstanceOf(ActivityNotFoundException::class.java)
     }
+
+    // ---- Issue #103: openPasskeyProviderSettings -----------------------
+
+    @Test
+    fun openPasskeyProviderSettings_dispatchesCredentialProviderIntent_onSuccess() {
+        // Req 6.5: with the resolver in default (permissive) mode the
+        // primary ACTION_CREDENTIAL_PROVIDER intent dispatches and we
+        // observe it as the next started activity.
+        val activity = newActivity()
+
+        val result = SystemSettingsIntents.openPasskeyProviderSettings(activity)
+
+        assertThat(result.isSuccess).isTrue()
+        val dispatched = shadowOf(activity).nextStartedActivity
+            ?: error("expected an Intent to be dispatched")
+        // Use the string literal — the constant Settings.ACTION_CREDENTIAL_PROVIDER
+        // is API 34+ and the production code references the literal too.
+        assertThat(dispatched.action).isEqualTo("android.settings.CREDENTIAL_PROVIDER")
+    }
+
+    @Test
+    fun openPasskeyProviderSettings_fallsBackToActionSettings_whenPrimaryFails() {
+        // Req 6.6: when the primary intent cannot be resolved, the helper
+        // must fall back to ACTION_SETTINGS in the same call.
+        //
+        // We mark only the primary action as unresolvable by combining
+        // checkActivities(true) with a PackageManager match for
+        // ACTION_SETTINGS — but Robolectric's checkActivities flips on
+        // BOTH, so we instead exercise the path by registering a resolver
+        // for ACTION_SETTINGS and leaving ACTION_CREDENTIAL_PROVIDER
+        // unhandled.
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        // Register ACTION_SETTINGS so the fallback resolves while the
+        // primary action does not. Without `addResolveInfoForIntent`
+        // Robolectric would still resolve in permissive mode, but with
+        // checkActivities(true) it forces strict resolution.
+        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+        val resolveInfo = android.content.pm.ResolveInfo().apply {
+            activityInfo = android.content.pm.ActivityInfo().apply {
+                packageName = "com.android.settings"
+                name = "com.android.settings.Settings"
+            }
+        }
+        shadowOf(app.packageManager).addResolveInfoForIntent(fallbackIntent, resolveInfo)
+        shadowOf(app).checkActivities(true)
+        val activity = newActivity()
+
+        val result = SystemSettingsIntents.openPasskeyProviderSettings(activity)
+
+        assertThat(result.isSuccess).isTrue()
+        // The next started activity should be the fallback ACTION_SETTINGS,
+        // not the primary action.
+        val dispatched = shadowOf(activity).nextStartedActivity
+            ?: error("expected an Intent to be dispatched")
+        assertThat(dispatched.action).isEqualTo(Settings.ACTION_SETTINGS)
+    }
+
+    @Test
+    fun openPasskeyProviderSettings_returnsFailure_whenBothFail() {
+        // Req 2.5 / 6.6 mirror: when neither the primary nor the fallback
+        // resolves, the helper returns Result.failure so the caller can
+        // surface the shared "settings unavailable" Snackbar.
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        shadowOf(app).checkActivities(true)
+        val activity = newActivity()
+
+        val result = SystemSettingsIntents.openPasskeyProviderSettings(activity)
+
+        assertThat(result.isFailure).isTrue()
+        assertThat(result.exceptionOrNull()).isInstanceOf(ActivityNotFoundException::class.java)
+    }
 }
