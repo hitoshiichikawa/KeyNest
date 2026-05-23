@@ -201,6 +201,116 @@ class SettingsViewModelTest {
             }
         }
 
+    // ---- Issue #103: PassKey provider status ----------------------------
+
+    @Test
+    fun uiState_passkeyProvider_isEnabled_whenApi34AndKeyNestActive() =
+        runTest(testDispatcher) {
+            // Req 6.1: the fake checker reports Enabled, so uiState must
+            // propagate it.
+            val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Enabled)
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Enabled)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun uiState_passkeyProvider_isDisabled_whenApi34AndKeyNestInactive() =
+        runTest(testDispatcher) {
+            // Req 6.2: the fake checker reports Disabled (API 34+ but
+            // KeyNest not selected as Credential Manager provider).
+            val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Disabled)
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Disabled)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun uiState_passkeyProvider_isUnsupported_andCheckerCalledOnce_onApi33() =
+        runTest(testDispatcher) {
+            // Req 6.3: ViewModel does NOT inspect Build.VERSION itself —
+            // it delegates to the checker. On API 33 the checker returns
+            // Unsupported, but the ViewModel still invokes check() exactly
+            // once per refresh tick.
+            val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Unsupported)
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isEqualTo(PasskeyProviderStatus.Unsupported)
+                // Exactly one call on the initial refreshTick = 0 emission.
+                assertThat(checker.callCount).isEqualTo(1)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun uiState_passkeyProvider_fallbackToDisabled_onCheckerException() =
+        runTest(testDispatcher) {
+            // Req 6.4: defensive contract. Production
+            // DefaultCredentialProviderStatusChecker catches everything
+            // internally and returns Disabled, but if a future
+            // implementation accidentally throws, the ViewModel must NOT
+            // crash and must NOT propagate Enabled.
+            //
+            // We assert the ViewModel survives the throw — the StateFlow
+            // stays on its previous (initial Unsupported placeholder)
+            // value rather than transitioning to Enabled. We also assert
+            // no Enabled is observed.
+            val checker = FakeCredentialProviderStatusChecker(
+                value = PasskeyProviderStatus.Enabled, // would-be-wrong value
+                throwError = RuntimeException("simulated checker bug"),
+            )
+            val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+            try {
+                advanceUntilIdle()
+                // Critical: must NOT be Enabled (Req 3.5 invariant —
+                // never falsely report Enabled on exception).
+                assertThat(vm.uiState.value.passkeyProviderStatus)
+                    .isNotEqualTo(PasskeyProviderStatus.Enabled)
+            } finally {
+                job.cancel()
+            }
+        }
+
+    @Test
+    fun refresh_reReadsPasskeyProviderStatus() = runTest(testDispatcher) {
+        // Req 3.7 / 5.3: returning from the OS Credential Manager
+        // settings re-evaluates the PassKey provider status — same
+        // mechanism as autofill / lock / storage.
+        val checker = FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Disabled)
+        val (vm, _, job) = newViewModelWithCollector(passkeyChecker = checker)
+        try {
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.passkeyProviderStatus)
+                .isEqualTo(PasskeyProviderStatus.Disabled)
+            val callsAfterInitial = checker.callCount
+
+            // Act: simulate user enabling KeyNest in OS settings then
+            // returning to KeyNest.
+            checker.value = PasskeyProviderStatus.Enabled
+            vm.refresh()
+            advanceUntilIdle()
+
+            assertThat(vm.uiState.value.passkeyProviderStatus)
+                .isEqualTo(PasskeyProviderStatus.Enabled)
+            assertThat(checker.callCount).isGreaterThan(callsAfterInitial)
+        } finally {
+            job.cancel()
+        }
+    }
+
     // ---- helpers --------------------------------------------------------
 
     /**
