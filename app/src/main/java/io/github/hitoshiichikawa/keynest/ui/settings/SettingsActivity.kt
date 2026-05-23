@@ -19,6 +19,7 @@ import io.github.hitoshiichikawa.keynest.ui.danger.DangerZoneActivity
 import io.github.hitoshiichikawa.keynest.ui.oss.OssLicensesActivity
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SystemSettingsIntents
+import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -67,6 +68,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = SettingsActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.applySystemBarsPadding()
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
 

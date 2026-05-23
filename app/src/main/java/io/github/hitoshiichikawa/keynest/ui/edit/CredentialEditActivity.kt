@@ -25,6 +25,7 @@ import io.github.hitoshiichikawa.keynest.databinding.CredentialEditActivityBindi
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import kotlinx.coroutines.launch
 
 /**
@@ -83,6 +84,7 @@ class CredentialEditActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = CredentialEditActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.root.applySystemBarsPadding()
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
