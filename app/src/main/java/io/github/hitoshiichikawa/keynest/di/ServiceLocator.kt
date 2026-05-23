@@ -34,6 +34,8 @@ import io.github.hitoshiichikawa.keynest.domain.usecase.UpdateCredentialUseCase
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
 import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.security.KeystoreKeyProvider
+import io.github.hitoshiichikawa.keynest.ui.settings.passkey.CredentialProviderStatusChecker
+import io.github.hitoshiichikawa.keynest.ui.settings.passkey.DefaultCredentialProviderStatusChecker
 import io.github.hitoshiichikawa.keynest.util.AppInfoProvider
 import io.github.hitoshiichikawa.keynest.util.IconLoader
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
@@ -298,6 +300,20 @@ object ServiceLocator {
 
     val clearVaultUseCase: ClearVaultUseCase by lazy {
         ClearVaultUseCase(credentialRepository, keystoreKeyProvider, detectedFieldRepository)
+    }
+
+    // ---- Issue #103 (Phase 6) PassKey provider settings ----------------
+
+    /**
+     * Issue #103: probes the OS Credential Manager registration state so
+     * the Settings screen can render Enabled / Disabled / Unsupported.
+     *
+     * Not gated by `@RequiresApi` — the checker itself runtime-checks
+     * `Build.VERSION.SDK_INT` and returns `Unsupported` on API 33-.
+     * This lets the lazy field resolve safely on API 26+ devices.
+     */
+    val credentialProviderStatusChecker: CredentialProviderStatusChecker by lazy {
+        DefaultCredentialProviderStatusChecker(requireAppContext())
     }
 
     // ---- bootstrap -------------------------------------------------------

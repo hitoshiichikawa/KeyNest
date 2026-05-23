@@ -8,11 +8,13 @@ import io.github.hitoshiichikawa.keynest.domain.model.AutofillStatus
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
 import io.github.hitoshiichikawa.keynest.domain.model.DeviceLockStatus
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
+import io.github.hitoshiichikawa.keynest.domain.model.PasskeyProviderStatus
 import io.github.hitoshiichikawa.keynest.domain.model.SigningHash
 import io.github.hitoshiichikawa.keynest.domain.usecase.FakeCredentialRepository
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetDeviceLockStatusUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.GetVaultStorageUsageUseCase
 import io.github.hitoshiichikawa.keynest.domain.usecase.ObserveVaultMetadataUseCase
+import io.github.hitoshiichikawa.keynest.ui.settings.passkey.CredentialProviderStatusChecker
 import io.github.hitoshiichikawa.keynest.util.AppInfoProvider
 import io.github.hitoshiichikawa.keynest.util.VaultStorageMeasurer
 import com.google.common.truth.Truth.assertThat
@@ -214,6 +216,8 @@ class SettingsViewModelTest {
         biometricStrongProvider: () -> Int = { biometricFor(lockStatus, strong = true) },
         biometricDeviceProvider: () -> Int = { biometricFor(lockStatus, strong = false) },
         storageBytesProvider: () -> Long = { storageBytes },
+        passkeyChecker: CredentialProviderStatusChecker =
+            FakeCredentialProviderStatusChecker(PasskeyProviderStatus.Unsupported),
     ): Triple<SettingsViewModel, FakeCredentialRepository, Job> {
         val repo = FakeCredentialRepository()
         val biometric = mockk<BiometricManager>(relaxed = true)
@@ -237,11 +241,36 @@ class SettingsViewModelTest {
             appInfoProvider = object : AppInfoProvider(ctx) {
                 override fun get(): AppInfo = appInfo
             },
+            credentialProviderStatusChecker = passkeyChecker,
         )
         // Drain uiState so the SharingStarted.WhileSubscribed pipeline
         // stays live for the duration of the test.
         val job = vm.uiState.onEach { /* keep alive */ }.launchIn(this)
         return Triple(vm, repo, job)
+    }
+
+    /**
+     * Issue #103: test double for [CredentialProviderStatusChecker]. Holds
+     * a mutable `value` so [refresh_reReadsPasskeyProviderStatus] can
+     * mutate the source between refresh ticks, and tracks `callCount` so
+     * tests assert that the checker is hit exactly once per refresh.
+     *
+     * If [throwError] is non-null the next [check] call throws it (used
+     * by the defensive `fallbackToDisabled_onCheckerException` case to
+     * prove the ViewModel does not crash even if the checker contract
+     * is somehow violated — production [DefaultCredentialProviderStatusChecker]
+     * already catches everything internally).
+     */
+    private class FakeCredentialProviderStatusChecker(
+        var value: PasskeyProviderStatus,
+        var throwError: Throwable? = null,
+    ) : CredentialProviderStatusChecker {
+        var callCount = 0
+        override fun check(): PasskeyProviderStatus {
+            callCount++
+            throwError?.let { throw it }
+            return value
+        }
     }
 
     private fun biometricFor(status: DeviceLockStatus, strong: Boolean): Int = when (status) {

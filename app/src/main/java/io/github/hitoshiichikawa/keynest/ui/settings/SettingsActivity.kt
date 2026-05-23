@@ -60,6 +60,10 @@ class SettingsActivity : AppCompatActivity() {
             getStorage = ServiceLocator.getVaultStorageUsageUseCase,
             getLockStatus = ServiceLocator.getDeviceLockStatusUseCase,
             appInfoProvider = ServiceLocator.appInfoProvider,
+            // Issue #103: probe the OS Credential Manager registration state
+            // so the PassKey provider section renders Enabled / Disabled /
+            // Unsupported.
+            credentialProviderStatusChecker = ServiceLocator.credentialProviderStatusChecker,
         )
     }
 
