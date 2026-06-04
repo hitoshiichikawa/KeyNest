@@ -7,8 +7,6 @@ import io.github.hitoshiichikawa.keynest.domain.model.SigningHash
 import io.github.hitoshiichikawa.keynest.domain.usecase.NewCredentialInput
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
 import com.google.common.truth.Truth.assertThat
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
@@ -64,8 +62,10 @@ class FillRequestLatencyTest {
         // matches. We don't have setter access on ServiceLocator's lazy
         // fields, but we can construct an ad-hoc use case via the same
         // repository.
-        val sigResolver = mockk<PackageSignatureResolver>().also {
-            every { it.resolveSha256(targetPackage) } returns matchingHash
+        val sigResolver = object : PackageSignatureResolver(
+            InstrumentationRegistry.getInstrumentation().targetContext.packageManager,
+        ) {
+            override fun resolveSha256(packageName: String) = matchingHash
         }
         // Backfill all rows with the matching hash so they pass the filter.
         for (rec in ServiceLocator.credentialRepository.findByPackage(targetPackage)) {

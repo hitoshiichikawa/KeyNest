@@ -15,6 +15,7 @@ import io.github.hitoshiichikawa.keynest.auth.BiometricAuthenticator
 import io.github.hitoshiichikawa.keynest.databinding.DangerZoneActivityBinding
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
+import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
@@ -56,6 +57,7 @@ class DangerZoneActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdgeWithKnDefaults()
         binding = DangerZoneActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.applySystemBarsPadding()

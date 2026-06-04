@@ -9,77 +9,125 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.CredentialListItemBinding
-import io.github.hitoshiichikawa.keynest.domain.model.Credential
 import io.github.hitoshiichikawa.keynest.util.IconLoader
 
 /**
  * RecyclerView adapter for the credential list (Req 1.5 / Issue #9 Req
- * 5.1, 6.2). Renders only the non-sensitive metadata of each [Credential]
- * - we never load decrypted data into the row (NFR 1.3).
+ * 5.1 / 6.2; Issue #101 R1.x for the multi-viewType extension).
  *
- * Issue #9 adds the per-row overflow button click callback; the existing
- * row click + long click delegates are preserved (Req 6.2 / 5.6).
+ * Two row variants are rendered against the same layout
+ * (`credential_list_item.xml`) — Issue #101 Q-9 settles the design on
+ * a shared layout with the ViewHolder toggling visibility and the
+ * icon resource per variant. The DRY win + the existing
+ * Issue #29 / #43 / #51 tests continuing to pass against the same
+ * layout was preferred over a per-variant XML.
+ *
+ * - `VIEW_TYPE_PASSWORD` (0): existing password row — IconLoader,
+ *   label / username / packageName, signature chip + overflow button.
+ * - `VIEW_TYPE_PASSKEY` (1): PassKey row — ic_passkey_24 vector via
+ *   setImageResource, three-line fallback (displayName → rpDisplayName
+ *   → rpId / etc per R1.3), signature chip + strength bar + overflow
+ *   button hidden (R1.9 / R5.4), long-click consumed (R5.3).
+ *
+ * DiffUtil identifies rows by `stableId` (`"pw:<id>"` / `"pk:<credentialId>"`)
+ * so a Long credential.id and a String credentialId can never collide
+ * (R1.5 / D-8).
+ *
+ * NFR 1.3: only non-sensitive metadata is bound — we never load
+ * decrypted password / private-key bytes into the row.
  */
 class CredentialListAdapter(
-    private val onItemClick: (Credential) -> Unit,
-    private val onItemLongClick: (Credential) -> Unit,
-    private val onOverflowClick: (Credential, View) -> Unit,
+    private val onItemClick: (CredentialListItem) -> Unit,
+    private val onItemLongClick: (CredentialListItem) -> Unit,
+    private val onOverflowClick: (CredentialListItem, View) -> Unit,
     private val iconLoader: IconLoader,
-) : ListAdapter<Credential, CredentialListAdapter.ViewHolder>(DIFF) {
+) : ListAdapter<CredentialListItem, RecyclerView.ViewHolder>(DIFF) {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+    override fun getItemViewType(position: Int): Int = when (getItem(position)) {
+        is CredentialListItem.Password -> VIEW_TYPE_PASSWORD
+        is CredentialListItem.Passkey -> VIEW_TYPE_PASSKEY
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val binding = CredentialListItemBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false,
         )
-        return ViewHolder(binding)
+        return when (viewType) {
+            VIEW_TYPE_PASSWORD -> PasswordViewHolder(binding)
+            VIEW_TYPE_PASSKEY -> PasskeyViewHolder(binding)
+            else -> error("Unknown viewType=$viewType")
+        }
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val item = getItem(position)
-        holder.bind(item, onItemClick, onItemLongClick, onOverflowClick, iconLoader)
+        when (holder) {
+            is PasswordViewHolder -> {
+                require(item is CredentialListItem.Password)
+                holder.bind(item, onItemClick, onItemLongClick, onOverflowClick, iconLoader)
+            }
+            is PasskeyViewHolder -> {
+                require(item is CredentialListItem.Passkey)
+                holder.bind(item, onItemClick, onItemLongClick)
+            }
+            else -> error("Unknown ViewHolder type=${holder.javaClass.simpleName}")
+        }
     }
 
     /**
-     * Issue #43 Req 2.4: when a ViewHolder is recycled (RecyclerView is
-     * about to rebind it to a different row), invalidate any in-flight
-     * IconLoader request so a delayed PackageManager result does not
-     * paint the wrong icon onto the now-rebound row.
+     * Issue #43 Req 2.4: when a password ViewHolder is recycled, cancel
+     * the IconLoader request so a late PackageManager result does not
+     * paint the wrong icon onto the now-rebound row. PassKey rows paint
+     * synchronously via `setImageResource(R.drawable.ic_passkey_24)` so
+     * they do not participate in this race and need no cancellation.
      */
-    override fun onViewRecycled(holder: ViewHolder) {
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
-        iconLoader.cancel(holder.iconAppView)
+        if (holder is PasswordViewHolder) {
+            iconLoader.cancel(holder.iconAppView)
+        }
     }
 
-    class ViewHolder(private val binding: CredentialListItemBinding) :
-        RecyclerView.ViewHolder(binding.root) {
-
+    /**
+     * Base ViewHolder that exposes the `iconApp` view for the
+     * IconLoader cancel hook above (PasswordViewHolder needs it;
+     * PasskeyViewHolder inherits it but does not use it).
+     */
+    internal abstract class BaseViewHolder(
+        protected val binding: CredentialListItemBinding,
+    ) : RecyclerView.ViewHolder(binding.root) {
         /** Exposed for [onViewRecycled] race-prevention. */
         internal val iconAppView get() = binding.iconApp
+    }
+
+    internal class PasswordViewHolder(
+        binding: CredentialListItemBinding,
+    ) : BaseViewHolder(binding) {
 
         fun bind(
-            item: Credential,
-            onClick: (Credential) -> Unit,
-            onLongClick: (Credential) -> Unit,
-            onOverflow: (Credential, View) -> Unit,
+            item: CredentialListItem.Password,
+            onClick: (CredentialListItem) -> Unit,
+            onLongClick: (CredentialListItem) -> Unit,
+            onOverflow: (CredentialListItem, View) -> Unit,
             iconLoader: IconLoader,
         ) {
             val ctx = binding.root.context
+            val c = item.credential
 
-            binding.textLabel.text = item.label
-            // Issue #29: username and package name are now rendered on
-            // separate lines per design/screens-1.jsx CredCard (Req 5.6 /
-            // 5.7). Username is not sensitive at rest (it is what we
-            // already surface in the Autofill dataset chip; NFR 1.3 still
-            // applies — we do NOT bind the decrypted password).
-            binding.textSubtitle.text = item.username
-            binding.textPackage.text = item.packageName
+            binding.textLabel.text = c.label
+            // Issue #29: username and package name are rendered on
+            // separate lines per design/screens-1.jsx CredCard
+            // (Req 5.6 / 5.7).
+            binding.textSubtitle.text = c.username
+            binding.textPackage.text = c.packageName
 
-            // Issue #29 Req 7.x: signature chip. We use a single
-            // LinearLayout chip view and swap background + tint + label by
-            // the signature presence.
-            val hasSignature = item.signatureSha256 != null
+            // Issue #29 Req 7.x: signature chip — visibility restored
+            // (PasskeyViewHolder may have hidden it on the previous
+            // bind cycle in the recycled view pool).
+            binding.chipSignature.visibility = View.VISIBLE
+            val hasSignature = c.signatureSha256 != null
             if (hasSignature) {
                 binding.chipSignature.setBackgroundResource(
                     R.drawable.kn_signature_chip_bg_success,
@@ -103,9 +151,10 @@ class CredentialListAdapter(
             }
 
             // Issue #29 Req 6.5: the Credential domain model does not
-            // carry a strength value. We pass null so the StrengthBar
-            // stays GONE; once a strength field is added (separate
-            // Issue), the adapter only needs to compute the enum here.
+            // carry a strength value, so the StrengthBar stays hidden.
+            // Defensive visibility restore in case a PasskeyViewHolder
+            // hid it on a previous bind cycle.
+            binding.strengthBar.visibility = View.VISIBLE
             binding.strengthBar.setStrength(null)
 
             binding.root.setOnClickListener { onClick(item) }
@@ -113,11 +162,23 @@ class CredentialListAdapter(
                 onLongClick(item)
                 true
             }
-            // Localise the overflow button's content description per row
-            // so TalkBack reads "More actions for <label>" (NFR 3.1).
+
+            // Issue #101 R5.4 / R6.2: overflow button is visible for
+            // password rows (existing Issue #9 / #29 behaviour) and the
+            // icon contentDescription is reset to null (the layout XML
+            // default — see credential_list_item.xml line 78). The
+            // explicit null assignment guards against ViewHolder reuse
+            // where a previous PasskeyViewHolder bind left the
+            // contentDescription pointing at the PassKey label.
+            binding.btnOverflow.visibility = View.VISIBLE
+            binding.iconApp.contentDescription = null
+
+            // Localise the overflow button's content description per
+            // row so TalkBack reads "More actions for <label>"
+            // (NFR 3.1).
             binding.btnOverflow.contentDescription = ctx.getString(
                 R.string.credential_list_row_overflow_a11y,
-                item.label,
+                c.label,
             )
             binding.btnOverflow.setOnClickListener { anchor ->
                 onOverflow(item, anchor)
@@ -125,25 +186,94 @@ class CredentialListAdapter(
 
             // Issue #43 Req 1.1: paint the real app icon (or the
             // initial-letter fallback when PackageManager throws).
-            // Issue #51: the parent FrameLayout no longer carries
-            // @drawable/kn_icon_tile_bg, so the 12dp rounded blue tile is
-            // now drawn by InitialLetterDrawable itself on the fallback
-            // path. Real icons are handed to ImageView as-is and the
-            // system circular mask of AdaptiveIconDrawable no longer has
-            // a parent tile peeking through its four corners.
-            iconLoader.loadInto(binding.iconApp, item.packageName)
+            iconLoader.loadInto(binding.iconApp, c.packageName)
+        }
+    }
+
+    internal class PasskeyViewHolder(
+        binding: CredentialListItemBinding,
+    ) : BaseViewHolder(binding) {
+
+        fun bind(
+            item: CredentialListItem.Passkey,
+            onClick: (CredentialListItem) -> Unit,
+            onLongClick: (CredentialListItem) -> Unit,
+        ) {
+            val ctx = binding.root.context
+            val p = item.passkey
+
+            // Issue #101 R1.3: 3-line fallback chain.
+            // Line 1: displayName -> rpDisplayName -> rpId
+            binding.textLabel.text = p.displayName
+                ?: p.rpDisplayName
+                ?: p.rpId
+            // Line 2: userDisplayName -> userName -> "(no user)"
+            binding.textSubtitle.text = p.userDisplayName
+                ?: p.userName
+                ?: ctx.getString(R.string.credential_list_passkey_unknown_user)
+            // Line 3: rpId (fixed)
+            binding.textPackage.text = p.rpId
+
+            // Issue #101 R1.9 / R5.4: signature chip, strength bar and
+            // overflow button are PassKey-irrelevant. Hide them on this
+            // viewType so the row stays clean.
+            binding.chipSignature.visibility = View.GONE
+            binding.strengthBar.visibility = View.GONE
+            binding.btnOverflow.visibility = View.GONE
+
+            // Issue #101 R1.2 / R1.8: paint the PassKey vector
+            // directly. IconLoader is NOT used because PassKey rows
+            // have no PackageManager-resolvable app icon.
+            binding.iconApp.setImageResource(R.drawable.ic_passkey_24)
+            // Issue #101 R6.1: TalkBack reads "PassKey" for the icon.
+            binding.iconApp.contentDescription = ctx.getString(
+                R.string.credential_list_passkey_kind_label,
+            )
+
+            binding.root.setOnClickListener { onClick(item) }
+            binding.root.setOnLongClickListener {
+                // Issue #101 R5.3: long-click is consumed but does
+                // nothing — the password promptDelete dialog is not
+                // applicable to PassKey rows in v1. Propagating the
+                // event would also be wrong; absorbing it suppresses
+                // the row ripple.
+                onLongClick(item)
+                true
+            }
         }
     }
 
     companion object {
-        private val DIFF = object : DiffUtil.ItemCallback<Credential>() {
-            override fun areItemsTheSame(a: Credential, b: Credential): Boolean = a.id == b.id
-            override fun areContentsTheSame(a: Credential, b: Credential): Boolean =
-                a.packageName == b.packageName &&
-                    a.username == b.username &&
-                    a.label == b.label &&
-                    a.updatedAt == b.updatedAt &&
-                    a.signatureSha256 == b.signatureSha256
+        /** Issue #101: viewType for password rows. */
+        internal const val VIEW_TYPE_PASSWORD: Int = 0
+
+        /** Issue #101: viewType for PassKey rows. */
+        internal const val VIEW_TYPE_PASSKEY: Int = 1
+
+        internal val DIFF = object : DiffUtil.ItemCallback<CredentialListItem>() {
+            override fun areItemsTheSame(
+                a: CredentialListItem,
+                b: CredentialListItem,
+            ): Boolean = a.stableId == b.stableId
+
+            override fun areContentsTheSame(
+                a: CredentialListItem,
+                b: CredentialListItem,
+            ): Boolean = when {
+                a is CredentialListItem.Password && b is CredentialListItem.Password ->
+                    a.credential.packageName == b.credential.packageName &&
+                        a.credential.username == b.credential.username &&
+                        a.credential.label == b.credential.label &&
+                        a.credential.updatedAt == b.credential.updatedAt &&
+                        a.credential.signatureSha256 == b.credential.signatureSha256
+                a is CredentialListItem.Passkey && b is CredentialListItem.Passkey ->
+                    a.passkey == b.passkey
+                // areItemsTheSame already returned false for cross-variant
+                // pairs (different stableId prefix), so reaching here is
+                // unexpected. Defensive: treat as not-equal so DiffUtil
+                // forces a rebind.
+                else -> false
+            }
         }
     }
 }

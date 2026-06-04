@@ -15,6 +15,9 @@ encrypted with AES-GCM using keys backed by the Android Keystore.
   ID in addition to the usual username
 - **Detected-fields suggestions** so newly registered credentials can pick
   field keys from what your Autofill flow has actually seen
+- **PassKey provider** via the Android Credential Manager API, letting
+  KeyNest store and present PassKeys for supported sites and apps
+  (requires Android 14 / API 34 or newer)
 - Material 3 + DayNight theming, adaptive launcher icon
 
 ## Documentation
@@ -32,6 +35,14 @@ Public-facing pages are hosted on GitHub Pages:
 ```
 
 Requires JDK 17 + Android SDK API 34. `minSdkVersion` is 26.
+
+## CI
+
+Non-draft PRs targeting `main` / `develop` run an Android 14 (API 34)
+emulator on GitHub Actions and execute `./gradlew connectedDebugAndroidTest`
+(see `.github/workflows/instrumentation-test.yml`). The emulator job is
+independent from any future unit-test / lint / build job so its failures
+do not mask other CI signal.
 
 ## Contributing
 

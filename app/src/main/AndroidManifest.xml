@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
         NFR 1.5: android.permission.INTERNET is intentionally NOT declared so that
@@ -99,6 +101,58 @@
             android:exported="false"
             android:label="@string/oss_licenses_title"
             android:parentActivityName=".ui.settings.SettingsActivity" />
+
+        <!--
+            Issue #99 / Parent #89:
+            PassKey 登録セレモニーで CreateEntry の pending intent から起動される
+            Activity。OS Credential Manager から呼ばれる前提のため exported=false。
+            recents から除外し、透過テーマで既存 AutofillUnlockActivity と同等の
+            UX を取る。@RequiresApi(34) なクラスのため tools:targetApi も付与。
+        -->
+        <activity
+            android:name=".credentialprovider.registration.PasskeyCreateActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.KeyNest.Translucent"
+            tools:targetApi="34" />
+
+        <!--
+            Issue #100 / Parent #89:
+            PassKey 認証セレモニーで PublicKeyCredentialEntry の pending intent から
+            起動される Activity。OS Credential Manager から呼ばれる前提のため
+            exported=false。recents から除外し、透過テーマで既存
+            PasskeyCreateActivity と同等の UX を取る。@RequiresApi(34) なクラスの
+            ため tools:targetApi も付与。
+        -->
+        <activity
+            android:name=".credentialprovider.authentication.PasskeyAuthActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.KeyNest.Translucent"
+            tools:targetApi="34" />
+
+        <!--
+            Issue #90 / Parent #89:
+            CredentialProviderService の最小骨格。Android 14 (API 34) 以降の OS
+            の「パスワードと PassKey」設定画面に KeyNest を PassKey プロバイダ
+            候補として表示させるための宣言。本 Issue では 3 callback は空応答。
+            登録 / 認証セレモニーの実体は後続 Issue で差し替える。
+        -->
+        <service
+            android:name=".credentialprovider.KeyNestCredentialProviderService"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_CREDENTIAL_PROVIDER_SERVICE"
+            tools:targetApi="34">
+            <intent-filter>
+                <action android:name="android.service.credentials.CredentialProviderService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.credentials.provider"
+                android:resource="@xml/credential_provider" />
+        </service>
 
     </application>
 

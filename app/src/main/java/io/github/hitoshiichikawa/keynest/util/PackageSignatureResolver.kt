@@ -28,12 +28,14 @@ import java.security.MessageDigest
  * that [io.github.hitoshiichikawa.keynest.domain.usecase.SaveCredentialUseCase] can record
  * a "signature unavailable" credential per Req 2.2.
  */
-class PackageSignatureResolver(
+open class PackageSignatureResolver(
     private val pm: PackageManager,
     private val sdkVersion: Int = Build.VERSION.SDK_INT,
 ) {
 
-    fun resolveSha256(packageName: String): SigningHash? {
+    // `open` so androidTest can extend with an anonymous-object stub instead of
+    // relying on mockk-android, which fails to instantiate on API 34 (Issue #106).
+    open fun resolveSha256(packageName: String): SigningHash? {
         return try {
             val signatures = readSignatures(packageName) ?: return null
             if (signatures.isEmpty()) return null

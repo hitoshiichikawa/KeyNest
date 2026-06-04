@@ -1,0 +1,170 @@
+# Android 15 (API 35) instrumentation test workflow.
+#
+# Issue #94 — originally introduced as an API 34 emulator job; bumped to
+# API 35 alongside the targetSdk = 35 hotfix (#122). Boots an API 35 AVD
+# on GitHub Actions runners via `reactivecircus/android-emulator-runner`
+# and runs `./gradlew connectedDebugAndroidTest`. This is the first
+# GitHub Actions workflow added to the repository (`.github/workflows/`
+# was empty before this commit). It is intentionally scoped to *only* the
+# emulator job so that future unit-test / lint / build jobs can be added
+# as additional, independent jobs without entangling with the emulator
+# (see requirements §2.1 / §2.2 — emulator flakiness must not mask the
+# build/lint signal).
+#
+# Trigger surface (requirements §3):
+#   - PRs targeting `main` or `develop` (CONTRIBUTING.md: PRs go to `develop`;
+#     `main` is the release branch).
+#   - Pushes to `main` / `develop` (release merges / direct release pushes).
+#   - Draft PRs are skipped via the `if:` guard on the job. The
+#     `ready_for_review` event ensures that flipping a draft to ready
+#     re-evaluates the workflow (requirements §3.4).
+#
+# Local verification note: emulator boot cannot be reproduced from the
+# Developer subagent's environment, so the proof of correctness for this
+# workflow's runtime behaviour is the first CI run after merge. Static
+# verification done at authoring time:
+#   - `./gradlew assembleDebugAndroidTest` compiles the new dummy test.
+#   - Workflow YAML reviewed against `reactivecircus/android-emulator-runner`
+#     README (https://github.com/ReactiveCircus/android-emulator-runner).
+name: Instrumentation Tests (Android 15 / API 35)
+
+on:
+  pull_request:
+    branches: [main, develop]
+    # `ready_for_review` is included so a draft-to-ready transition
+    # re-triggers the workflow even if no new commits were pushed
+    # (requirements §3.4).
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main, develop]
+
+# Cancel in-flight runs for the same ref to save CI minutes when a PR is
+# updated rapidly. The emulator job is the most expensive thing in CI, so
+# the savings are significant.
+concurrency:
+  group: instrumentation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Default GITHUB_TOKEN permissions: read-only `contents` is sufficient for
+# `actions/checkout`. No write scopes are requested (NFR 1.1).
+permissions:
+  contents: read
+
+jobs:
+  instrumentation-test:
+    name: connectedDebugAndroidTest (API 35)
+    # Skip the job for draft PRs (requirements §3.2). For `push` events
+    # `github.event.pull_request` is null, so the second clause is true and
+    # the job runs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # `ubuntu-latest` is required by `reactivecircus/android-emulator-runner`
+    # (the action does not support macOS / Windows for KVM-accelerated AVDs).
+    runs-on: ubuntu-latest
+    # Timeout chosen to be comfortably above NFR 3.2's 10–25 min target
+    # while still failing fast if the emulator hangs. AVD snapshot caching
+    # (below) should keep typical runs well under this.
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # JDK 17 matches `app/build.gradle.kts`:
+      #   compileOptions { sourceCompatibility = JavaVersion.VERSION_17 }
+      #   kotlinOptions  { jvmTarget = "17" }
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Gradle dependency cache. Distinct from the AVD cache below so the
+      # two never collide on key (requirements §2.3).
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Enable KVM on the runner so the emulator can use hardware
+      # acceleration. Without this the AVD falls back to software rendering
+      # and frequently times out.
+      - name: Enable KVM for hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # AVD snapshot cache. Saves the boot snapshot from the first run so
+      # subsequent runs can resume the AVD instead of cold-booting.
+      # Key components:
+      #   - `avd-api-35-google_apis-x86_64`: identifies the AVD config so the
+      #     cache is only reused for the exact same system image / arch.
+      #   - `${{ runner.os }}`: cache is per-OS (currently always ubuntu).
+      # No hashFiles() input is included because the AVD itself does not
+      # depend on repo files; the cache invalidates only when we bump the
+      # API level / target / arch in the workflow.
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-35-google_apis-x86_64-${{ runner.os }}-v1
+
+      # First run: cache miss → generate the AVD snapshot so subsequent
+      # runs can restore it. `force-avd-creation: false` keeps an existing
+      # AVD on disk if one was restored from cache. `script: echo ...`
+      # exits immediately, which causes the runner to persist the boot
+      # snapshot.
+      - name: Create AVD snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: echo "Generated AVD snapshot for caching."
+
+      # Main run: boot the cached AVD (or a freshly created one) and run
+      # the instrumentation test suite.
+      #
+      # Requirements traceability:
+      #   - §1.1: `reactivecircus/android-emulator-runner` boots API 35 AVD.
+      #   - §1.2: `connectedDebugAndroidTest` runs; stdout/stderr are
+      #           captured by the Actions runner.
+      #   - §1.3: If the Gradle task exits non-zero (any test failure or
+      #           emulator error), the job step fails and the workflow
+      #           status check becomes `failure` by default.
+      #   - §1.4: API level pinned to 35 (no matrix). targetSdk = 35
+      #           hotfix (#122) で app 側も 35 に揃えた。
+      #   - §1.5: JDK 17 set up above.
+      #   - §1.6: Emulator boot failures bubble up via the action's own
+      #           non-zero exit; combined with the `timeout-minutes: 45`
+      #           guard this prevents silent skips.
+      - name: Run connectedDebugAndroidTest on API 35 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew connectedDebugAndroidTest --stacktrace
+
+      # Upload the AGP-generated HTML/XML test reports so reviewers can
+      # drill into failures from the Actions UI without re-running locally
+      # (NFR 3.1). Uploaded regardless of success/failure for traceability.
+      - name: Upload instrumentation test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumentation-test-report-api-35
+          path: |
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+          retention-days: 14

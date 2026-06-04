@@ -1,7 +1,11 @@
 package io.github.hitoshiichikawa.keynest.util
 
+import android.content.res.Configuration
 import android.view.View
+import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 
 /**
@@ -29,4 +33,31 @@ fun View.applySystemBarsPadding() {
         )
         WindowInsetsCompat.CONSUMED
     }
+}
+
+/**
+ * Activity を edge-to-edge レイアウトに切り替え、現在の uiMode (light/dark) に応じて
+ * システムバーアイコンの明暗を設定する一括 helper。
+ *
+ * 呼び出しタイミング: `super.onCreate(...)` の直後、`setContentView()` の前で 1 回だけ呼ぶ。
+ * 内部で [ComponentActivity.enableEdgeToEdge] を呼び出して window を edge-to-edge にした上で、
+ * [WindowCompat.getInsetsController] 経由でアイコンの appearance を制御する。
+ *
+ * - light モード時: status bar / navigation bar とも **暗いアイコン**（appearance light = true）
+ * - dark モード時: status bar / navigation bar とも **明るいアイコン**（appearance light = false）
+ *
+ * `isAppearanceLightNavigationBars` は API 27 (O_MR1) 未満では internally no-op となる
+ * （androidx.core 実装契約）。クラッシュ・例外は発生しない（Req 5.3 silent degrade）。
+ *
+ * **注意**: 透過 Activity (`Theme.KeyNest.Translucent` を親に持つ Activity、すなわち
+ * AutofillUnlockActivity / PasskeyAuthActivity / PasskeyCreateActivity) では呼ばないこと。
+ * caller のシステムバー styling を上書きしてしまい、透過 launch UX が崩れるリスクがあるため。
+ */
+fun ComponentActivity.enableEdgeToEdgeWithKnDefaults() {
+    enableEdgeToEdge()
+    val isNightMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+        Configuration.UI_MODE_NIGHT_YES
+    val controller = WindowCompat.getInsetsController(window, window.decorView)
+    controller.isAppearanceLightStatusBars = !isNightMode
+    controller.isAppearanceLightNavigationBars = !isNightMode
 }

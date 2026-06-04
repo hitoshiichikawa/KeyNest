@@ -223,17 +223,15 @@
         <item name="android:fontFamily">@font/manrope</item>
         <item name="fontFamily">@font/manrope</item>
 
-        <!-- ── System bars (Issue #28 Phase 1) ─────────── -->
+        <!-- ── System bars (Issue #128) ────────────────── -->
         <!--
-            Phase 2 の前段階として system bar 配色を kn_bg に揃える.
-            Light bar は light mode のみ true. values-night は
-            kn_bg をダーク色で再定義するためダーク時は dark icon が
-            選択される.
+            Android 15 (API 35) で android:statusBarColor /
+            android:navigationBarColor / windowLightStatusBar /
+            windowLightNavigationBar が非推奨化したため撤去.
+            edge-to-edge と icon appearance は Activity.onCreate で
+            enableEdgeToEdgeWithKnDefaults() (util/EdgeToEdgeInsets.kt)
+            を呼んで WindowInsetsControllerCompat 経由で設定する.
         -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@color/kn_bg</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
-        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
     </style>
 
     <!--
