@@ -26,6 +26,7 @@ import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
+import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import kotlinx.coroutines.launch
 
 /**
@@ -82,6 +83,7 @@ class CredentialEditActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdgeWithKnDefaults()
         binding = CredentialEditActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.applySystemBarsPadding()
