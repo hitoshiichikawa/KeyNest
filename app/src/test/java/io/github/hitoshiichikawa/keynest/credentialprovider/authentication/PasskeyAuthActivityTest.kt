@@ -197,7 +197,7 @@ class PasskeyAuthActivityTest {
         activity.runAuthenticationFlow(
             credentialId = "cred-1",
             rpId = "example.com",
-            clientDataJson = """{"type":"webauthn.get","challenge":"x","origin":"https://example.com"}""",
+            clientDataHash = ByteArray(32),
             providerRequest = mockk(),
         ).join()
 
@@ -220,7 +220,7 @@ class PasskeyAuthActivityTest {
             activity.runAuthenticationFlow(
                 credentialId = "cred-1",
                 rpId = "example.com",
-                clientDataJson = """{"type":"webauthn.get","challenge":"x"}""",
+                clientDataHash = ByteArray(32),
                 providerRequest = mockk(),
             ).join()
 
@@ -243,7 +243,7 @@ class PasskeyAuthActivityTest {
         activity.runAuthenticationFlow(
             credentialId = "cred-1",
             rpId = "example.com",
-            clientDataJson = "{}",
+            clientDataHash = ByteArray(32),
             providerRequest = mockk(),
         ).join()
 
@@ -264,7 +264,7 @@ class PasskeyAuthActivityTest {
         activity.runAuthenticationFlow(
             credentialId = "cred-1",
             rpId = "example.com",
-            clientDataJson = "{}",
+            clientDataHash = ByteArray(32),
             providerRequest = mockk(),
         ).join()
 
@@ -287,7 +287,7 @@ class PasskeyAuthActivityTest {
             activity.runAuthenticationFlow(
                 credentialId = "cred-1",
                 rpId = "example.com",
-                clientDataJson = "{}",
+                clientDataHash = ByteArray(32),
                 providerRequest = mockk(),
             ).join()
 
@@ -314,7 +314,7 @@ class PasskeyAuthActivityTest {
         activity.runAuthenticationFlow(
             credentialId = "cred-1",
             rpId = "example.com",
-            clientDataJson = "{}",
+            clientDataHash = ByteArray(32),
             providerRequest = mockk(),
         ).join()
 
@@ -336,13 +336,13 @@ class PasskeyAuthActivityTest {
         activity.runAuthenticationFlow(
             credentialId = "cred-1",
             rpId = "example.com",
-            clientDataJson = "{}",
+            clientDataHash = ByteArray(32),
             providerRequest = mockk(),
         ).join()
         activity.runAuthenticationFlow(
             credentialId = "cred-1",
             rpId = "example.com",
-            clientDataJson = "{}",
+            clientDataHash = ByteArray(32),
             providerRequest = mockk(),
         ).join()
 
@@ -360,7 +360,7 @@ class PasskeyAuthActivityTest {
             activity.runAuthenticationFlow(
                 credentialId = "cred-1",
                 rpId = "example.com",
-                clientDataJson = "{}",
+                clientDataHash = ByteArray(32),
                 providerRequest = mockk(),
             ).join()
 

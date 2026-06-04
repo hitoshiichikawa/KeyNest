@@ -2,7 +2,6 @@ package io.github.hitoshiichikawa.keynest.credentialprovider.authentication
 
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.AuthenticatorDataBuilder
 import java.security.KeyFactory
-import java.security.MessageDigest
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
 
@@ -69,12 +68,14 @@ internal object PasskeyAssertion {
         val signature = try {
             val privateKey = KeyFactory.getInstance(EC_KEY_ALGORITHM)
                 .generatePrivate(PKCS8EncodedKeySpec(input.privateKeyPkcs8))
-            val clientDataHash = MessageDigest.getInstance("SHA-256")
-                .digest(input.clientDataJson.toByteArray(Charsets.UTF_8))
+            // The OS-supplied clientDataHash is exactly what the browser
+            // computed from its own clientDataJSON. We must NOT re-hash
+            // the request options JSON (which is what we used to do — that
+            // was the cause of "Could not verify authentication signature").
             Signature.getInstance(SIGNATURE_ALGORITHM).run {
                 initSign(privateKey)
                 update(authenticatorData)
-                update(clientDataHash)
+                update(input.clientDataHash)
                 sign()
             }
         } catch (t: Throwable) {

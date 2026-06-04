@@ -786,5 +786,8 @@ class CredentialListViewModelTest {
             credentialId: String,
             signer: suspend (newSignCount: Long) -> T,
         ): T = throw UnsupportedOperationException()
+
+        override suspend fun update(entity: PasskeyEntity): Unit =
+            throw UnsupportedOperationException()
     }
 }

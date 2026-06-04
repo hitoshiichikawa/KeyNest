@@ -143,8 +143,12 @@ class GetEntryBuilderTest {
         assertThat(intent.data?.scheme).isEqualTo(PasskeyAuthActivity.INTENT_DATA_SCHEME)
         assertThat(intent.data?.authority).isEqualTo(PasskeyAuthActivity.INTENT_DATA_AUTHORITY)
         assertThat(intent.data?.path).isEqualTo("${PasskeyAuthActivity.INTENT_DATA_PATH_PREFIX}myCred")
-        // PendingIntent must be immutable.
-        assertThat(shadowPi.flags and PendingIntent.FLAG_IMMUTABLE).isEqualTo(PendingIntent.FLAG_IMMUTABLE)
+        // PendingIntent must be MUTABLE so the OS Credential Manager can
+        // inject the ProviderGetCredentialRequest extras at the moment the
+        // user picks this entry. FLAG_IMMUTABLE caused signature verification
+        // failures because the request never reached PasskeyAuthActivity.
+        assertThat(shadowPi.flags and PendingIntent.FLAG_MUTABLE).isEqualTo(PendingIntent.FLAG_MUTABLE)
+        assertThat(shadowPi.flags and PendingIntent.FLAG_IMMUTABLE).isEqualTo(0)
         assertThat(shadowPi.flags and PendingIntent.FLAG_UPDATE_CURRENT)
             .isEqualTo(PendingIntent.FLAG_UPDATE_CURRENT)
     }

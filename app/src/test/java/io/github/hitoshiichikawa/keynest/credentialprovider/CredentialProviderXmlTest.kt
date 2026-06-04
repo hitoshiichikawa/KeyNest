@@ -90,7 +90,11 @@ class CredentialProviderXmlTest {
         context.resources.getXml(R.xml.credential_provider).use { parser ->
             while (parser.next() != XmlPullParser.END_DOCUMENT) {
                 if (parser.eventType == XmlPullParser.START_TAG && parser.name == "capability") {
-                    val name = parser.getAttributeValue(ANDROID_NAMESPACE, "name")
+                    // Framework parser reads `name` (no namespace) — that is
+                    // the form the AOSP CredentialManager accepts. See
+                    // credential_provider.xml for the rationale on why the
+                    // `android:` prefix is intentionally NOT used.
+                    val name = parser.getAttributeValue(null, "name")
                     if (name != null) {
                         names += name
                     }

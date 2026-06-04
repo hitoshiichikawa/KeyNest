@@ -54,14 +54,18 @@ class CreateEntryBuilderTest {
     }
 
     @Test
-    fun build_pendingIntentIsImmutable_andFlagUpdateCurrent() {
+    fun build_pendingIntentIsMutable_andFlagUpdateCurrent() {
         val entry = builder.build(sampleRequest())
 
         val shadowPi = Shadows.shadowOf(entry.pendingIntent)
         val flags = shadowPi.flags
 
-        // Both flags must be present (ImmutableFlag is mandatory on API 31+).
-        assertThat(flags and PendingIntent.FLAG_IMMUTABLE).isEqualTo(PendingIntent.FLAG_IMMUTABLE)
+        // FLAG_MUTABLE is REQUIRED: the OS Credential Manager injects the
+        // ProviderCreateCredentialRequest extras into this intent at the
+        // moment the user picks KeyNest. With FLAG_IMMUTABLE those extras
+        // are silently dropped and PendingIntentHandler returns null.
+        assertThat(flags and PendingIntent.FLAG_MUTABLE).isEqualTo(PendingIntent.FLAG_MUTABLE)
+        assertThat(flags and PendingIntent.FLAG_IMMUTABLE).isEqualTo(0)
         assertThat(flags and PendingIntent.FLAG_UPDATE_CURRENT).isEqualTo(PendingIntent.FLAG_UPDATE_CURRENT)
     }
 

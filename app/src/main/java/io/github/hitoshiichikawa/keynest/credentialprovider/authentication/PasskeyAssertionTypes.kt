@@ -17,7 +17,15 @@ package io.github.hitoshiichikawa.keynest.credentialprovider.authentication
  */
 internal data class PasskeyAssertionInput(
     val rpId: String,
-    val clientDataJson: String,
+    /**
+     * SHA-256 of the WebAuthn `clientDataJSON`. Per W3C §7.2 step 19, the
+     * signature is over `authenticatorData || clientDataHash`. On Android
+     * Credential Manager flows from Chrome / Safari the hash is supplied
+     * directly by the OS via `GetPublicKeyCredentialOption.clientDataHash`
+     * — we MUST sign over that exact bytes (no re-hashing of `requestJson`,
+     * which is the OPTIONS payload, not clientDataJSON).
+     */
+    val clientDataHash: ByteArray,
     val signCount: Long,
     val privateKeyPkcs8: ByteArray,
 ) {
@@ -28,14 +36,14 @@ internal data class PasskeyAssertionInput(
         if (this === other) return true
         if (other !is PasskeyAssertionInput) return false
         return rpId == other.rpId &&
-            clientDataJson == other.clientDataJson &&
+            clientDataHash.contentEquals(other.clientDataHash) &&
             signCount == other.signCount &&
             privateKeyPkcs8.contentEquals(other.privateKeyPkcs8)
     }
 
     override fun hashCode(): Int {
         var result = rpId.hashCode()
-        result = 31 * result + clientDataJson.hashCode()
+        result = 31 * result + clientDataHash.contentHashCode()
         result = 31 * result + signCount.hashCode()
         result = 31 * result + privateKeyPkcs8.contentHashCode()
         return result

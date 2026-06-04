@@ -132,10 +132,24 @@ internal class PasskeyCreator(
             attestationObject,
             Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP,
         )
+        val authenticatorDataB64 = Base64.encodeToString(
+            authenticatorData,
+            Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP,
+        )
+        // X.509 SubjectPublicKeyInfo DER (Java's getEncoded for EC public key
+        // returns SPKI). Chrome's WebAuthn JSON parser requires this in the
+        // `publicKey` field as base64url alongside `publicKeyAlgorithm`.
+        val publicKeySpkiB64 = Base64.encodeToString(
+            publicKey.encoded,
+            Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP,
+        )
 
         val registrationResponseJson = buildRegistrationResponseJson(
             credentialIdB64 = credentialId,
             attestationObjectB64 = attestationObjectB64,
+            authenticatorDataB64 = authenticatorDataB64,
+            publicKeySpkiB64 = publicKeySpkiB64,
+            publicKeyAlgorithm = COSE_ALG_ES256,
         )
 
         val pkcs8 = privateKey.encoded ?: throw PasskeyCreationException.KeyGen(
@@ -176,16 +190,28 @@ internal class PasskeyCreator(
     }
 
     /**
-     * WebAuthn `PublicKeyCredential` JSON serialization (minimal). The OS
-     * framework fills `clientDataJSON` from the request side, so we
-     * deliberately omit it / leave as empty string here — `webauthn.io`
-     * and the AOSP CredentialManager tolerate a missing key.
+     * WebAuthn L3 `RegistrationResponseJSON` serialization
+     * (https://www.w3.org/TR/webauthn-3/#dictdef-registrationresponsejson).
+     *
+     * Modern Chrome on Android validates these fields strictly and rejects
+     * the credential with `MojoClassFromJSON failed to convert JSON` if any
+     * are missing:
+     *  - `response.publicKey` — base64url DER SubjectPublicKeyInfo
+     *  - `response.publicKeyAlgorithm` — COSE algorithm identifier (number)
+     *  - `response.authenticatorData` — base64url authData (extracted)
+     *  - `response.transports` — array of transport hint strings
+     *
+     * `clientDataJSON` is left as an empty string; the OS framework attaches
+     * its own client data from the request side.
      */
     private fun buildRegistrationResponseJson(
         credentialIdB64: String,
         attestationObjectB64: String,
+        authenticatorDataB64: String,
+        publicKeySpkiB64: String,
+        publicKeyAlgorithm: Int,
     ): String {
-        val sb = StringBuilder(256)
+        val sb = StringBuilder(512)
         sb.append('{')
         sb.append("\"id\":\"").append(escapeJson(credentialIdB64)).append('\"')
         sb.append(",\"rawId\":\"").append(escapeJson(credentialIdB64)).append('\"')
@@ -194,6 +220,10 @@ internal class PasskeyCreator(
         sb.append(",\"response\":{")
         sb.append("\"clientDataJSON\":\"\"")
         sb.append(",\"attestationObject\":\"").append(escapeJson(attestationObjectB64)).append('\"')
+        sb.append(",\"authenticatorData\":\"").append(escapeJson(authenticatorDataB64)).append('\"')
+        sb.append(",\"publicKey\":\"").append(escapeJson(publicKeySpkiB64)).append('\"')
+        sb.append(",\"publicKeyAlgorithm\":").append(publicKeyAlgorithm)
+        sb.append(",\"transports\":[\"internal\"]")
         sb.append('}')
         sb.append(",\"clientExtensionResults\":{}")
         sb.append('}')
@@ -222,6 +252,9 @@ internal class PasskeyCreator(
         @VisibleForTesting internal const val EC_CURVE_NAME: String = "secp256r1"
         @VisibleForTesting internal const val INITIAL_SIGN_COUNT: Int = 0
         @VisibleForTesting internal const val WRAPPING_KEY_BITS: Int = 256
+
+        /** COSE Algorithm Identifier for ES256 (RFC 8152). */
+        @VisibleForTesting internal const val COSE_ALG_ES256: Int = -7
 
         /**
          * Provision the AES-256-GCM wrapping key under [alias] in the
