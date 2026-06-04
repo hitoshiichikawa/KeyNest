@@ -15,7 +15,13 @@ import java.security.SecureRandom
  * (Issue #99 / parent #89 / design §4.7).
  *
  * The pending intent points at [PasskeyCreateActivity] and uses
- * `FLAG_IMMUTABLE | FLAG_UPDATE_CURRENT` per Android security guidance.
+ * `FLAG_MUTABLE | FLAG_UPDATE_CURRENT`. Mutable is REQUIRED here even
+ * though Android security guidance generally prefers IMMUTABLE: the
+ * Credential Manager system service injects the
+ * `ProviderCreateCredentialRequest` extras into this intent at the
+ * moment the user picks KeyNest. With FLAG_IMMUTABLE those extras are
+ * silently dropped and `PendingIntentHandler.retrieveProviderCreateCredentialRequest`
+ * returns null, surfacing in Chrome as `TYPE_UNKNOWN: ... returned null`.
  * A per-request token (`SecureRandom().nextInt()`) is embedded in the
  * Intent's data Uri so that concurrent registration requests do not
  * collide on `PendingIntent` identity (design §4.8).
@@ -36,7 +42,7 @@ internal class CreateEntryBuilder(
             context,
             REQUEST_CODE,
             PasskeyCreateActivity.intent(context, token),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
         // The Activity re-reads the OS request via

@@ -19,7 +19,9 @@ import org.junit.Test
  *    全長 37 byte) — req 3.2 / 決定 1 / 決定 2
  *  - ES256 (P-256) 署名が同テスト内で生成した public key で verify できる
  *    こと、ASN.1 DER 形式 (JCE 標準) — req 3.5 / req 4.2
- *  - 署名対象が `authenticatorData || SHA-256(clientDataJson)` — req 3.5
+ *  - 署名対象が `authenticatorData || clientDataHash` — req 3.5
+ *    (the OS supplies clientDataHash directly; we no longer SHA-256 the
+ *    request options JSON ourselves).
  *  - signCount overflow / malformed PKCS#8 で `PasskeyAssertionException`
  *
  * `KeyPairGenerator.getInstance("EC")` は JCE 標準 (`SunEC` on the JVM)
@@ -79,19 +81,21 @@ class PasskeyAssertionTest {
     fun sign_signatureVerifiesWithGeneratedPublicKey_asn1Der() {
         val kp = generateP256KeyPair()
         val rpId = "example.com"
-        val clientDataJson = """{"type":"webauthn.get","challenge":"abc","origin":"https://example.com"}"""
+        // The OS provides clientDataHash directly; we sign authenticatorData
+        // || clientDataHash. Use any 32-byte value here — the same bytes the
+        // verifier feeds to `Signature.update`.
+        val clientDataHash = MessageDigest.getInstance("SHA-256")
+            .digest("{\"type\":\"webauthn.get\",\"challenge\":\"abc\"}".toByteArray(Charsets.UTF_8))
 
         val result = PasskeyAssertion.sign(
             PasskeyAssertionInput(
                 rpId = rpId,
-                clientDataJson = clientDataJson,
+                clientDataHash = clientDataHash,
                 signCount = 7L,
                 privateKeyPkcs8 = kp.privateKeyPkcs8,
             ),
         )
 
-        val clientDataHash = MessageDigest.getInstance("SHA-256")
-            .digest(clientDataJson.toByteArray(Charsets.UTF_8))
         val verifier = Signature.getInstance("SHA256withECDSA").apply {
             initVerify(kp.publicKey)
             update(result.authenticatorData)
@@ -101,14 +105,16 @@ class PasskeyAssertionTest {
     }
 
     @Test
-    fun sign_signatureChangesWhenClientDataJsonChanges() {
+    fun sign_signatureChangesWhenClientDataHashChanges() {
         val kp = generateP256KeyPair()
         val rpId = "example.com"
+        val hashA = ByteArray(32) { 0x01 }
+        val hashB = ByteArray(32) { 0x02 }
 
         val a = PasskeyAssertion.sign(
             PasskeyAssertionInput(
                 rpId = rpId,
-                clientDataJson = "{\"a\":1}",
+                clientDataHash = hashA,
                 signCount = 0L,
                 privateKeyPkcs8 = kp.privateKeyPkcs8,
             ),
@@ -116,14 +122,14 @@ class PasskeyAssertionTest {
         val b = PasskeyAssertion.sign(
             PasskeyAssertionInput(
                 rpId = rpId,
-                clientDataJson = "{\"a\":2}",
+                clientDataHash = hashB,
                 signCount = 0L,
                 privateKeyPkcs8 = kp.privateKeyPkcs8,
             ),
         )
 
         // Same authenticatorData (same rpId / flags / signCount) but different
-        // signature input because clientDataJson differs.
+        // signature input because clientDataHash differs.
         assertThat(a.authenticatorData).isEqualTo(b.authenticatorData)
         assertThat(a.signature).isNotEqualTo(b.signature)
     }
@@ -136,7 +142,7 @@ class PasskeyAssertionTest {
             PasskeyAssertion.sign(
                 PasskeyAssertionInput(
                     rpId = "example.com",
-                    clientDataJson = "{}",
+                    clientDataHash = ByteArray(32),
                     signCount = -1L,
                     privateKeyPkcs8 = kp.privateKeyPkcs8,
                 ),
@@ -154,7 +160,7 @@ class PasskeyAssertionTest {
             PasskeyAssertion.sign(
                 PasskeyAssertionInput(
                     rpId = "example.com",
-                    clientDataJson = "{}",
+                    clientDataHash = ByteArray(32),
                     signCount = 0x1_0000_0000L,
                     privateKeyPkcs8 = kp.privateKeyPkcs8,
                 ),
@@ -170,7 +176,7 @@ class PasskeyAssertionTest {
             PasskeyAssertion.sign(
                 PasskeyAssertionInput(
                     rpId = "example.com",
-                    clientDataJson = "{}",
+                    clientDataHash = ByteArray(32),
                     signCount = 0L,
                     privateKeyPkcs8 = byteArrayOf(0x00, 0x01, 0x02, 0x03),
                 ),
@@ -216,14 +222,14 @@ class PasskeyAssertionTest {
 
     private fun signSample(
         rpId: String = "example.com",
-        clientDataJson: String = "{}",
+        clientDataHash: ByteArray = ByteArray(32),
         signCount: Long = 0L,
     ): PasskeyAssertionResult {
         val kp = generateP256KeyPair()
         return PasskeyAssertion.sign(
             PasskeyAssertionInput(
                 rpId = rpId,
-                clientDataJson = clientDataJson,
+                clientDataHash = clientDataHash,
                 signCount = signCount,
                 privateKeyPkcs8 = kp.privateKeyPkcs8,
             ),

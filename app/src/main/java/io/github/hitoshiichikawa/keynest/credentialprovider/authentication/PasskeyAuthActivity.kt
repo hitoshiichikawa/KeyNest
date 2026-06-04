@@ -132,10 +132,24 @@ class PasskeyAuthActivity : AppCompatActivity() {
             return
         }
 
+        // Chrome / browser flows always set clientDataHash; native-app flows
+        // may leave it null. In the null case we can't fabricate the hash
+        // (we don't know the calling app's origin), so we surface the same
+        // unknown-error the OS would.
+        val clientDataHash = publicKeyOption.clientDataHash
+        if (clientDataHash == null) {
+            finishWithException(
+                GetCredentialUnknownException(
+                    "clientDataHash missing — KeyNest only supports OS-driven web / app flows",
+                ),
+            )
+            return
+        }
+
         authJob = runAuthenticationFlow(
             credentialId = credentialId,
             rpId = parsedRpId,
-            clientDataJson = publicKeyOption.requestJson,
+            clientDataHash = clientDataHash,
             providerRequest = providerRequest,
         )
     }
@@ -144,7 +158,7 @@ class PasskeyAuthActivity : AppCompatActivity() {
     internal fun runAuthenticationFlow(
         credentialId: String,
         rpId: String,
-        clientDataJson: String,
+        clientDataHash: ByteArray,
         @Suppress("UNUSED_PARAMETER") providerRequest: ProviderGetCredentialRequest,
     ): Job = lifecycleScope.launch {
         val wipeQueue = mutableListOf<ByteArray>()
@@ -186,14 +200,13 @@ class PasskeyAuthActivity : AppCompatActivity() {
                 val assertion = PasskeyAssertion.sign(
                     PasskeyAssertionInput(
                         rpId = rpId,
-                        clientDataJson = clientDataJson,
+                        clientDataHash = clientDataHash,
                         signCount = newSignCount,
                         privateKeyPkcs8 = plaintext,
                     ),
                 )
                 buildAuthenticationResponseJson(
                     credentialId = credentialId,
-                    clientDataJson = clientDataJson,
                     userHandle = userHandle,
                     authenticatorData = assertion.authenticatorData,
                     signature = assertion.signature,
@@ -243,7 +256,6 @@ class PasskeyAuthActivity : AppCompatActivity() {
     @VisibleForTesting
     internal fun buildAuthenticationResponseJson(
         credentialId: String,
-        clientDataJson: String,
         userHandle: ByteArray,
         authenticatorData: ByteArray,
         signature: ByteArray,
@@ -251,8 +263,11 @@ class PasskeyAuthActivity : AppCompatActivity() {
         val authenticatorDataB64 = base64UrlNoPad(authenticatorData)
         val signatureB64 = base64UrlNoPad(signature)
         val userHandleB64 = base64UrlNoPad(userHandle)
-        val clientDataJsonB64 = base64UrlNoPad(clientDataJson.toByteArray(Charsets.UTF_8))
 
+        // `clientDataJSON` is intentionally left as the empty string — the OS
+        // CredentialManager substitutes the real client data it constructed
+        // from the request side. Echoing back the request options JSON (as
+        // we used to do) confused Chrome and broke signature verification.
         val sb = StringBuilder(384)
         sb.append('{')
         sb.append("\"id\":\"").append(escapeJson(credentialId)).append('\"')
@@ -260,7 +275,7 @@ class PasskeyAuthActivity : AppCompatActivity() {
         sb.append(",\"type\":\"public-key\"")
         sb.append(",\"authenticatorAttachment\":\"platform\"")
         sb.append(",\"response\":{")
-        sb.append("\"clientDataJSON\":\"").append(escapeJson(clientDataJsonB64)).append('\"')
+        sb.append("\"clientDataJSON\":\"\"")
         sb.append(",\"authenticatorData\":\"").append(escapeJson(authenticatorDataB64)).append('\"')
         sb.append(",\"signature\":\"").append(escapeJson(signatureB64)).append('\"')
         sb.append(",\"userHandle\":\"").append(escapeJson(userHandleB64)).append('\"')
@@ -318,13 +333,22 @@ class PasskeyAuthActivity : AppCompatActivity() {
                     .build()
             }
 
-        /** PendingIntent factory used by [GetEntryBuilder]. */
+        /**
+         * PendingIntent factory used by [GetEntryBuilder].
+         *
+         * `FLAG_MUTABLE` is REQUIRED: the Credential Manager system service
+         * injects the `ProviderGetCredentialRequest` extras into this intent
+         * at the moment the user picks a KeyNest entry. With FLAG_IMMUTABLE
+         * those extras are dropped and
+         * `PendingIntentHandler.retrieveProviderGetCredentialRequest` returns
+         * null, which Chrome surfaces as a generic `TYPE_UNKNOWN` error.
+         */
         internal fun pendingIntent(context: Context, credentialId: String): PendingIntent =
             PendingIntent.getActivity(
                 context,
                 PENDING_INTENT_REQUEST_CODE,
                 intent(context, credentialId),
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
 
         /** Extracts the credentialId from an Intent built by [intent]. */
