@@ -27,7 +27,7 @@
   - _Requirements: 1.1, 1.2, NFR 1.1, NFR 1.2, NFR 1.3_
   - _Boundary: themes.xml_
 
-- [ ] 3. 6 つの opaque Activity に `enableEdgeToEdgeWithKnDefaults()` 呼び出しを追加 (P)
+- [x] 3. 6 つの opaque Activity に `enableEdgeToEdgeWithKnDefaults()` 呼び出しを追加 (P)
   - 対象 Activity と編集箇所:
     - `ui/list/CredentialListActivity.kt` (super.onCreate 直後)
     - `ui/edit/CredentialEditActivity.kt` (super.onCreate 直後)
