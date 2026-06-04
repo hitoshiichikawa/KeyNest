@@ -36,6 +36,24 @@
 - 残存課題: なし（task 3 で 6 opaque Activity の onCreate に helper を組み込む、task 4 で
   XML scan テスト追加でこの削除を pinning する予定）。
 
+### Task 3
+
+- 採用方針: tasks.md の指示通り、6 opaque Activity 全てで `super.onCreate(savedInstanceState)`
+  の直後 (`binding = ...Inflate()` の前) に `enableEdgeToEdgeWithKnDefaults()` を 1 行追加。
+  import は既存の `applySystemBarsPadding` と同 package のため隣接して alphabetical order
+  (`applySystemBarsPadding` < `enableEdgeToEdgeWithKnDefaults`) で挿入。
+- 重要な判断: 既存の `binding.root.applySystemBarsPadding()` 呼び出し位置はそのまま温存
+  （tasks.md 明示）。これにより edge-to-edge 化 → inset 取得 → root に padding 加算という
+  順序が成立し、Issue #128 の Req 2.x (edge-to-edge 切替) と Req 3.5 (icon appearance) が
+  6 Activity すべてで同一パスで担保される。透過 Activity 3 件 (AutofillUnlockActivity /
+  PasskeyAuthActivity / PasskeyCreateActivity) は Theme.KeyNest.Translucent を使用しており
+  helper の KDoc にも「呼ばないこと」と明示されているため対象外。assembleDebug と
+  testDebugUnitTest は pass を確認。lintDebug は task 3 と無関係な既存問題
+  (`PackageSignatureResolver.kt:52` の NewApi error。最終更新 Issue #106、本 task で touch
+  していない) で failure するが、task 3 で導入した変更には lint 警告ゼロ。
+- 残存課題: なし（task 4 で themes.xml の pure-XML scan + `setStatusBarColor` /
+  `setNavigationBarColor` の文字列検索テストを追加して Req 1.x を pinning する予定）。
+
 ## 確認事項
 
 - なし
