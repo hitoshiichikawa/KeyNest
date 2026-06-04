@@ -15,7 +15,7 @@
   - _Requirements: 2.1, 3.1, 3.2, 3.3, 3.4, 5.3_
   - _Boundary: EdgeToEdgeInsets_
 
-- [ ] 2. `Theme.KeyNest` から非推奨 attribute を撤去
+- [x] 2. `Theme.KeyNest` から非推奨 attribute を撤去
   - `app/src/main/res/values/themes.xml` の `Theme.KeyNest` 内から以下 4 行を削除:
     - `<item name="android:statusBarColor">@android:color/transparent</item>`
     - `<item name="android:navigationBarColor">@color/kn_bg</item>`
