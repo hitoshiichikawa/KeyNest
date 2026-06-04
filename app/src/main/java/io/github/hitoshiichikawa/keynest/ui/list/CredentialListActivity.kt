@@ -27,6 +27,7 @@ import io.github.hitoshiichikawa.keynest.ui.settings.SettingsActivity
 import io.github.hitoshiichikawa.keynest.util.AutofillServiceStatus
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
+import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -70,6 +71,7 @@ class CredentialListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdgeWithKnDefaults()
         binding = CredentialListActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.applySystemBarsPadding()

@@ -23,6 +23,7 @@ import io.github.hitoshiichikawa.keynest.ui.oss.OssLicensesActivity
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SystemSettingsIntents
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
+import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 
@@ -73,6 +74,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdgeWithKnDefaults()
         binding = SettingsActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.applySystemBarsPadding()

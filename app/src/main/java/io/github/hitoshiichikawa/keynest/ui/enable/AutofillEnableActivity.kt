@@ -13,6 +13,7 @@ import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.AutofillEnableActivityBinding
 import io.github.hitoshiichikawa.keynest.util.AutofillServiceStatus
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
+import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import com.google.android.material.snackbar.Snackbar
 
 /**
@@ -42,6 +43,7 @@ class AutofillEnableActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdgeWithKnDefaults()
         binding = AutofillEnableActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.applySystemBarsPadding()

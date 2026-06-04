@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. `EdgeToEdgeInsets.kt` に edge-to-edge 初期化 helper を追加
+- [x] 1. `EdgeToEdgeInsets.kt` に edge-to-edge 初期化 helper を追加
   - 既存 `View.applySystemBarsPadding()` は不変
   - 新規 `fun ComponentActivity.enableEdgeToEdgeWithKnDefaults()` を追加:
     - `enableEdgeToEdge()` を呼ぶ
@@ -15,7 +15,7 @@
   - _Requirements: 2.1, 3.1, 3.2, 3.3, 3.4, 5.3_
   - _Boundary: EdgeToEdgeInsets_
 
-- [ ] 2. `Theme.KeyNest` から非推奨 attribute を撤去
+- [x] 2. `Theme.KeyNest` から非推奨 attribute を撤去
   - `app/src/main/res/values/themes.xml` の `Theme.KeyNest` 内から以下 4 行を削除:
     - `<item name="android:statusBarColor">@android:color/transparent</item>`
     - `<item name="android:navigationBarColor">@color/kn_bg</item>`
@@ -27,7 +27,7 @@
   - _Requirements: 1.1, 1.2, NFR 1.1, NFR 1.2, NFR 1.3_
   - _Boundary: themes.xml_
 
-- [ ] 3. 6 つの opaque Activity に `enableEdgeToEdgeWithKnDefaults()` 呼び出しを追加 (P)
+- [x] 3. 6 つの opaque Activity に `enableEdgeToEdgeWithKnDefaults()` 呼び出しを追加 (P)
   - 対象 Activity と編集箇所:
     - `ui/list/CredentialListActivity.kt` (super.onCreate 直後)
     - `ui/edit/CredentialEditActivity.kt` (super.onCreate 直後)
@@ -45,7 +45,7 @@
   - _Boundary: CredentialListActivity, CredentialEditActivity, SettingsActivity, DangerZoneActivity, OssLicensesActivity, AutofillEnableActivity_
   - _Depends: 1_
 
-- [ ] 4. 非推奨 API 呼び出し不在のソースレベル pinning と既存テストの非劣化確認
+- [x] 4. 非推奨 API 呼び出し不在のソースレベル pinning と既存テストの非劣化確認
   - `app/src/test/java/io/github/hitoshiichikawa/keynest/resources/` 配下に新規テストファイルを
     1 つ追加し、`themes.xml` を pure-XML scan で以下を verify:
     - `Theme.KeyNest` ブロック内に `android:statusBarColor` が含まれない（Req 1.1）

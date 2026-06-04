@@ -12,6 +12,7 @@ import io.github.hitoshiichikawa.keynest.R
 import io.github.hitoshiichikawa.keynest.databinding.OssLicensesActivityBinding
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
+import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,6 +46,7 @@ class OssLicensesActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdgeWithKnDefaults()
         binding = OssLicensesActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.root.applySystemBarsPadding()
