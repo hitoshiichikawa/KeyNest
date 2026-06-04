@@ -45,7 +45,7 @@
   - _Boundary: CredentialListActivity, CredentialEditActivity, SettingsActivity, DangerZoneActivity, OssLicensesActivity, AutofillEnableActivity_
   - _Depends: 1_
 
-- [ ] 4. 非推奨 API 呼び出し不在のソースレベル pinning と既存テストの非劣化確認
+- [x] 4. 非推奨 API 呼び出し不在のソースレベル pinning と既存テストの非劣化確認
   - `app/src/test/java/io/github/hitoshiichikawa/keynest/resources/` 配下に新規テストファイルを
     1 つ追加し、`themes.xml` を pure-XML scan で以下を verify:
     - `Theme.KeyNest` ブロック内に `android:statusBarColor` が含まれない（Req 1.1）
