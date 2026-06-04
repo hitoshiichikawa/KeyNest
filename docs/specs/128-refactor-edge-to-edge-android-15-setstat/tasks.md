@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. `EdgeToEdgeInsets.kt` に edge-to-edge 初期化 helper を追加
+- [x] 1. `EdgeToEdgeInsets.kt` に edge-to-edge 初期化 helper を追加
   - 既存 `View.applySystemBarsPadding()` は不変
   - 新規 `fun ComponentActivity.enableEdgeToEdgeWithKnDefaults()` を追加:
     - `enableEdgeToEdge()` を呼ぶ
