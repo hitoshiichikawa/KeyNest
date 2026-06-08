@@ -1,0 +1,173 @@
+# セキュリティスキャン workflow。
+#
+# 3 ジョブ構成。posture は「秘密検出=ブロック / SAST・依存=助言」:
+#   1. gitleaks          — git 全履歴の秘密情報（API キー・鍵・トークン）スキャン。
+#                          検出したら PR チェックを fail させる（BLOCKING）。
+#   2. semgrep           — Kotlin / セキュリティ監査 / secrets ルールによる SAST。
+#                          助言扱い（continue-on-error）。所見は SARIF で Security タブへ。
+#   3. dependency-check  — OWASP Dependency-Check による依存ライブラリの CVE 照合。
+#                          助言扱い。SARIF を Security タブへ、HTML を artifact に。
+#
+# instrumentation-test.yml と同じトリガー面（main/develop への PR + push、draft はスキップ、
+# ready_for_review で再評価）に揃えている。依存 CVE は「コード未変更でも新規 CVE が出る」
+# ため weekly schedule も追加（schedule トリガー）。
+#
+# 既存の instrumentation ジョブとは独立した workflow とし、emulator flakiness と
+# セキュリティシグナルを混線させない（instrumentation-test.yml の設計方針と同様）。
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main, develop]
+  schedule:
+    # 毎週月曜 18:00 UTC（= 火曜 03:00 JST）。コード未変更でも新規開示 CVE を拾う。
+    - cron: "0 18 * * 1"
+
+# 同一 ref の in-flight run をキャンセルして CI 分を節約。
+concurrency:
+  group: security-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# upload-sarif が Code scanning に書き込むため security-events: write が必要。
+# それ以外は actions/checkout 用の contents: read のみ。
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # 1. gitleaks — 秘密情報スキャン（BLOCKING）
+  # ───────────────────────────────────────────────────────────────────────────
+  gitleaks:
+    name: Secret scan (gitleaks)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          # 全コミットを走査するため履歴を全取得（tip だけでは過去混入を見逃す）。
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        env:
+          GITLEAKS_VERSION: 8.18.4
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          # --redact: 検出値をログに出さない。--exit-code 1: 検出時に非ゼロ終了 → ジョブ fail。
+          ./gitleaks detect \
+            --source . \
+            --redact \
+            --report-format sarif \
+            --report-path gitleaks.sarif \
+            --exit-code 1
+
+      - name: Upload gitleaks SARIF
+        # 検出で前ステップが fail しても SARIF を上げる。GHAS 無効環境でも
+        # ブロッキング判定（exit-code）は前ステップで成立済みなので continue-on-error。
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 2. semgrep — SAST（advisory）
+  # ───────────────────────────────────────────────────────────────────────────
+  semgrep:
+    name: SAST (semgrep)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install semgrep
+        run: pip install --quiet semgrep
+
+      - name: Run semgrep
+        # 助言扱い: 所見があってもジョブを fail させない（Security タブで可視化）。
+        continue-on-error: true
+        run: |
+          semgrep scan \
+            --config p/kotlin \
+            --config p/security-audit \
+            --config p/secrets \
+            --sarif --output semgrep.sarif
+
+      - name: Upload semgrep SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # 3. OWASP Dependency-Check — 依存 CVE 照合（advisory）
+  # ───────────────────────────────────────────────────────────────────────────
+  dependency-check:
+    name: Dependency CVE scan (OWASP)
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # JDK 17 は app/build.gradle.kts の sourceCompatibility = VERSION_17 に一致。
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # NVD ミラーを run 間でキャッシュ（初回 DB 取得が重いため）。data.directory は
+      # app/build.gradle.kts の dependencyCheck { data { directory = ... } } と一致させる。
+      - name: Cache NVD data
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/dependency-check-data
+          key: dependency-check-nvd-${{ runner.os }}-v1
+
+      - name: Run OWASP Dependency-Check
+        # 助言扱い: failBuildOnCVSS=11 で Gradle 側も fail させない設計だが、
+        # ネットワーク不調等の実行時エラーでも PR を止めないよう continue-on-error。
+        continue-on-error: true
+        env:
+          # 未登録でも動くが NVD API がレート制限され低速になる。
+          # リポジトリ secrets に NVD_API_KEY を登録すると高速化する。
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: ./gradlew :app:dependencyCheckAnalyze --stacktrace
+
+      - name: Upload dependency-check SARIF
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: app/build/reports/dependency-check-report.sarif
+          category: owasp-dependency-check
+
+      - name: Upload dependency-check HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: app/build/reports/dependency-check-report.html
+          if-no-files-found: warn
+          retention-days: 14
