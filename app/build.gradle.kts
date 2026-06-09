@@ -3,6 +3,24 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.dependencycheck)
+}
+
+// Security Scan workflow 用: OWASP Dependency-Check（依存ライブラリの CVE 照合）。
+// `:app:dependencyCheckAnalyze` で実行する。posture は「助言」なので failBuildOnCVSS=11
+// を指定して Gradle ビルドは決して fail させず、所見は SARIF（GitHub Security タブ）と
+// HTML artifact で可視化する。NVD_API_KEY（env）があれば NVD ミラー取得が高速化する。
+dependencyCheck {
+    formats = listOf("SARIF", "HTML")
+    failBuildOnCVSS = 11.0f
+    nvd {
+        apiKey = System.getenv("NVD_API_KEY")
+        delay = 4000
+    }
+    data {
+        // workflow の actions/cache パス（~/.gradle/dependency-check-data）と一致させる。
+        directory = "${System.getProperty("user.home")}/.gradle/dependency-check-data"
+    }
 }
 
 // Issue #9 Req 3.1 / Task 1.2 (Issue #58: applicationId / namespace 再移行済み):
