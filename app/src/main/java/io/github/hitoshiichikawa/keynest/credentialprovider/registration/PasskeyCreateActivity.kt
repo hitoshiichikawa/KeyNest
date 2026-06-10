@@ -17,6 +17,8 @@ import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.exceptions.CreateCredentialCancellationException
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.CreateCredentialUnknownException
+import androidx.credentials.exceptions.domerrors.InvalidStateError
+import androidx.credentials.exceptions.publickeycredential.CreatePublicKeyCredentialDomException
 import androidx.credentials.provider.PendingIntentHandler
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -31,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -48,10 +51,14 @@ import kotlinx.serialization.json.jsonPrimitive
  *  3. On Save: `BiometricAuthenticator.authenticate(...)` is launched. The
  *     authenticator is `BIOMETRIC_STRONG | DEVICE_CREDENTIAL` so PIN /
  *     pattern fallback works on devices without a sensor (#89 確定事項).
- *  4. On `AuthResult.Succeeded`: `PasskeyCreator.create(...)` runs on
- *     `Dispatchers.IO`. Existing `(rpId, userHandle)` row is deleted first
- *     (overwrite path, §5.3.2), then the new row is INSERTed via
- *     `PasskeyRepository.save(...)`.
+ *  4. On `AuthResult.Succeeded`: まず `excludeCredentials` を照合する
+ *     (Issue #136)。一致（同一 rpId）なら InvalidStateError の DOM 例外で
+ *     セレモニーを終了する — WebAuthn §6.3.2 step 5 は除外一致のエラーを
+ *     user presence 取得 **後** に返すことを要求するため、Service 側
+ *     （認証前）ではなくここで判定する。続いて `PasskeyCreator.create(...)`
+ *     runs on `Dispatchers.IO`. Existing `(rpId, userHandle)` row is
+ *     deleted first (overwrite path, §5.3.2), then the new row is INSERTed
+ *     via `PasskeyRepository.save(...)`.
  *  5. The plaintext PKCS#8 private key in [SavePasskeyRequest.privateKey]
  *     is `fill(0)`-wiped in the `finally` block (NFR 1.3 / req 1.7).
  *  6. `PendingIntentHandler.setCreateCredentialResponse(...)` or
@@ -146,6 +153,23 @@ class PasskeyCreateActivity : AppCompatActivity() {
                     )
                     is AuthResult.Unavailable -> throw CreateCredentialUnknownException(
                         "Biometric unavailable: ${authResult.availability.name}",
+                    )
+                }
+
+                // Issue #136: excludeCredentials は生体認証成功後にのみ照合
+                // する（WebAuthn §6.3.2 step 5 — user presence 前に一致を
+                // 漏らさない）。一致時の InvalidStateError は RP が
+                // 「既に登録済み」と解釈する spec 上の正規シグナル。
+                val excluded = withContext(Dispatchers.IO) {
+                    ServiceLocator.excludeCredentialDetector.containsAny(
+                        rpId = parsed.rpId,
+                        credentialIds = parsed.excludeCredentialIds,
+                    )
+                }
+                if (excluded) {
+                    throw CreatePublicKeyCredentialDomException(
+                        InvalidStateError(),
+                        "A PassKey for one of the excluded credential ids already exists for this RP",
                     )
                 }
 
@@ -255,6 +279,17 @@ class PasskeyCreateActivity : AppCompatActivity() {
 
         val userHandle = Base64.decode(userIdB64, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
 
+        // Issue #136: excludeCredentials[].id（base64url 文字列）。欠落 /
+        // 形不正の要素は無視する（除外照合は best-effort で、欠けても
+        // 登録自体は WebAuthn 的に有効なため）。
+        val excludeCredentialIds = root["excludeCredentials"]?.jsonArray
+            ?.mapNotNull { element ->
+                runCatching {
+                    element.jsonObject["id"]?.jsonPrimitive?.contentOrNull
+                }.getOrNull()
+            }
+            .orEmpty()
+
         return CreationOptions(
             rpId = rpId,
             rpDisplayName = rpName,
@@ -262,6 +297,7 @@ class PasskeyCreateActivity : AppCompatActivity() {
             userName = userName,
             userDisplayName = userDisplayName,
             isDiscoverable = isDiscoverable,
+            excludeCredentialIds = excludeCredentialIds,
         )
     }
 
@@ -278,6 +314,8 @@ class PasskeyCreateActivity : AppCompatActivity() {
         val userName: String?,
         val userDisplayName: String?,
         val isDiscoverable: Boolean,
+        /** Issue #136: 認証成功後の除外照合に使う excludeCredentials[].id。 */
+        val excludeCredentialIds: List<String> = emptyList(),
     )
 
     companion object {
