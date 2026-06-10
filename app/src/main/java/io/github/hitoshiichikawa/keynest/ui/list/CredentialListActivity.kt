@@ -26,6 +26,7 @@ import io.github.hitoshiichikawa.keynest.ui.enable.AutofillEnableActivity
 import io.github.hitoshiichikawa.keynest.ui.settings.SettingsActivity
 import io.github.hitoshiichikawa.keynest.util.AutofillServiceStatus
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.SecureWindow
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import com.google.android.material.snackbar.Snackbar
@@ -71,6 +72,9 @@ class CredentialListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Issue #135: credential rows (labels / usernames) must not appear in
+        // screenshots, screen recordings or the recents thumbnail.
+        SecureWindow.apply(window)
         enableEdgeToEdgeWithKnDefaults()
         binding = CredentialListActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)

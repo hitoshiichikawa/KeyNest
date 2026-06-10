@@ -26,6 +26,7 @@ import io.github.hitoshiichikawa.keynest.auth.BiometricAuthenticator
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.domain.model.DeletePasskeyResult
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.SecureWindow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,6 +64,8 @@ class PasskeyCreateActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Issue #135: exclude the registration ceremony from screen capture.
+        SecureWindow.apply(window)
         // Defensive — the AutofillService process / CredentialProviderService
         // process is the same JVM as KeyNestApp, but the framework may bind
         // a fresh process before Application.onCreate completes.

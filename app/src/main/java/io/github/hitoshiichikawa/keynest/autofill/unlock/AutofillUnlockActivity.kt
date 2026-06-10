@@ -22,6 +22,7 @@ import io.github.hitoshiichikawa.keynest.autofill.parser.AutofillFieldHeuristics
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.domain.model.CredentialId
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.SecureWindow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -46,6 +47,8 @@ class AutofillUnlockActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Issue #135: exclude the decrypt ceremony from screen capture.
+        SecureWindow.apply(window)
         // Initialise ServiceLocator defensively - on hostile process boots the
         // Application may not yet have been created when an authentication
         // intent fires.
