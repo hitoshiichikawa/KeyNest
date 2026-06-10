@@ -136,12 +136,14 @@ class AutofillUnlockActivity : AppCompatActivity() {
                             putExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT, dataset as android.os.Parcelable)
                         }
                         setResult(RESULT_OK, replyIntent)
-                        // NFR 2.2 / Req 5.1: include counts only, never any
-                        // customField value or fieldKey.
+                        // NFR 2.2 / Req 5.1: presence boolean と件数のみ。
+                        // username / password の「長さ」も秘匿情報のメタデータ
+                        // （総当たり探索空間を狭める）なので出力しない（#137）。
                         SafeLogger.info(
                             tag = TAG,
-                            message = "unlock returning dataset (userLen=${plain.username.length} " +
-                                "passLen=${plain.password.size}, userIdPresent=${usernameAutofillId != null}, " +
+                            message = "unlock returning dataset (" +
+                                "userPresent=${plain.username.isNotEmpty()}, " +
+                                "userIdPresent=${usernameAutofillId != null}, " +
                                 "passIdPresent=${passwordAutofillId != null}, " +
                                 "customFieldsMatched=${customFieldValues.size}, " +
                                 "fwResultPresent=${intent?.hasExtra(AutofillManager.EXTRA_AUTHENTICATION_RESULT) == true})",

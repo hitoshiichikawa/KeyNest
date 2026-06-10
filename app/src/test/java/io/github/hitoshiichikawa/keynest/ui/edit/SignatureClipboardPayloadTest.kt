@@ -42,4 +42,18 @@ class SignatureClipboardPayloadTest {
         val clip = SignatureClipboardPayload.build(label = "L", hex = "")
         assertThat(clip.getItemAt(0).text.toString()).isEmpty()
     }
+
+    @Test
+    fun build_marksClipAsSensitive() {
+        // Arrange / Act (Issue #137): パスワードマネージャ発のクリップボード
+        // 書き込みには常に EXTRA_IS_SENSITIVE を立てる。
+        val clip = SignatureClipboardPayload.build(label = "L", hex = "ab".repeat(32))
+
+        // Assert
+        val extras = clip.description.extras
+        assertThat(extras).isNotNull()
+        assertThat(
+            extras!!.getBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, false),
+        ).isTrue()
+    }
 }

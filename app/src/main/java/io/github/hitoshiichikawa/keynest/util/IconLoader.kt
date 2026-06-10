@@ -3,7 +3,6 @@ package io.github.hitoshiichikawa.keynest.util
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
-import android.util.Log
 import android.util.LruCache
 import android.widget.ImageView
 import io.github.hitoshiichikawa.keynest.R
@@ -61,15 +60,17 @@ import kotlinx.coroutines.withContext
  *     past a missing package would re-throw `NameNotFoundException`
  *     every frame).
  *
- * Diagnostic logs (Issue #46 Req 4.x):
+ * Diagnostic logs (Issue #46 Req 4.x, Issue #137 で SafeLogger 経由に変更):
  *   - All routes log at most one line tagged [LOG_TAG] so a Logcat
  *     `tag:IconLoader` filter is enough to isolate cache hit / miss /
- *     success / fallback / cancel paths. The body intentionally contains
- *     only the packageName + a result classifier (no user content,
- *     signature SHA, ciphertext etc.) per Req 4.6 / NFR 3.x.
- *   - Normal paths use [Log.d]; the unexpected-cancel / exception path
- *     uses [Log.w] so production filter rules can keep noise low
- *     (NFR 2.1 / 2.2).
+ *     success / fallback / cancel paths (no user content, signature SHA,
+ *     ciphertext etc. per Req 4.6 / NFR 3.x).
+ *   - Normal paths use [SafeLogger.debug] — packageName 入りの詳細は
+ *     debug ビルド限定（release では BuildConfig.DEBUG ゲートで脱落）。
+ *   - The unexpected-cancel / exception path uses [SafeLogger.warn] so
+ *     production filter rules can keep noise low (NFR 2.1 / 2.2)。warn は
+ *     release にも残るため、packageName（=ユーザーがどのアプリの
+ *     クレデンシャルを持つかのメタデータ）は含めず classifier のみ出す。
  *
  * Out of scope (per requirements.md > Out of Scope):
  *   - Coil / Glide / external image loaders.
@@ -116,12 +117,12 @@ class IconLoader(
             return
         }
 
-        Log.d(LOG_TAG, "loadInto: request pkg=$packageName")
+        SafeLogger.debug(tag = LOG_TAG, message = "loadInto: request pkg=$packageName")
         imageView.setTag(R.id.icon_loader_request_tag, packageName)
 
         val cached = cache.get(packageName)
         if (cached != null) {
-            Log.d(LOG_TAG, "loadInto: cacheHit pkg=$packageName")
+            SafeLogger.debug(tag = LOG_TAG, message = "loadInto: cacheHit pkg=$packageName")
             imageView.setImageDrawable(cached)
             return
         }
@@ -149,7 +150,8 @@ class IconLoader(
                 // still useful for a future bind, but we surface this so
                 // a repeating "icon never appears" symptom in the field
                 // can be distinguished from a resolve failure (Req 4.5).
-                Log.w(LOG_TAG, "loadInto: cancelledByRecycle pkg=$packageName")
+                // warn は release にも出るため pkg は載せない（#137）。
+                SafeLogger.warn(tag = LOG_TAG, message = "loadInto: cancelledByRecycle")
             }
         }
     }
@@ -185,7 +187,7 @@ class IconLoader(
     suspend fun resolve(packageName: String?): Drawable? {
         if (packageName.isNullOrBlank()) return null
         cache.get(packageName)?.let {
-            Log.d(LOG_TAG, "resolve: cacheHit pkg=$packageName")
+            SafeLogger.debug(tag = LOG_TAG, message = "resolve: cacheHit pkg=$packageName")
             return it
         }
         val resolved = withContext(ioDispatcher) { resolveOrFallback(packageName) }
@@ -204,18 +206,20 @@ class IconLoader(
     private fun resolveOrFallback(packageName: String): Drawable {
         return try {
             val icon = pm.getApplicationIcon(packageName)
-            Log.d(LOG_TAG, "resolveOrFallback: success pkg=$packageName")
+            SafeLogger.debug(tag = LOG_TAG, message = "resolveOrFallback: success pkg=$packageName")
             icon
         } catch (e: PackageManager.NameNotFoundException) {
-            Log.d(
-                LOG_TAG,
-                "resolveOrFallback: fallback pkg=$packageName reason=${e.javaClass.simpleName}",
+            SafeLogger.debug(
+                tag = LOG_TAG,
+                message = "resolveOrFallback: fallback pkg=$packageName reason=${e.javaClass.simpleName}",
             )
             buildFallback(packageName)
         } catch (e: RuntimeException) {
-            Log.w(
-                LOG_TAG,
-                "resolveOrFallback: fallback pkg=$packageName reason=${e.javaClass.simpleName}",
+            // warn は release にも出るため pkg は載せない（#137）。
+            SafeLogger.warn(
+                tag = LOG_TAG,
+                message = "resolveOrFallback: fallback",
+                throwable = e,
             )
             buildFallback(packageName)
         }
