@@ -5,11 +5,9 @@ import io.github.hitoshiichikawa.keynest.domain.model.CustomField
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.CharArrayCodec
 import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
-import java.nio.ByteBuffer
-import java.nio.CharBuffer
-import java.nio.charset.StandardCharsets
 import java.util.Arrays
 
 /**
@@ -68,7 +66,7 @@ class UpdateCredentialUseCase(
 
             // Optionally re-encrypt the password with a fresh IV.
             val (ciphertext, iv) = if (newPasswordCopy != null) {
-                val bytes = encodeUtf8(newPasswordCopy)
+                val bytes = CharArrayCodec.encodeUtf8(newPasswordCopy)
                 try {
                     val blob = cipher.encrypt(bytes)
                     blob.ciphertext to blob.iv
@@ -114,21 +112,6 @@ class UpdateCredentialUseCase(
         } finally {
             wipeIfPresent(newPasswordCopy)
         }
-    }
-
-    private fun encodeUtf8(chars: CharArray): ByteArray {
-        val byteBuffer: ByteBuffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(chars))
-        val out = ByteArray(byteBuffer.remaining())
-        byteBuffer.get(out)
-        if (byteBuffer.hasArray()) {
-            Arrays.fill(
-                byteBuffer.array(),
-                byteBuffer.arrayOffset(),
-                byteBuffer.arrayOffset() + byteBuffer.limit(),
-                0,
-            )
-        }
-        return out
     }
 
     private fun wipeIfPresent(chars: CharArray?) {

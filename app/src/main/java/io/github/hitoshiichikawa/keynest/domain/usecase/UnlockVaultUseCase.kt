@@ -5,11 +5,10 @@ import io.github.hitoshiichikawa.keynest.domain.model.CustomField
 import io.github.hitoshiichikawa.keynest.domain.model.PlaintextCredential
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.CharArrayCodec
 import io.github.hitoshiichikawa.keynest.security.EncryptedBlob
 import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
 import java.util.Arrays
 
 /**
@@ -39,7 +38,7 @@ class UnlockVaultUseCase(
         var plaintextBytes: ByteArray? = null
         return try {
             plaintextBytes = cipher.decrypt(EncryptedBlob(iv = record.passwordIv, ciphertext = record.passwordCiphertext))
-            val passwordChars = decodeUtf8(plaintextBytes)
+            val passwordChars = CharArrayCodec.decodeUtf8(plaintextBytes)
 
             // Issue #66 Phase 1: also decrypt the customFields list. The
             // codec tolerates an empty BLOB (migration-default rows) and
@@ -103,20 +102,6 @@ class UnlockVaultUseCase(
         }
     }
 
-    private fun decodeUtf8(bytes: ByteArray): CharArray {
-        val charBuffer = StandardCharsets.UTF_8.decode(ByteBuffer.wrap(bytes))
-        val out = CharArray(charBuffer.remaining())
-        charBuffer.get(out)
-        if (charBuffer.hasArray()) {
-            Arrays.fill(
-                charBuffer.array(),
-                charBuffer.arrayOffset(),
-                charBuffer.arrayOffset() + charBuffer.limit(),
-                ' ',
-            )
-        }
-        return out
-    }
 }
 
 sealed class UnlockFailure(message: String) : Exception(message) {

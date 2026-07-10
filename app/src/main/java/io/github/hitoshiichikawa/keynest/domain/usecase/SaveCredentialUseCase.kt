@@ -5,11 +5,9 @@ import io.github.hitoshiichikawa.keynest.domain.model.CustomField
 import io.github.hitoshiichikawa.keynest.domain.model.EncryptedCredentialRecord
 import io.github.hitoshiichikawa.keynest.domain.repository.CredentialRepository
 import io.github.hitoshiichikawa.keynest.security.AesGcmCipher
+import io.github.hitoshiichikawa.keynest.security.CharArrayCodec
 import io.github.hitoshiichikawa.keynest.security.EncryptedCustomFieldsCodec
 import io.github.hitoshiichikawa.keynest.util.PackageSignatureResolver
-import java.nio.ByteBuffer
-import java.nio.CharBuffer
-import java.nio.charset.StandardCharsets
 import java.util.Arrays
 
 /**
@@ -53,7 +51,7 @@ class SaveCredentialUseCase(
             val sigCapturedAt = if (sigHash != null) now() else null
 
             // 3) Encrypt the password.
-            val passwordBytes = encodeUtf8(input.password)
+            val passwordBytes = CharArrayCodec.encodeUtf8(input.password)
             val blob = try {
                 cipher.encrypt(passwordBytes)
             } finally {
@@ -101,19 +99,6 @@ class SaveCredentialUseCase(
         if (input.password.isEmpty()) return SaveFailure.PasswordBlank
         if (input.label.isBlank()) return SaveFailure.LabelBlank
         return null
-    }
-
-    private fun encodeUtf8(chars: CharArray): ByteArray {
-        // Encode WITHOUT going through String to avoid a long-lived String in
-        // the JVM intern table / GC pool.
-        val byteBuffer: ByteBuffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(chars))
-        val out = ByteArray(byteBuffer.remaining())
-        byteBuffer.get(out)
-        // Zero the temporary ByteBuffer backing array if accessible.
-        if (byteBuffer.hasArray()) {
-            Arrays.fill(byteBuffer.array(), byteBuffer.arrayOffset(), byteBuffer.arrayOffset() + byteBuffer.limit(), 0)
-        }
-        return out
     }
 
     private fun wipe(chars: CharArray) = Arrays.fill(chars, ' ')
