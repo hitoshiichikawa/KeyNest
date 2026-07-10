@@ -126,10 +126,11 @@ object ServiceLocator {
     }
 
     /**
-     * Issue #99: synchronous helper around
-     * `PasskeyRepository.findByCredentialId(...)` used by
-     * `KeyNestCredentialProviderService.onBeginCreateCredentialRequest`
-     * to short-circuit excludeCredentials before the OS sheet renders.
+     * Issue #99 / #136: suspend helper around
+     * `PasskeyRepository.findByCredentialId(...)`. #136 以降は
+     * `PasskeyCreateActivity` が生体認証成功後に excludeCredentials を
+     * 照合するために使う（認証前の Service 側照合は存在オラクルになる
+     * ため廃止 — WebAuthn §6.3.2 step 5）。
      */
     internal val excludeCredentialDetector: ExcludeCredentialDetector by lazy {
         ExcludeCredentialDetector(passkeyRepository)

@@ -8,7 +8,6 @@ import android.os.CancellationSignal
 import android.os.OutcomeReceiver
 import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.CreateCredentialException
-import androidx.credentials.exceptions.CreateCredentialNoCreateOptionException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.provider.BeginCreateCredentialRequest
 import androidx.credentials.provider.BeginCreateCredentialResponse
@@ -28,6 +27,7 @@ import io.github.hitoshiichikawa.keynest.credentialprovider.authentication.GetEn
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.CreateEntryBuilder
 import io.github.hitoshiichikawa.keynest.credentialprovider.registration.ExcludeCredentialDetector
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkObject
@@ -48,9 +48,13 @@ import org.robolectric.annotation.Config
  * / `onClearCredentialStateRequest`) is preserved (Req 6.4). Issue #99
  * adds:
  *  - residentKey = required / preferred / discouraged → 1 CreateEntry
- *  - excludeCredentials hit → CreateCredentialNoCreateOptionException
- *  - excludeCredentials miss → 1 CreateEntry
  *  - non-PublicKey request → empty response, repository NOT consulted
+ *
+ * Issue #136: excludeCredentials は **認証前に照合しない** 契約に変更。
+ *  - excludeCredentials の有無に関わらず Service は 1 CreateEntry を返し、
+ *    ExcludeCredentialDetector を一切呼ばない（存在オラクル防止 /
+ *    WebAuthn §6.3.2 step 5）。照合は PasskeyCreateActivity の生体認証
+ *    成功後に行われる
  *
  * `ServiceLocator` is stubbed via [mockkObject] so the dependency graph
  * (database / Keystore / repository) stays out of the unit-test classpath.
@@ -74,11 +78,12 @@ class KeyNestCredentialProviderServiceTest {
         service = Robolectric.setupService(KeyNestCredentialProviderService::class.java)
         mockkObject(ServiceLocator)
         every { ServiceLocator.initialize(any()) } returns Unit
+        // #136: Service は detector を呼ばない契約。スタブは「呼ばれない」
+        // 検証（coVerify exactly=0）のためだけに繋いでおく。
         every { ServiceLocator.excludeCredentialDetector } returns detector
         every { ServiceLocator.createEntryBuilder } returns createEntryBuilder
         every { ServiceLocator.getEntryBuilder } returns getEntryBuilder
         every { createEntryBuilder.build(any()) } returns fakeCreateEntry()
-        every { detector.containsAny(any()) } returns false
         every { getEntryBuilder.build(any()) } returns emptyList()
     }
 
@@ -137,14 +142,16 @@ class KeyNestCredentialProviderServiceTest {
         assertThat(resultSlot.captured.createEntries).hasSize(1)
     }
 
-    // ---- excludeCredentials -----------------------------------------------
+    // ---- excludeCredentials (#136: 認証前に照合しない) ---------------------
 
     @Test
-    fun onBeginCreateCredentialRequest_excludeCredentialsHit_returnsNoCreateOptionException() {
-        every { detector.containsAny(any()) } returns true
+    fun onBeginCreateCredentialRequest_excludeCredentialsPresent_returnsCreateEntryWithoutQueryingVault() {
+        // Arrange: excludeCredentials 付きリクエスト。#136 以前はここで
+        // vault を照会し NoCreateOption 例外を返していた（存在オラクル）。
         val callback = mockk<OutcomeReceiver<BeginCreateCredentialResponse, CreateCredentialException>>(relaxed = true)
-        val errSlot = slot<CreateCredentialException>()
+        val resultSlot = slot<BeginCreateCredentialResponse>()
 
+        // Act
         service.onBeginCreateCredentialRequest(
             publicKeyRequest(
                 residentKey = "preferred",
@@ -154,31 +161,32 @@ class KeyNestCredentialProviderServiceTest {
             callback,
         )
 
-        verify(exactly = 1) { callback.onError(capture(errSlot)) }
-        verify(exactly = 0) { callback.onResult(any()) }
-        assertThat(errSlot.captured).isInstanceOf(CreateCredentialNoCreateOptionException::class.java)
-        verify(exactly = 0) { createEntryBuilder.build(any()) }
+        // Assert: 例外ではなく CreateEntry を返し、vault には触れない
+        // （認証前の応答が exclude の有無で分岐しない = 観測不能）。
+        verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
+        verify(exactly = 0) { callback.onError(any()) }
+        assertThat(resultSlot.captured.createEntries).hasSize(1)
+        coVerify(exactly = 0) { detector.containsAny(any(), any()) }
     }
 
     @Test
-    fun onBeginCreateCredentialRequest_excludeCredentialsNoHit_returnsCreateEntry() {
-        every { detector.containsAny(any()) } returns false
+    fun onBeginCreateCredentialRequest_noExcludeCredentials_returnsCreateEntryWithoutQueryingVault() {
+        // Arrange
         val callback = mockk<OutcomeReceiver<BeginCreateCredentialResponse, CreateCredentialException>>(relaxed = true)
         val resultSlot = slot<BeginCreateCredentialResponse>()
 
+        // Act
         service.onBeginCreateCredentialRequest(
-            publicKeyRequest(
-                residentKey = "preferred",
-                excludeIds = listOf("xxxxxx", "yyyyyy"),
-            ),
+            publicKeyRequest(residentKey = "preferred"),
             CancellationSignal(),
             callback,
         )
 
+        // Assert: exclude 有り（上のテスト）と応答が区別できないこと。
         verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
         verify(exactly = 0) { callback.onError(any()) }
         assertThat(resultSlot.captured.createEntries).hasSize(1)
-        verify(exactly = 1) { detector.containsAny(any()) }
+        coVerify(exactly = 0) { detector.containsAny(any(), any()) }
     }
 
     // ---- password request -------------------------------------------------
@@ -200,7 +208,7 @@ class KeyNestCredentialProviderServiceTest {
         verify(exactly = 1) { callback.onResult(capture(resultSlot)) }
         verify(exactly = 0) { callback.onError(any()) }
         assertThat(resultSlot.captured.createEntries).isEmpty()
-        verify(exactly = 0) { detector.containsAny(any()) }
+        coVerify(exactly = 0) { detector.containsAny(any(), any()) }
         verify(exactly = 0) { createEntryBuilder.build(any()) }
     }
 
