@@ -1,6 +1,8 @@
 package io.github.hitoshiichikawa.keynest.util
 
 import android.util.Log
+import androidx.annotation.VisibleForTesting
+import io.github.hitoshiichikawa.keynest.BuildConfig
 
 /**
  * Logging wrapper that mechanically prevents sensitive data from leaking to
@@ -18,17 +20,32 @@ import android.util.Log
  *   passed to any of these log methods. Anything else implies a programmer
  *   error.
  * - Logged Throwable messages are scrubbed: only the exception class name is
- *   forwarded. Stack traces are emitted at DEBUG level only, never at
- *   INFO/WARN/ERROR (the assumption being that release builds may strip
- *   DEBUG via R8).
+ *   forwarded.
+ * - DEBUG level is gated on [BuildConfig.DEBUG] (Issue #137): release builds
+ *   have `isMinifyEnabled = false` so R8 strips nothing — the gate is the
+ *   runtime mechanism that actually keeps debug-only detail (package names
+ *   etc.) out of release logcat. Production code must therefore route ALL
+ *   logging through this object instead of `android.util.Log`
+ *   (enforced by RawLogImportAuditTest).
  */
 object SafeLogger {
 
     private const val DEFAULT_TAG = "KeyNest"
 
+    /**
+     * Runtime gate for [debug]. Defaults to [BuildConfig.DEBUG] so release
+     * builds drop DEBUG lines entirely. `@VisibleForTesting` so unit tests
+     * can simulate the release behaviour (and must restore the value in
+     * their teardown).
+     */
+    @VisibleForTesting
+    internal var debugLogsEnabled: Boolean = BuildConfig.DEBUG
+
     @JvmStatic
     fun debug(tag: String = DEFAULT_TAG, message: String) {
-        Log.d(tag, message)
+        if (debugLogsEnabled) {
+            Log.d(tag, message)
+        }
     }
 
     @JvmStatic

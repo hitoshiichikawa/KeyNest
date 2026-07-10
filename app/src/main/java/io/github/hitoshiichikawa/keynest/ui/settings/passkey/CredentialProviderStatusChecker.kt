@@ -3,9 +3,9 @@ package io.github.hitoshiichikawa.keynest.ui.settings.passkey
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
-import android.util.Log
 import androidx.annotation.RequiresApi
 import io.github.hitoshiichikawa.keynest.domain.model.PasskeyProviderStatus
+import io.github.hitoshiichikawa.keynest.util.SafeLogger
 
 /**
  * Resolves the current KeyNest PassKey provider registration state by
@@ -109,10 +109,13 @@ internal class DefaultCredentialProviderStatusChecker @JvmOverloads constructor(
             // Req 3.8 / NFR 2.1: never log at info level or above. The raw
             // `credential_service` value may contain third-party provider
             // package names; emitting them would leak which other PassKey
-            // providers the user has selected. Log.d is allowed (stripped
-            // in release builds) but we deliberately do not include the raw
-            // value or `t.message` here for that reason.
-            Log.d(TAG, "PassKey provider status probe failed; falling back to Disabled")
+            // providers the user has selected. SafeLogger.debug は
+            // BuildConfig.DEBUG ゲートにより release では出力されない（#137）。
+            // その上で raw value / `t.message` は debug でも含めない。
+            SafeLogger.debug(
+                tag = TAG,
+                message = "PassKey provider status probe failed; falling back to Disabled",
+            )
             PasskeyProviderStatus.Disabled
         }
     }
