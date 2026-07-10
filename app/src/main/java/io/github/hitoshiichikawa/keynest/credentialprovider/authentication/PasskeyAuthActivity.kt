@@ -25,6 +25,7 @@ import io.github.hitoshiichikawa.keynest.auth.BiometricAuthenticator
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.domain.repository.PasskeyRepository
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.SecureWindow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -82,6 +83,8 @@ class PasskeyAuthActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Issue #135: exclude the assertion ceremony from screen capture.
+        SecureWindow.apply(window)
         // Defensive — the CredentialProviderService process is the same JVM
         // as KeyNestApp, but the framework may bind a fresh process before
         // Application.onCreate completes (mirrors PasskeyCreateActivity).

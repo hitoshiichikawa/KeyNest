@@ -25,6 +25,7 @@ import io.github.hitoshiichikawa.keynest.databinding.CredentialEditActivityBindi
 import io.github.hitoshiichikawa.keynest.di.ServiceLocator
 import io.github.hitoshiichikawa.keynest.util.AdvancedDetailsFormatter
 import io.github.hitoshiichikawa.keynest.util.SafeLogger
+import io.github.hitoshiichikawa.keynest.util.SecureWindow
 import io.github.hitoshiichikawa.keynest.util.applySystemBarsPadding
 import io.github.hitoshiichikawa.keynest.util.enableEdgeToEdgeWithKnDefaults
 import kotlinx.coroutines.launch
@@ -83,6 +84,9 @@ class CredentialEditActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Issue #135: the plaintext password (visibility toggle) must not
+        // appear in screenshots, screen recordings or the recents thumbnail.
+        SecureWindow.apply(window)
         enableEdgeToEdgeWithKnDefaults()
         binding = CredentialEditActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
