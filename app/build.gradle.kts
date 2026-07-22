@@ -47,12 +47,21 @@ val keynestSigningReady = keynestStoreFile != null &&
 
 android {
     namespace = "io.github.hitoshiichikawa.keynest"
-    compileSdk = 35
+    // Issue #145 / Req 1.2: compileSdk を Android 16 (API 36) に引き上げる。
+    // targetSdk = 36 に必要な platform シンボル解決のため両方 36。
+    // AGP 8.6.1 は compileSdk 36 を未サポート扱いとして警告するが、Google 公式の
+    // エスケープハッチ `android.suppressUnsupportedCompileSdk=36`（gradle.properties）
+    // で警告のみ抑止し、ビルド自体は成立する。AGP/Gradle/Kotlin/KSP の恒久 bump は
+    // 本 Issue の Out of Scope（依存ライブラリの自発的メジャーアップグレード除外）。
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.hitoshiichikawa.keynest"
         minSdk = 26
-        targetSdk = 35
+        // Issue #145 / Req 1.1: Play Console の 2026-08-31 以降の target API ポリシー
+        // 準拠のため、targetSdk を Android 16 (API 36) に引き上げる。
+        // minSdk = 26 は Req 2.1 により据え置き。
+        targetSdk = 36
         versionCode = 3
         versionName = "1.1.0"
 
